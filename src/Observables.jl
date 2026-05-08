@@ -2,13 +2,14 @@ module Observables
 
 using LinearAlgebra
 using ITensors
-using ..Geometry: Coord, neighbor
-using ..States: TriangularIPEPS, wrap_coord
+using ..Geometry: Coord, neighbor, star_sites
+using ..States: TriangularIPEPS, wrap_coord, unit_cell_representatives
 using ..Models: blockade_projector
 using ..SpinOps: projector_up
 
 export local_expectation, tensor_norm, dense_blockade_violations
 export local_blockade_violation, mean_blockade_violation
+export dense_star_blockade_violation, blockade_violations
 
 """
     local_expectation(state, c, op) -> ComplexF64
@@ -70,7 +71,7 @@ function local_blockade_violation(state::TriangularIPEPS, c::Coord, d::Integer)
     1 <= d <= 6 || throw(ArgumentError("direction must be in 1:6"))
     pup_c = real(local_expectation(state, c, projector_up()))
     pup_n = real(local_expectation(state, neighbor(c, d), projector_up()))
-    return pup_c * pup_n
+    return clamp(pup_c * pup_n, 0.0, 1.0)
 end
 
 function mean_blockade_violation(state::TriangularIPEPS, centers)
@@ -79,6 +80,50 @@ function mean_blockade_violation(state::TriangularIPEPS, centers)
         push!(vals, local_blockade_violation(state, c, d))
     end
     return isempty(vals) ? 0.0 : sum(vals) / length(vals)
+end
+
+function blockade_violations(state::TriangularIPEPS,
+                             centers = unit_cell_representatives(state.unitcell))
+    vals = Float64[]
+    for c in centers, d in 1:6
+        push!(vals, local_blockade_violation(state, c, d))
+    end
+    return vals
+end
+
+"""
+    dense_star_blockade_violation(state, center) -> Float64
+
+Build a dense 7-site star vector from each site's dominant local physical
+profile and evaluate the exact dense blockade projector on that vector. This
+is exact for product iPEPS and a bounded local diagnostic for `D>1`.
+"""
+function dense_star_blockade_violation(state::TriangularIPEPS, center::Coord)
+    star = star_sites(center)
+    vectors = [_dominant_site_vector(state, wrap_coord(state.unitcell, c)) for c in star]
+    psi = vectors[1]
+    for v in vectors[2:end]
+        psi = kron(psi, v)
+    end
+    return clamp(dense_blockade_violations(psi), 0.0, 1.0)
+end
+
+function _dominant_site_vector(state::TriangularIPEPS, rep::Coord)
+    T = state.tensors[rep]
+    ph = state.phys_inds[rep]
+    idxs = collect(inds(T))
+    phpos = findfirst(i -> i == ph, idxs)
+    phpos === nothing && error("physical index missing from tensor at $rep")
+    A = array(T)
+    perm = (phpos, (i for i in eachindex(idxs) if i != phpos)...)
+    M = reshape(permutedims(A, perm), 2, :)
+    rho = M * M'
+    tr = real(sum(diag(rho)))
+    tr == 0 && return ComplexF64[1, 0]
+    vals, vecs = eigen(Hermitian(rho / tr))
+    v = ComplexF64.(vecs[:, argmax(vals)])
+    nrm = norm(v)
+    return nrm == 0 ? ComplexF64[1, 0] : v / nrm
 end
 
 end

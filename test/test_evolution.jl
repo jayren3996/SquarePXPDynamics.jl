@@ -60,4 +60,47 @@ using ITensors
         @test all(isfinite(real(local_expectation(state, c, pauli_z()))) for c in reps)
         @test mean_blockade_violation(state, reps) < 1e-8
     end
+
+    @testset "projected PXP step helpers report schedule diagnostics" begin
+        first = product_ipeps(OneSiteUnitCell(), :down; D = 1)
+        d1 = projected_pxp_step!(first, 0.01; order = :first, maxdim = 1, cutoff = 1e-12)
+        @test length(d1.layer_diagnostics) == 7
+        @test length(d1.discarded_weights) == 7
+        @test d1.max_bond_dim == 1
+        @test isfinite(d1.blockade_violation)
+        @test all(isfinite, values(d1.local_z))
+        @test all(isfinite, values(d1.local_x))
+        @test all(isfinite, values(d1.local_projector_up))
+
+        second = product_ipeps(OneSiteUnitCell(), :down; D = 1)
+        d2 = projected_pxp_step!(second, 0.01; order = :second, maxdim = 1)
+        @test length(d2.layer_diagnostics) == 14
+        @test length(d2.discarded_weights) == 14
+    end
+
+    @testset "imaginary projected PXP step and runs stay finite" begin
+        state = product_ipeps(ThreeSiteUnitCell(), :down; D = 1)
+        diag = imaginary_projected_pxp_step!(state, 0.01; order = :first, maxdim = 1)
+        reps = unit_cell_representatives(ThreeSiteUnitCell())
+        @test all(isfinite(tensor_norm(state, c)) for c in reps)
+        @test all(isfinite, diag.tensor_norms)
+
+        run_state = product_ipeps(OneSiteUnitCell(), :down; D = 1)
+        history = run_projected_pxp!(run_state, 0.005, 3; order = :first, maxdim = 1)
+        @test length(history) == 3
+        @test all(length(d.layer_diagnostics) == 7 for d in history)
+    end
+
+    @testset "projected PXP helpers reject unsupported D>1 non-product updates" begin
+        state = random_ipeps(OneSiteUnitCell(), 2; seed = 31)
+        @test_throws ArgumentError projected_pxp_step!(state, 0.01; order = :first, maxdim = 2)
+    end
+
+    @testset "projected PXP helper invalid options" begin
+        state = product_ipeps(OneSiteUnitCell(), :down; D = 1)
+        @test_throws ArgumentError projected_pxp_step!(state, 0.01; order = :bad, maxdim = 1)
+        @test_throws ArgumentError projected_pxp_step!(state, 0.01; evolution = :bad, maxdim = 1)
+        @test_throws ArgumentError projected_pxp_step!(state, 0.01; maxdim = 0)
+        @test_throws ArgumentError run_projected_pxp!(state, 0.01, -1; maxdim = 1)
+    end
 end

@@ -1,12 +1,32 @@
 module Evolution
 
+using LinearAlgebra: norm
+using ITensors: dim
 using ..Geometry: Coord
-using ..States: TriangularIPEPS
+using ..States: TriangularIPEPS, unit_cell_representatives
 using ..Gates: dense_gate, projected_gate
+using ..Models: pxp_star_hamiltonian
+using ..SpinOps: pauli_x, pauli_z, projector_down, projector_up
+using ..Observables: local_expectation, mean_blockade_violation, tensor_norm
 using ..Schedules: first_order_colors, second_order_colors, schedule_layers
-using ..SimpleUpdate: apply_star_gate_simple_update!
+using ..SimpleUpdate: SimpleUpdateDiagnostics, apply_star_gate_simple_update!
 
+export ProjectedPXPStepDiagnostics
 export evolve_step!, color_canonical_center
+export projected_pxp_step!, imaginary_projected_pxp_step!, run_projected_pxp!
+
+struct ProjectedPXPStepDiagnostics
+    layer_diagnostics::Vector{SimpleUpdateDiagnostics}
+    discarded_weights::Vector{Float64}
+    max_bond_dim::Int
+    mean_bond_dim::Float64
+    lambda_summaries::Dict{Tuple{Coord,Int},NamedTuple{(:min, :max, :norm),Tuple{Float64,Float64,Float64}}}
+    blockade_violation::Float64
+    tensor_norms::Vector{Float64}
+    local_z::Dict{Coord,Float64}
+    local_x::Dict{Coord,Float64}
+    local_projector_up::Dict{Coord,Float64}
+end
 
 """
     color_canonical_center(color) -> Coord
@@ -28,9 +48,9 @@ colors of the triangular partition. `order` selects the schedule
 (`:first` or `:second`); `update` selects the bond-update backend
 (`:simple` is the only currently supported value).
 
-The same `gate` is applied at each color; for translationally invariant
-states the schedule reduces to repeated applications at color-canonical
-centers.
+The same `gate` is applied at each scheduled color; for translationally
+invariant states the schedule reduces to repeated applications at
+color-canonical centers.
 """
 function evolve_step!(state::TriangularIPEPS, gate::AbstractMatrix;
                       order::Symbol = :second, update::Symbol = :simple)
@@ -73,6 +93,99 @@ function evolve_step!(state::TriangularIPEPS,
         apply_star_gate_simple_update!(state, gate, color_canonical_center(layer.color))
     end
     return state
+end
+
+"""
+    projected_pxp_step!(state, dt; order=:second, maxdim, cutoff=1e-12, evolution=:real)
+
+Apply one scheduled projected-PXP sweep. For `order=:second`, `dt` is the
+full step parameter and each of the 14 symmetric layers uses `dt/2`; over a
+complete translationally invariant product-gate sweep this gives the same
+per-site total angle as the 7-layer first-order schedule.
+"""
+function projected_pxp_step!(state::TriangularIPEPS,
+                             dt::Real;
+                             order::Symbol = :second,
+                             maxdim::Union{Nothing,Integer} = nothing,
+                             cutoff::Real = 1e-12,
+                             evolution::Symbol = :real)
+    _validate_projected_pxp_options(order, maxdim, cutoff, evolution)
+    H = pxp_star_hamiltonian(projector_down(), pauli_x())
+    layer_diags = SimpleUpdateDiagnostics[]
+    for layer in schedule_layers(order)
+        gate = projected_gate(H, dt * layer.scale; evolution = evolution)
+        push!(layer_diags, apply_star_gate_simple_update!(
+            state, gate, color_canonical_center(layer.color);
+            maxdim = maxdim, cutoff = cutoff,
+        ))
+    end
+    return _step_diagnostics(state, layer_diags)
+end
+
+function imaginary_projected_pxp_step!(state::TriangularIPEPS,
+                                       dτ::Real;
+                                       order::Symbol = :second,
+                                       maxdim::Union{Nothing,Integer} = nothing,
+                                       cutoff::Real = 1e-12)
+    return projected_pxp_step!(
+        state, dτ; order = order, maxdim = maxdim, cutoff = cutoff,
+        evolution = :imaginary,
+    )
+end
+
+function run_projected_pxp!(state::TriangularIPEPS,
+                            dt::Real,
+                            nsteps::Integer;
+                            order::Symbol = :second,
+                            maxdim::Union{Nothing,Integer} = nothing,
+                            cutoff::Real = 1e-12,
+                            evolution::Symbol = :real)
+    nsteps >= 0 || throw(ArgumentError("nsteps must be nonnegative"))
+    history = ProjectedPXPStepDiagnostics[]
+    for _ in 1:nsteps
+        push!(history, projected_pxp_step!(
+            state, dt; order = order, maxdim = maxdim, cutoff = cutoff,
+            evolution = evolution,
+        ))
+    end
+    return history
+end
+
+function _validate_projected_pxp_options(order::Symbol,
+                                         maxdim::Union{Nothing,Integer},
+                                         cutoff::Real,
+                                         evolution::Symbol)
+    order in (:first, :second) || throw(ArgumentError("order must be :first or :second"))
+    evolution in (:real, :imaginary) || throw(ArgumentError("evolution must be :real or :imaginary"))
+    maxdim !== nothing || throw(ArgumentError("maxdim is required"))
+    maxdim >= 1 || throw(ArgumentError("maxdim must be >= 1"))
+    cutoff >= 0 || throw(ArgumentError("cutoff must be nonnegative"))
+    return nothing
+end
+
+function _step_diagnostics(state::TriangularIPEPS,
+                           layer_diags::Vector{SimpleUpdateDiagnostics})
+    reps = collect(unit_cell_representatives(state.unitcell))
+    bond_dims = [dim(idx) for idx in values(state.bond_inds)]
+    lambda_summaries = Dict{Tuple{Coord,Int},NamedTuple{(:min, :max, :norm),Tuple{Float64,Float64,Float64}}}()
+    for (bond, λ) in state.lambdas
+        lambda_summaries[bond] = (min = minimum(λ), max = maximum(λ), norm = norm(λ))
+    end
+    local_z = Dict(c => real(local_expectation(state, c, pauli_z())) for c in reps)
+    local_x = Dict(c => real(local_expectation(state, c, pauli_x())) for c in reps)
+    local_pup = Dict(c => real(local_expectation(state, c, projector_up())) for c in reps)
+    return ProjectedPXPStepDiagnostics(
+        layer_diags,
+        [d.discarded_weight for d in layer_diags],
+        maximum(bond_dims),
+        sum(bond_dims) / length(bond_dims),
+        lambda_summaries,
+        mean_blockade_violation(state, reps),
+        [tensor_norm(state, c) for c in reps],
+        local_z,
+        local_x,
+        local_pup,
+    )
 end
 
 end

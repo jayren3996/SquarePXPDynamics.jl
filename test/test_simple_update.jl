@@ -2,6 +2,33 @@ using LinearAlgebra
 using ITensors
 
 @testset "simple update" begin
+    @testset "product-gate factorization preserves kron order for asymmetric factors" begin
+        factors = [
+            ComplexF64[1.0 0.2; 0.3 1.1],
+            ComplexF64[0.7 -0.1im; 0.4 0.9],
+            ComplexF64[1.2 0.0; 0.1im 0.8],
+            ComplexF64[0.6 0.3; -0.2 1.0],
+            ComplexF64[1.0 0.5im; 0.25 0.75],
+            ComplexF64[0.9 -0.15; 0.2im 1.05],
+            ComplexF64[1.1 0.05; -0.35im 0.65],
+        ]
+        G = factors[1]
+        for f in factors[2:end]
+            G = kron(G, f)
+        end
+
+        recovered = TriangularPEPSDynamics.SimpleUpdate._try_factorize_product_gate(G, 7)
+
+        @test recovered !== nothing
+        if recovered !== nothing
+            reconstructed = recovered[1]
+            for f in recovered[2:end]
+                reconstructed = kron(reconstructed, f)
+            end
+            @test reconstructed ≈ G
+        end
+    end
+
     @testset "identity gate: no-op on D=1 product" begin
         state = product_ipeps(OneSiteUnitCell(), :down; D = 1)
         T_before = copy(site_tensor(state, Coord(0, 0)))
@@ -15,6 +42,18 @@ using ITensors
         @test diag isa SimpleUpdateDiagnostics
         @test diag.discarded_weight == 0
         @test array(T_before) ≈ array(T_after)
+    end
+
+    @testset "global-phase identity gate is a no-op" begin
+        state = random_ipeps(OneSiteUnitCell(), 2; seed = 17)
+        T_before = copy(site_tensor(state, Coord(0, 0)))
+
+        G = cis(0.37) * Matrix{ComplexF64}(I, 128, 128)
+        diag = apply_star_gate_simple_update!(state, G, Coord(0, 0); maxdim = 2)
+
+        @test diag isa SimpleUpdateDiagnostics
+        @test diag.discarded_weight == 0
+        @test array(T_before) ≈ array(site_tensor(state, Coord(0, 0)))
     end
 
     @testset "site-symmetric single-site gate (u^⊗7) on D=1" begin
@@ -77,18 +116,16 @@ using ITensors
         end
     end
 
-    @testset "projected PXP simple update skeleton preserves fixed D on random D=2 state" begin
+    @testset "general non-product star updates at D>1 fail explicitly" begin
         state = random_ipeps(OneSiteUnitCell(), 2; seed = 11)
+        T_before = copy(site_tensor(state, Coord(0, 0)))
         H = pxp_star_hamiltonian(projector_down(), pauli_x())
         Uproj = projected_gate(H, 0.02; evolution = :real)
 
-        diag = apply_star_gate_simple_update!(state, Uproj, Coord(0, 0); maxdim = 2, cutoff = 1e-12)
-
-        @test diag isa SimpleUpdateDiagnostics
-        @test diag.discarded_weight >= 0
-        @test all(dim(bond_index(state, Coord(0, 0), d)) <= 2 for d in 1:6)
-        @test all(length(bond_lambda(state, Coord(0, 0), d)) <= 2 for d in 1:6)
-        @test all(all(bond_lambda(state, Coord(0, 0), d) .>= 0) for d in 1:6)
+        @test_throws ArgumentError apply_star_gate_simple_update!(
+            state, Uproj, Coord(0, 0); maxdim = 2, cutoff = 1e-12,
+        )
+        @test array(T_before) ≈ array(site_tensor(state, Coord(0, 0)))
     end
 
     @testset "PXP-on-allowed-product preserves blockade (dense level)" begin

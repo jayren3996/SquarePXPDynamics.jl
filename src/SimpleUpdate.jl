@@ -3,7 +3,7 @@ module SimpleUpdate
 using LinearAlgebra
 using ITensors
 using ..Geometry: Coord, star_sites
-using ..States: TriangularIPEPS, wrap_coord, opposite_direction
+using ..States: TriangularIPEPS, wrap_coord
 
 export SimpleUpdateDiagnostics, apply_star_gate_simple_update!
 
@@ -36,12 +36,13 @@ otherwise. The factors satisfy `kron(u_1, kron(u_2, ..., u_n)) ≈ G`.
 """
 function _try_factorize_product_gate(G::AbstractMatrix, n::Int; tol::Real = 1e-10)
     @assert size(G, 1) == size(G, 2) == 2^n
-    factors = Matrix{ComplexF64}[]
+    peeled = Matrix{ComplexF64}[]
     rest = Matrix{ComplexF64}(G)
     for _ in 1:(n - 1)
         m = size(rest, 1) ÷ 2
         rest_4d = reshape(rest, 2, m, 2, m)
-        # Bring (out_first, in_first) to the front: (1,3,2,4)
+        # Julia's kron indexing makes the rightmost two-state factor contiguous
+        # in row/column storage, so this peels factors from right to left.
         rest_perm = permutedims(rest_4d, (1, 3, 2, 4))
         rest_mat = reshape(rest_perm, 4, m * m)
         F = svd(rest_mat)
@@ -49,15 +50,16 @@ function _try_factorize_product_gate(G::AbstractMatrix, n::Int; tol::Real = 1e-1
             return nothing
         end
         s = F.S[1]
-        u_first = reshape(F.U[:, 1] * sqrt(s), 2, 2)
+        u_right = reshape(F.U[:, 1] * sqrt(s), 2, 2)
         rest = reshape(F.Vt[1, :] * sqrt(s), m, m)
-        push!(factors, u_first)
+        push!(peeled, u_right)
     end
-    push!(factors, rest)
+    push!(peeled, rest)
+    factors = reverse(peeled)
     # Sanity check: reconstruct and compare.
-    reconstructed = factors[end]
-    for k in (n - 1):-1:1
-        reconstructed = kron(factors[k], reconstructed)
+    reconstructed = factors[1]
+    for factor in factors[2:end]
+        reconstructed = kron(reconstructed, factor)
     end
     if norm(reconstructed - G) > 1e-8 * max(norm(G), 1.0)
         return nothing
@@ -68,8 +70,8 @@ end
 """
     apply_star_gate_simple_update!(state, gate, center; cutoff=1e-12, maxdim=...) -> SimpleUpdateDiagnostics
 
-Apply a 7-site star gate at `center`. The current implementation is
-conservative and supports two correctness-validated paths:
+Apply a 7-site star gate at `center`. The implementation supports two
+correctness-validated paths:
 
 1. **Identity gate**: detected numerically; no-op on the state.
 2. **Site-product gate** `u_1 ⊗ ... ⊗ u_7`: each factor is applied to the
@@ -78,9 +80,9 @@ conservative and supports two correctness-validated paths:
    factors must agree (translational invariance); otherwise an error is
    raised.
 
-A general 7-site gate that does not factorize into a site-product is
-*not yet implemented*: a clear error is raised. This is the documented
-truncation gap until full Simple Update SVD bookkeeping lands.
+A general non-product 7-site gate at `D>1` is not implemented yet and raises
+an explicit `ArgumentError`. This prevents projected PXP runs from silently
+using a non-variational placeholder as a fixed-D Simple Update.
 """
 function apply_star_gate_simple_update!(state::TriangularIPEPS,
                                         gate::AbstractMatrix,
@@ -195,16 +197,14 @@ function _apply_general_star_gate_simple_update!(state::TriangularIPEPS,
         current_dim = dim(state.bond_inds[bond])
         current_dim <= maxdim || throw(ArgumentError(
             "current bond dimension $current_dim exceeds requested maxdim $maxdim; " *
-            "SVD truncation for dimension-changing star updates is not implemented yet"))
-        λ = abs.(state.lambdas[bond])
-        if norm(λ) == 0
-            λ .= 1
-        end
-        state.lambdas[bond] .= λ .* (sqrt(length(λ)) / norm(λ))
+            "dimension-changing star writeback is not implemented yet"))
     end
 
-    dims = [dim(state.bond_inds[b]) for b in affected]
-    return SimpleUpdateDiagnostics(0.0, affected, dims)
+    throw(ArgumentError(
+        "general dense 7-site Simple Update for D>1 is not implemented; " *
+        "only identity gates, site-product gates, and the D=1 dense product-state " *
+        "oracle are currently supported"
+    ))
 end
 
 function _affected_star_bonds(state::TriangularIPEPS, center::Coord)

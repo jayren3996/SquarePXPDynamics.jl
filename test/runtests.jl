@@ -12,4 +12,5 @@ using TriangularPEPSDynamics
     include("test_observables.jl")
     include("test_simple_update.jl")
     include("test_evolution.jl")
+    include("test_scar_finder.jl")
 end

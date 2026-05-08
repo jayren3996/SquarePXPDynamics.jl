@@ -161,10 +161,8 @@ function random_ipeps(uc::AbstractUnitCell, D::Integer; seed::Union{Nothing,Inte
     for c in unit_cell_representatives(uc)
         ph = phys_inds[c]
         binds = ntuple(d -> bond_inds[(c, d)], 6)
-        T = ITensor(ComplexF64, ph, binds...)
         data = randn(rng, ComplexF64, dim(ph), ntuple(d -> dim(binds[d]), 6)...)
-        T .= ITensor(data, ph, binds...)
-        tensors[c] = T
+        tensors[c] = ITensor(data, ph, binds...)
     end
     return TriangularIPEPS(uc, phys_inds, bond_inds, tensors, lambdas)
 end
