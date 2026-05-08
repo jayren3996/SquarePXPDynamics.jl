@@ -14,6 +14,10 @@ The first implemented layer provides:
 
 The next implementation layers should stay focused on ScarFinder needs: reliable constrained PXP evolution, fixed-bond-dimension projection, blockade diagnostics, and candidate-ranking workflows.
 
+## Current ScarFinder-Facing Boundary
+
+The code supports dense 7-site projected PXP gates and an initial PEPS evolution path. The Simple Update backend is being built in stages: exact `D=1` non-product star updates first, then fixed-`D` SVD truncation with lambda updates. PEPS blockade diagnostics are currently local-environment diagnostics and should be treated as screening metrics until a stronger environment contraction is added.
+
 ## Test
 
 ```bash

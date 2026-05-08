@@ -2,7 +2,8 @@ module Evolution
 
 using ..Geometry: Coord
 using ..States: TriangularIPEPS
-using ..Schedules: first_order_colors, second_order_colors
+using ..Gates: dense_gate, projected_gate
+using ..Schedules: first_order_colors, second_order_colors, schedule_layers
 using ..SimpleUpdate: apply_star_gate_simple_update!
 
 export evolve_step!, color_canonical_center
@@ -46,6 +47,30 @@ function evolve_step!(state::TriangularIPEPS, gate::AbstractMatrix;
     for color in schedule
         center = color_canonical_center(color)
         apply_star_gate_simple_update!(state, gate, center)
+    end
+    return state
+end
+
+function evolve_step!(state::TriangularIPEPS,
+                      H::AbstractMatrix,
+                      dt::Real;
+                      order::Symbol = :second,
+                      update::Symbol = :simple,
+                      evolution::Symbol = :real,
+                      projected::Bool = false,
+                      projector::Union{Nothing,AbstractMatrix} = nothing)
+    update === :simple || throw(ArgumentError("update must be :simple"))
+
+    for layer in schedule_layers(order)
+        step = dt * layer.scale
+        gate = if projected
+            projector === nothing ?
+                projected_gate(H, step; evolution) :
+                projected_gate(H, step; evolution, projector)
+        else
+            dense_gate(H, step; evolution)
+        end
+        apply_star_gate_simple_update!(state, gate, color_canonical_center(layer.color))
     end
     return state
 end

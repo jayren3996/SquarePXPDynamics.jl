@@ -2,11 +2,13 @@ module Observables
 
 using LinearAlgebra
 using ITensors
-using ..Geometry: Coord
+using ..Geometry: Coord, neighbor
 using ..States: TriangularIPEPS, wrap_coord
 using ..Models: blockade_projector
+using ..SpinOps: projector_up
 
 export local_expectation, tensor_norm, dense_blockade_violations
+export local_blockade_violation, mean_blockade_violation
 
 """
     local_expectation(state, c, op) -> ComplexF64
@@ -55,6 +57,28 @@ function dense_blockade_violations(vec::AbstractVector)
     proj = P * vec
     allowed = real(dot(vec, proj))
     return real((nrm2 - allowed) / nrm2)
+end
+
+"""
+    local_blockade_violation(state, c, d) -> Float64
+
+Approximate nearest-neighbor blockade violation on bond `(c, neighbor(c, d))`
+using the product of local `|up><up|` expectations. This is exact for `D=1`
+product states and a local-environment diagnostic for `D>1`.
+"""
+function local_blockade_violation(state::TriangularIPEPS, c::Coord, d::Integer)
+    1 <= d <= 6 || throw(ArgumentError("direction must be in 1:6"))
+    pup_c = real(local_expectation(state, c, projector_up()))
+    pup_n = real(local_expectation(state, neighbor(c, d), projector_up()))
+    return pup_c * pup_n
+end
+
+function mean_blockade_violation(state::TriangularIPEPS, centers)
+    vals = Float64[]
+    for c in centers, d in 1:6
+        push!(vals, local_blockade_violation(state, c, d))
+    end
+    return isempty(vals) ? 0.0 : sum(vals) / length(vals)
 end
 
 end

@@ -40,4 +40,14 @@ using ITensors
         all_up[1] = 1
         @test dense_blockade_violations(all_up) > 0
     end
+
+    @testset "nearest-neighbor blockade diagnostics on product states" begin
+        down = product_ipeps(OneSiteUnitCell(), :down; D = 1)
+        @test local_blockade_violation(down, Coord(0, 0), 1) ≈ 0
+        @test mean_blockade_violation(down, [Coord(0, 0)]) ≈ 0
+
+        up = product_ipeps(OneSiteUnitCell(), :up; D = 1)
+        @test local_blockade_violation(up, Coord(0, 0), 1) ≈ 1
+        @test mean_blockade_violation(up, [Coord(0, 0)]) ≈ 1
+    end
 end

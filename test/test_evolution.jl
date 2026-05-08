@@ -2,6 +2,12 @@ using LinearAlgebra
 using ITensors
 
 @testset "evolution" begin
+    @testset "color canonical centers match requested color" begin
+        for color in 1:7
+            @test star_color(color_canonical_center(color)) == color
+        end
+    end
+
     @testset "evolve_step! identity preserves D=1 product" begin
         state = product_ipeps(OneSiteUnitCell(), :down; D = 1)
         I128 = Matrix{ComplexF64}(I, 128, 128)
@@ -25,10 +31,33 @@ using ITensors
         @test real(local_expectation(state, Coord(0, 0), pauli_z())) ≈ -1 atol = 1e-10
     end
 
+    @testset "Hamiltonian evolution uses first/second order step weights" begin
+        α = 0.03
+        Xsum = sum(embed_one_site(pauli_x(), site, 7) for site in 1:7)
+
+        first = product_ipeps(OneSiteUnitCell(), :down; D = 1)
+        evolve_step!(first, Xsum, α; order = :first, update = :simple)
+        @test real(local_expectation(first, Coord(0, 0), pauli_z())) ≈ -cos(14 * α) atol = 1e-10
+
+        second = product_ipeps(OneSiteUnitCell(), :down; D = 1)
+        evolve_step!(second, Xsum, α; order = :second, update = :simple)
+        @test real(local_expectation(second, Coord(0, 0), pauli_z())) ≈ -cos(14 * α) atol = 1e-10
+    end
+
     @testset "invalid update mode" begin
         state = product_ipeps(OneSiteUnitCell(), :down; D = 1)
         I128 = Matrix{ComplexF64}(I, 128, 128)
         @test_throws ArgumentError evolve_step!(state, I128; order = :first, update = :nonexistent)
         @test_throws ArgumentError evolve_step!(state, I128; order = :nonexistent, update = :simple)
+    end
+
+    @testset "projected PXP evolution smoke test" begin
+        state = product_ipeps(ThreeSiteUnitCell(), :down; D = 1)
+        H = pxp_star_hamiltonian(projector_down(), pauli_x())
+        evolve_step!(state, H, 0.01; order = :first, update = :simple,
+                     evolution = :real, projected = true)
+        reps = collect(unit_cell_representatives(ThreeSiteUnitCell()))
+        @test all(isfinite(real(local_expectation(state, c, pauli_z()))) for c in reps)
+        @test mean_blockade_violation(state, reps) < 1e-8
     end
 end

@@ -13,7 +13,7 @@ This helper is a small analytic regression target for gate signs and benchmark
 plumbing; it is not a general triangular-lattice stabilizer solver.
 """
 function cluster_center_z_expectation_exact(t::Real; initial::Symbol = :z_plus)
-    if initial == :z_plus || initial == :plus
+    if initial == :z_plus
         return cos(2t)
     else
         throw(ArgumentError("supported initial states: :z_plus"))

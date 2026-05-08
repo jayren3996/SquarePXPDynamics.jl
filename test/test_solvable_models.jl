@@ -5,6 +5,7 @@ using LinearAlgebra
     for t in (0.0, 0.1, 0.7)
         @test cluster_center_z_expectation_exact(t; initial = :z_plus) ≈ cos(2t)
     end
+    @test_throws ArgumentError cluster_center_z_expectation_exact(0.1; initial = :plus)
     @test_throws ArgumentError cluster_center_z_expectation_exact(0.1; initial = :minus)
 
     U1 = dense_gate(H, 0.11; evolution = :real)

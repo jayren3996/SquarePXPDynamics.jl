@@ -1,0 +1,845 @@
+                                                    Tensor renormalization of quantum many-body systems using projected entangled
+                                                                                    simplex states
+                                                                           Z. Y. Xie1∗ , J. Chen1∗ , J. F. Yu1 , X. Kong1 , B. Normand2 , and T. Xiang1
+                                                                 1
+                                                                     Institute of Physics, Chinese Academy of Sciences, P.O. Box 603, Beijing 100190, China and
+                                                                             2
+                                                                               Department of Physics, Renmin University of China, Beijing 100872, China
+
+                                                                  We propose a new class of tensor-network states, which we name projected entangled simplex
+                                                                states (PESS), for studying the ground-state properties of quantum lattice models. These states
+                                                                extend the pair-correlation basis of projected entangled pair states (PEPS) to a simplex. PESS are
+                                                                an exact representation of the simplex solid states and provide an efficient trial wave function that
+                                                                satisfies the area law of entanglement entropy. We introduce a simple update method for evaluating
+
+
+
+
+arXiv:1307.5696v3 [cond-mat.str-el] 2 Jan 2014
+                                                                the PESS wave function based on imaginary-time evolution and the higher-order singular-value
+                                                                decomposition of tensors. By applying this method to the spin-1/2 antiferromagnetic Heisenberg
+                                                                model on the kagome lattice, we obtain accurate and systematic results for the ground-state energy,
+                                                                which approach the lowest upper bounds yet estimated for this quantity.
+
+                                                                PACS numbers: 64.60.Cn, 05.50.+q, 75.10.Hk, 64.60.F-
+
+
+                                                                      I.   INTRODUCTION                                It is precisely the existence of entanglement that is re-
+                                                                                                                       sponsible for such exotic phenomena as quantum phase
+                                                                                                                       transitions and topological quantum order. Furthermore,
+                                                    The theory of tensor-network states is evolving rapidly            PEPS allow a many-body ground-state wave function,
+                                                 into an interdisciplinary field involving condensed mat-              which contains exponentially many degrees of freedom,
+                                                 ter physics, quantum information theory, renormaliza-                 to be calculated approximately but accurately on a poly-
+                                                 tion group theory, and even quantum gravity. From its                 nomial time scale. In particular, for a translationally
+                                                 initial proposals [1–3], through the development of repre-            invariant system, the understanding of the whole wave
+                                                 sentations and techniques [4–12], it has become increas-              function can be mapped to the problem of studying the
+                                                 ingly popular in the simulation of both classical models              properties of just a single, or a small number of, local
+                                                 [3, 7, 11, 13] and strongly correlated quantum systems [8–            tensor(s).
+                                                 10, 14–16], providing deep insight into the physical prop-               Despite its strengths, the PEPS representation has two
+                                                 erties of quantum many-body states. In one dimension,                 significant disadvantages. It describes correctly the en-
+                                                 the tensor-network state is known as a matrix-product                 tanglement of adjacent basis states, making it a good
+                                                 state (MPS) [17], and is also the wave function generated             representation of AKLT-type states, and in principle it
+                                                 by the density matrix renormalization group (DMRG) al-                can be used to represent all quantum states satisfying
+                                                 gorithm [18]. A MPS may be viewed as a trial wave func-               the area law of entanglement. However, in practical cal-
+                                                 tion arising from virtual entangled pairs formed between              culations, the bond dimension must be kept as small as
+                                                 two nearest-neighbor sites of a lattice. Thus it yields               possible to obtain sufficient accuracy and efficiency, and
+                                                 a local description of quantum many-body states based                 this means that PEPS may not always provide a good
+                                                 on their entanglement structure. A typical example of a               representation for the quantum states of some systems.
+                                                 MPS is the S = 1 Affleck-Kennedy-Lieb-Tasaki (AKLT)                   As an example, applying the PEPS algorithm on a trian-
+                                                 state [19], which provides a prototype framework for un-              gular lattice is technically difficult due to the high coor-
+                                                 derstanding the physics of the Haldane excitation gap in              dination number. A local tensor in PEPS on a triangular
+                                                 integer quantum spin chains.                                          lattice contains seven indices, six from the virtual bond
+                                                   Projected entangled pair states (PEPS) constitute a                 degrees of freedom and one from the physical degrees of
+                                                 natural generalization of MPS to two and higher di-                   freedom. Because the size of each tensor scales as D6 ,
+                                                 mensions [4]. This generalization, motivated by two-                  the bond dimension D that can be handled practically
+                                                 dimensional AKLT states [19], is obtained by distribut-               by current techniques is limited to a very small value
+                                                 ing virtual maximally entangled states between any two                (approximately 2−5).
+                                                 nearest-neighbor sites. It leads to a faithful represen-                 The other disadvantage of PEPS concerns their appli-
+                                                 tation of the many-body wave function of the ground                   cation to frustrated systems. They have been used to pro-
+                                                 state. Crucially, PEPS capture the boundary area law                  vide a very good variational ansatz for the ground-state
+                                                 obeyed by the entanglement entropy, which is believed                 wave function of two-dimensional quantum spin mod-
+                                                 to be the most important ingredient causing quantum                   els on the square and honeycomb lattices [8–10]. How-
+                                                 systems to behave differently from classical ones [20].               ever, for the antiferromagnetic Heisenberg model on the
+                                                                                                                       kagome lattice, we found that the entanglement spectra
+                                                                                                                       of the local tensors for each one of the four bonding direc-
+                                                                                                                       tions are always doubly degenerate, due to the frustrated
+                                                 ∗ The first two authors contributed equally to this work.             lattice geometry, when D > 3. This causes a numerical
+                                                                                                                          2
+
+instability that is difficult to correct in the calculation of   mean a PESS representation is always more efficient than
+expectation values, and in this case the PEPS ground-            a PEPS one. For AKLT states, PEPS remain the most
+state energy does not converge with increasing D. More           efficient representation, whereas for simplex solid states,
+generally, and as we discuss in detail below, it is diffi-       PESS are undoubtedly the most efficient.
+cult to use PEPS to represent a quantum state in which              We close this introduction by noting that general in-
+the local correlation or entanglement among all the ba-          sight into the structure of a quantum wave function may
+sis states within a cluster (or simplex) containing more         be obtained from singular value decomposition (SVD). In
+than two lattice sites, for example the simplex solid state      the DMRG procedure in one spatial dimension, Schmidt
+proposed by Arovas [21], becomes important.                      decomposition of the wave function is a SVD, and the
+   In this work, we solve these problems by introducing          SVD spectrum is simply the square root of the eigenval-
+a new class of tensor-network states. We call these Pro-         ues of the reduced density matrix. Indeed, at the formal
+jected Entangled Simplex States (PESS), because they             level any wave function generated by DMRG can be ex-
+can be understood in terms of entangled simplex states of        pressed as a projected “maximally entangled pair” state;
+virtual systems that are locally projected onto the phys-        in this sense, the PEPS description is equivalent to a SVD
+ical basis states. This class of states arises naturally as      and the physical content of a MPS or PEPS ansatz can be
+the exact representation of the simplex solid states, but        understood more generally from the entanglement struc-
+is of much broader use because, similar to PEPS, any             ture of the wave function under SVD. However, the PEPS
+state can be represented by PESS if the virtual dimen-           approach offers a means of constructing the wave func-
+sion is sufficiently large. PESS extend pair correlations        tion using only the local entanglement structure, which
+to simplex correlations and hence constitute a natural           greatly simplifies the construction of the PESS repre-
+generalization of the PEPS representation.                       sentation in comparison with a SVD approach. This
+   By the word “simplex” we refer to a cluster of lat-           said, SVD [8–10] and higher-order SVD (HOSVD) [11]
+tice sites, which constitute the basic unit, or “building        of tensors is fundamental in constructing renormalization
+block,” of a two- or higher-dimensional lattice. As an ex-       schemes for tensor-network representations of systems in
+ample, a triangle is a building block of the kagome lattice      dimensions higher than one, and is the core of the meth-
+(Fig. 1) and can be taken as a simplex for this lattice.         ods employed in Sec. IV.
+However, one may also combine a number of simplices                 This paper is arranged as follows. In Sec. II, in order
+to form a larger simplex; the choice of a simplex is not         to elaborate the physics underlying the PESS, we intro-
+unique, but it should reflect correctly the symmetry of          duce an SU(2) simplex solid state of spin S = 2 and con-
+the system. If a simplex contains N lattice sites, we refer      struct explicitly both its PESS representation and the
+to the corresponding PESS as an N -PESS. If we release           parent Hamiltonian. In Sec. III we propose the PESS
+the definition of the simplex and allow it to contain just       as a trial wavefuntion for the ground states of quantum
+two neighboring sites, N = 2, the PESS are precisely             lattice models. We introduce in Sec. IV a simple update
+the PEPS. Thus PESS include PEPS as a subclass. As               approach for evaluating the PESS wavefunction based on
+for PEPS, PESS are defined by introducing a number of            the HOSVD of tensors. By applying this approach to the
+virtual basis states at each node of the lattice. In addi-       spin-1/2 Heisenberg model on the kagome lattice, we ob-
+tion to the local tensors, defined similarly to the PEPS         tain the ground-state energy as a function of the bond
+framework for projecting out the physical states from the        dimension D for simplices with N = 3, 5, and 9. Section
+virtual basis states at each node, the PESS contain a new        V contains a summary and discussion.
+type of local tensor, which we call the “entangled simplex
+tensor.” This tensor describes the correlation, or entan-
+glement, of virtual particles within the full simplex, and it      II.   PESS REPRESENTATION OF SIMPLEX
+is this feature that addresses the frustration problem. An                       SOLID STATES
+N -PESS with N ≥ 3 is constructed as a tensor-network
+product of these two types of local tensor. Examples of             The simplex solid state of SU(N) quantum antiferro-
+this process are presented in Sec. II.                           magnets was introduced by Arovas [21]. It extends the
+   Concerning the bond-dimension problem of PEPS, we             bond singlets of the AKLT state to S = 0 states of N -
+provide a brief example using the kagome lattice. The            site simplices, with N ≥ 3. Each simplex accommodates
+order (number of tensor indices) of the local tensors in         a virtual quantum singlet. As with the AKLT states, the
+a PEPS representation is five and the size of the local          simplex solid states are extinguished by certain local pro-
+tensor is dD4 , where d is the dimension of the physical         jection operators. This feature allows one to construct a
+basis states. For PESS, as we will illustrate in Sec. II,        many-body Hamiltonian for which the simplex solid state
+both types of local tensors have only three indices, their       is an exact ground state, usually with a gap to all low-
+sizes being dD2 for the regular projection tensors and           energy excitations.
+D3 for the entangled simplex tensor. Thus in practical              The wave function of simplex solid states can be ex-
+calculations a significantly larger bond dimension may           pressed as a tensor-network state. This tensor-network
+be studied in the PESS representation than by PEPS.              state is the PESS, a result we illustrate by construct-
+While this is a major advantage of PESS, it does not             ing a simplex solid state and its PESS representation for
+                                                                                                                                      3
+
+                                                                         sites). The Roman letters {a, b, ...} denote the virtual
+                                                                         bond states. Because the virtual spins in each simplex
+                                                                         triangle form a spin singlet, Sijk in this case is simply an
+                                                                         antisymmetric Levi-Civita tensor,
+                                                                                                   Sijk = εijk .
+                                                                         Ai,i′ [σ1 ] is a 3 × 3 matrix, which maps two virtual S = 1
+                                                                         spins onto an S = 2 physical spin, and whose components
+                                                                         are given by the Clebsch-Gordan coefficients of the SU(2)
+                                                                         Lie algebra,
+                                                                           A11 [2] = A33 [−2] = 1,
+FIG. 1: (Color online) The spin-2 simplex solid state on the                                                          1
+kagome lattice (blue dashed lines). The entangled simplex                  A12 [1] = A21 [1] = A23 [−1] = A32 [−1] = √ ,
+                                                                                                                       2
+tensors S form a honeycomb lattice (black solid lines) and
+                                                                                                1
+the projection tensors A are defined on the decorating sites               A13 [0] = A31 [0] = √ ,
+of this honeycomb lattice.                                                                       6
+                                                                                      2
+                                                                           A22 [0] = √ ,
+                                                                                       6
+the S = 2 Heisenberg model on the kagome lattice. The
+kagome geometry is a two-dimensional network of corner-                  while all other matrix elements are zero.
+sharing triangles, each forming a three-site simplex. As
+shown in Fig. 1, the simplices form a honeycomb lattice,
+on which the kagome lattice is formed by the decorating                    For this S = 2 PESS representation, the total spins
+sites.                                                                   have the following possibilities on any given bond of the
+                                                                         kagome lattice,
+                A.     Spin-2 kagome lattice                                                2 ⊗ 2 = 0 ⊕ 1 ⊕ 2 ⊕ 3 ⊕ 4.           (4)
+                                                                         The fact that each bond belongs to a simplex means that
+   A physical S = 2 state can be regarded as a symmetric
+                                                                         it cannot be in the fully symmetric S = 4 state. Thus
+superposition of two virtual S = 1 spins. On the kagome
+                                                                         this PESS is an exact ground state of the Hamiltonian
+lattice, two neighboring triangles (simplices) share a sin-
+gle site. As in an AKLT state, we can assign each of the
+                                                                                                  X
+                                                                                             H=      P4 (ij) ,               (5)
+S = 1 spins to one of the simplices associated with this                                              hiji
+site. There are then three S = 1 spins on each simplex
+triangle, and their product contains a unique spin singlet               where P4 (ij) is a projection operator projecting the spin
+state,                                                                   states on any nearest-neighbor bond hiji onto a state
+                                                                         with total spin S = 4. P4 (ij) can be expressed using the
+           1 ⊗ 1 ⊗ 1 = 0 ⊕ (3 × 1) ⊕ (2 × 2) ⊕ 3.                 (1)    local spin operators as
+This allows us to define a virtual singlet on the simplex,                               1         3            1           1
+                                                                          P4 (ij) = −       Tij +      Tij2 −      Tij3 +      T4,
+                                                                                        280       1120        2016        40320 ij
+                    1 X
+           |0, 0i = √           εsi sj sk |si i |sj i |sk i ,     (2)
+                     6 si sj sk
+                                                                         TABLE I: Coefficients for projection operators in Eq. (7).
+where |si i (si = −1, 0, 1) is a basis state of the S = 1 spin                 n        P4,n                 P5,n        P6,n
+at site i and εijk is the Levi-Civita antisymmetric tensor.
+   The many-body state with this singlet on each simplex                                   9               1              1
+                                                                               1        −                                −
+is a simplex solid state. Its wavefunction, illustrated in                               440             360            5544
+                                                                                        1017              173            5
+Fig. 1, is a PESS, which can be expressed as                                   2                      −
+                                                                                       61600             75600         33264
+    |Ψi = T r (. . . Sabc Aaa′ [σi ] Abb′ [σj ] Acc′ [σk ] . . . )                        23             197             731
+                                                                               3      −                             −
+                                                                                         6160          362880         19958400
+              |. . . σi σj σk . . . i ,                            (3)                   39               547           61
+                                                                               4                     −
+where the trace is over all spin configurations and all                               123200           10886400      17107200
+                                                                                          23              41              1
+bond indices. Sabc is the entangled simplex tensor defined                     5     −                              −
+                                                                                       2217600        21772800        6842880
+on the simplex honeycomb lattice. The physical basis
+                                                                                          1                 1            1
+states {σi , σj , ...} are defined on the decorating sites of                  6                     −
+                                                                                      8870400          43545600     479001600
+the honeycomb lattice {i, j, ...} (i.e. on the kagome lattice
+                                                                                                                                 4
+
+
+
+
+FIG. 2: (Color online) Schematic representation of the sim-
+plex solid state on the triangular lattice (blue dashed lines).
+                                                                  FIG. 3: (Color online) Schematic representation of two types
+                                                                  of simplex solid state on the square lattice (blue dashed lines).
+where Tij = (Si + Sj )2 . We note here that the spin-2
+AKLT state on the kagome lattice is also the ground state
+of this Hamiltonian. In fact, it can be shown that the            tual spins. The simplex solid state is defined on a honey-
+PESS wave function for this system, defined by Eq. (3),           comb lattice, which is bipartite, with the simplex tensors
+is identical to the AKLT state [22]. This is a very special       on one of the sublattices and the projection tensors on
+property of the case we have chosen for illustration; in          the other. If one assumes the virtual spin is still in the
+the general case, there is no AKLT-type representation            spin-1 representation, then the physical spin will be in
+for most simplex solid states.                                    an S = 3 state. The simplex tensor is a D = 3 antisym-
+   In the PESS of Fig. 1, half of the virtual spins at the        metric Levi-Civita tensor, as for the kagome lattice. The
+three vertices on any given simplex are quenched to zero.         projection tensor is now a four-indexed quantity, with
+Thus the total spin on a simplex cannot exceed S = 3. If          three virtual indices and one physical index. It maps
+we allow the system to have three-site interactions within        three virtual S = 1 states onto a fully symmetric S = 3
+each simplex, then it is straightforward to show that the         physical state. The parent Hamiltonian for this PESS
+above PESS is also the ground state of the Hamiltonian            representation can be constructed in the same way as
+                                                                  for the kagome lattice. A parent Hamiltonian containing
+                                                                  only nearest-neighbor interaction terms is given by
+                 X
+           H=       (J4 Pα,4 + J5 Pα,5 + J6 Pα,6 ) ,   (6)
+                   α                                                                        X
+                                                                                      H=        P6 (ij) ,                (8)
+where α represents a simplex triangle, J4 , J5 , and J6 are                                    hiji
+non-negative coupling constants, and Pα,S is the oper-
+ator projecting a state at each simplex triangle onto a           where P6 (ij) is the projection operator mapping the two
+state with total spin S. Using the spin operators on the          S = 3 states onto a state with total spin S = 6.
+three vertices of the simplex, (Sα,1 , Sα,2 , Sα3 ), Pα,s can        The definition of simplex solid states depends on the
+be expressed as                                                   choice of simplex, and on a given lattice is not unique.
+                   6
+                                                                  As an example of this, we show in Fig. 3 that two kinds
+                   X                                  2n          of simplex solid state can be defined on the square lat-
+          Pα,S =         PS,n (Sα,1 + Sα,2 + Sα,3 )        (7)
+                                                                  tice. If the lattice is taken as an edge-sharing simplex
+                   n=1
+                                                                  lattice [Fig. 3(b)], there are four virtual particles on each
+where the coefficients PS,n are given in Table I.                 lattice site and the simplex solid state so defined is trans-
+                                                                  lationally invariant. The site projection is a five-indexed
+                                                                  tensor. If instead we take the square lattice as a vertex-
+  B.   Generalizations to different spins and lattice             sharing simplex lattice [Fig. 3(a)], then each site con-
+                     geometries                                   tains only two virtual particles and the site projection is
+                                                                  a three-indexed tensor. The order of the projection ten-
+   The preceding discussion for the S = 2 simplex solid           sors is also lower than the edge-sharing case. While this
+state can be extended to systems of any higher spin, pro-         simplex solid state is also translationally invariant, the
+vided that a unique spin singlet can be formed by the vir-        lattice unit cell is doubled.
+tual spins in each simplex [21]. We continue our illustra-           The simplex solid state can also be considered in sys-
+tion of the PESS representation by discussing briefly its         tems where the generalized “spin” at each site has SU(N)
+further generalization to describe simplex solids on differ-      symmetry, or obeys any other Lie algebra. A general
+ent lattices, choosing as examples the triangular (Fig. 2)        discussion of the SU(N) simplex solid states is given in
+and square (Fig. 3) geometries.                                   Ref. [21]. There is always a PESS representation of sim-
+   For the simplex solid state on the triangular lattice          plex solid states and it is readily constructed from the
+shown in Fig. 2, the physical spin is formed by three vir-        Clebsch-Gordon coefficients, or more generally from the
+                                                                                                                                          5
+
+decomposition rules of the irreducible representations.       form
+                                                                           X        M
+                                                                                    Y
+                                                                 Z ≈                        σ x,n e−τ Hx σ x,n hσ x,n |σ y,n i
+    III.   PESS AS A VARIATIONAL ANSATZ
+                                                                        {σx ,σy ,σz } n=1
+
+  As for PEPS, it can be shown that PESS provide a                          × σ y,n e−τ Hy σ y,n hσ y,n |σ z,n i
+good approximation for the ground-state wave function,                      × σ z,n e−τ Hz σ z,n             σ z,n |σ x,n−1 .           (16)
+which satisfies the entanglement area law. Thus PESS
+can be also regarded as a trial wave function for the         The basis sets |σ y,n i and |σ x,n i are connected by the
+ground state of a quantum lattice model. To understand        transformation matrix hσ x,n |σ y,n i, which is a product of
+this statement clearly, we take for illustration the spin-    local transformation matrices at each site,
+1/2 Heisenberg antiferromagnet on the kagome lattice                                                  Y
+and demonstrate how to generate a PESS wavefunction                  Axσx,n ,σy,n = hσ x,n |σ y,n i =   Axj,σx,n ,σy,n , (17)
+by imaginary-time evolution.                                                                                    j
+  The Heisenberg model is defined on any lattice by                                1
+                                                                                            
+                                                                                                1+i 1−i
+                                                                                                                    
+                                                                             Axj =                                      .               (18)
+                  X                                                                2            1−i 1+i
+                       Six Sjx + Siy Sjy + Siz Sjz ,
+                                                  
+           H=J                                         (9)
+                  hiji                                        Similarly, one obtains for the other matrices
+                                                                                           Y y
+where we take the simplest version in which hiji denotes                    Ayσy,n ,σz,n =    Aj,σy,n ,σz,n ,                           (19)
+the summation only over all nearest neighbors. To per-                                             j
+form the imaginary-time evolution, we divide this Hamil-                                           1
+                                                                                                                           
+                                                                                                            1 −i
+tonian into a sum of three terms,                                                     Ayj       = √                                     (20)
+                                                                                                    2       1 i
+                  H = Hx + H y + Hz ,                  (10)   and
+where
+                                                                                                   Y
+                                                                          Azσz,n ,σx,n−1 =             Azj,σz,n ,σx,n−1 ,               (21)
+                               X                                                                   j
+                    Hα = J            Siα Sjα          (11)                                                                
+                                                                                                   1        1 1
+                               hiji                                                   Azj       = √                             .       (22)
+                                                                                                    2       1 −1
+with α = x, y, z. All terms within Hα commute, but Hx ,
+Hy , and Hz do not commute with each other. To evaluate          In Eq. (16), σ α,n e−τ Hα σ α,n is the matrix element
+the partition function, we use the Trotter-Suzuki formula     of the classical Ising model Hα , which is also the Boltz-
+to decompose the evolution opertor e−τ H into a product       mann weight of Hα for a given basis set |σ α,n i. As dis-
+of three terms,                                               cussed in Ref. [10], this quantity can be written as a
+                                                              product of local tensors,
+           e−τ H = e−τ Hx e−τ Hy e−τ Hz + O τ 2
+                                                
+                                                     (12)                                  Y
+                                                                     σ α,n e−τ Hα σ α,n =       Sσαα,n ,σα,n ,σα,n , (23)
+                                                                                                            i           j           k
+for small τ . In this approximation, the partition function                                        ∇ijk
+can be expressed as
+                                                              with
+                         −βH              −τ H M
+                                              
+            Z = Tre            ≈ Tr e
+                                                                     Sσαi ,σj ,σk = exp [−τ J (σi σj + σk σi + σj σk )] .
+                         −τ Hx −τ Hy −τ Hz M
+                                          
+               ≈ Tr e          e          e        ,   (13)
+                                                              It is at this point where the lattice geometry enters, the
+where β = M τ .                                               symbol ∇ indicating that the product is taken over all
+  We define a set of basis states specific to the spin-1/2    simplices (triangles) of the kagome lattice.
+case,                                                            Now the partition function becomes
+
+           |σ α,n i = σjα,n ; j = 1, . . . , L ,                                        Z ≈ Tr TM,                                      (24)
+                     
+                                                      (14)
+                                                              where T = T x T y T z is the tensor evolution operator and
+where σ α,0 = σ α,M and L is the total number of
+                                                              the matrix elements of T α , given by
+lattice sites. Here σjα,n is the local basis state of Sjα ,
+                                                                                         Y                 Y j
+                                                                        hσ ′ |T α | σi =    Sσαi′ ,σj′ ,σ′  Aσ′ ,σj , (25)
+                Sjα σjα,n = σjα,n σjα,n ,              (15)                                 ∇ijk
+                                                                                                            k
+                                                                                                                    j
+                                                                                                                                j
+
+
+
+
+with eigenvalue σjα,n = ±1. By inserting these basis sets     contain both the entangled simplex and projection ten-
+into Eq. (13), we express the partition function in the       sors. T α defines a simplex tensor network operator on the
+                                                                                                                                             6
+
+                                                                  PEPS. However, the bond dimensions of PESS that can
+                                                                  be treated with these techniques are generally very small.
+                                                                  An approximate but efficient means of determining the
+                                                                  PEPS wave function is the “simple update” method first
+                                                                  proposed by Jiang et al. [8], which is in essence an entan-
+                                                                  glement mean-field approach. It avoids a full calculation
+                                                                  of the tensor environment during the step where the wave
+                                                                  function is updated by imaginary-time evolution, which
+                                                                  is usually the rate-limiting step in the calculation. This
+                                                                  procedure converts a global minimization problem into
+                                                                  a local one, yielding a fast algorithm that allows us to
+                                                                  reach large values of the bond dimension D. It is more
+                                                                  effective for gapped systems and is almost exact on Bethe
+                                                                  lattices [6, 16] (a one-dimensional chain can be regarded
+                                                                  as the simplest Bethe lattice). However, the accuracy of
+                                                                  the results falls substantially when the system is close to
+                                                                  a quantum critical point, i.e. where correlations become
+                                                                  long-ranged and full updating of the environment tensor
+                                                                  becomes essential [16].
+                                                                     Here we generalize the simple update method to study
+                                                                  the PESS wave function, by utilizing the HOSVD of ten-
+                                                                  sors [11, 23]. We again take the kagome lattice to illus-
+                                                                  trate the method. Figure 5 shows graphical representa-
+                                                                  tions of the 3-PESS, the 5-PESS, and the 9-PESS, which
+FIG. 4: (Color online) Graphical representation of simplex        are the three simplest available PESS wave functions on
+tensor operators on the kagome lattice. (a) Simplex (S) and       the kagome lattice. We stress again that each one takes
+projection (A) operators. (b) Tensor T z specified in Eq. (25).   into account all the correlations (or entanglement) among
+(c) One evolution step of the simplex tensor operator T =         the N spins on the corresponding simplex, described by
+T x T y T z describing the partition function (16).               the entangled simplex tensor S. In the limit of large D,
+                                                                  this simplex entanglement is treated rigorously. For sim-
+                                                                  plicity, we describe only the 3-PESS in detail below. It
+decorated honeycomb lattice, a graphical representation           is straightforward to extend the method to other PESS
+of which is shown in Fig. 4. Thus the partition func-             representations and to different lattices.
+tion is expressed as a product of simplex tensor network             We write the Hamiltonian in the form
+operators.
+   In the limit of zero temperature, β → ∞, the partition
+function (or the density matrix) is determined purely by                                    H = H △ + H∇ ,                               (26)
+the largest eigenvalue and eigenvector of the evolution op-
+erator T . The largest eigenvector may be found by the            where H△ and H∇ are the Hamiltonians defined respec-
+power method, starting from an arbitrary initial wave-            tively on all upward- and downward-oriented triangular
+function |Ψ0 i, which is not orthogonal to this eigenvec-         simplices. As shown in Fig. 5, the 3-PESS is defined on a
+tor. Due to the simplex network structure of the evolu-           honeycomb lattice formed by the simplex triangles. We
+tion operators T α , it is natural to assume that |Ψ0 i is        assume the ground-state wave function to be translation-
+a PESS wave function. When T is applied to |Ψ0 i, its             ally invariant within each sublattice formed by the “up”
+PESS structure is retained, and thus the ground-state             or “down” triangle simplices, and hence that the sim-
+wave function can indeed be expressed using PESS. Of              plex tensors are the same on the same sublattice. The
+course, at each projection, or application of T α to the          ground-state wave function may then be expressed as
+wave function, the bond dimension of the PESS is dou-
+bled. Thus in real calculations the bond dimension must
+                                                                     |Ψi = T r (. . . Saα′ b′ c′ Aa′ a [σi ] Ab′ b [σj ] Ac′ c [σk ] . . . )
+be truncated to find an approximate PESS solution for
+the ground-state wave function.                                                 |. . . σi σj σk . . . i ,                                  (27)
+
+                                                                  where α represents the vertex coordinates of the simplex
+  IV.    SIMPLE UPDATE METHOD FOR PESS                            honeycomb lattice and S α is the corresponding entan-
+                CALCULATIONS                                      gled simplex tensor. As in Sec. II, the physical basis
+                                                                  states {σi , σj , ...} are defined on the kagome lattice sites
+  In principle, the PESS wave function can be deter-              {i, j, ...} and the Roman letters {a, b, ...} denote the vir-
+mined by using the variational approaches developed for           tual bond states.
+                                                                                                                                             7
+
+
+
+
+                                                                  FIG. 6: (Color online) Flowchart for the simple update renor-
+                                                                  malization scheme for the wave function using HOSVD. The
+                                                                  environment contribution around simplex α is described by
+                                                                  a singular bond vector λβ on each bond connected with the
+                                                                  environment; λβ is an approximate measure of the entangle-
+                                                                  ment on this bond. (a) exp(−τ H∇α ) acts on the tensors in a
+                                                                                                     α
+                                                                  simplex to produce a new tensor T defined by Eq. (30). (b)
+                                                                  T is decomposed by HOSVD [Eq. (31)] into the product of a
+                                                                  simplex tensor S and three unitary matrices U . The dimen-
+                                                                  sions of the thick and thin black bonds are respectively dD
+FIG. 5: (Color online) Graphical representations of a 3-PESS,     and D. (c) The thick bond dimension is truncated from dD
+5-PESS, and 9-PESS on the kagome lattice (blue dashed             to D, defining the renormalized S and A tensors.
+lines). (a) The 3-PESS is defined on the decorated honeycomb
+lattice. The vertical dangling bonds represent the physical
+degrees of freedom {σi , ...}. S α is the entangled three-index
+                                                                  two terms by the Trotter-Suzuki formula,
+simplex tensor and A is a three-index tensor defined at each
+physical lattice site. (b) The 5-PESS is defined on the deco-
+                                                                                  e−τ H = e−τ H△ e−τ H∇ + O τ 2 .
+                                                                                                               
+rated square lattice. The entangled simplex tensor S α has five
+                                                                                                                                         (28)
+indices, one of which represents the physical basis states at
+the nodes of the square lattice while the other four represent    Each projection is then performed in two steps, by ap-
+the four virtual bond states connecting to the neighboring        plying exp(−τ H△ ) and exp (−τ H∇ ) successively to the
+decorated sites; it takes into account all of the entanglement    wave function.
+among these five spins. A tensor-network ansatz with the            We first consider the projection with H∇ . A schematic
+same structure as this 5-PESS has been used in Ref. [24] for      representation of this procedure is shown in Fig. 6. Be-
+studying the ground state of the SU(N) model on the kagome        cause all of the separate terms in H∇ commute with each
+lattice. (c) The 9-PESS is defined by taking the three spins      other, the action of the projection operator exp (−τ H∇ )
+on each upward-oriented triangle as one effective site. The       on a wave function of the form specified by Eq. (27) can
+entangled simplex tensor S α has three indices and describes      be expressed as a product of local evolution operators
+all of the entanglement among the nine spins it connects.         defined on each simplex (down triangle),
+                                                                                            α∇                   β
+                                                                  e−τ H∇ |Ψ0 i = T r(. . . Taσ           S △ . . . ) |. . . σi σj σk . . . i ,
+                                                                                              i ,bσj ,cσk ade
+
+                 A.   HOSVD procedure                                    α∇
+                                                                  where Taσi ,bσj ,cσk
+                                                                                       is a dD × dD × dD tensor defined by
+
+  As in Sec. III, the ground-state wave function is de-
+                                                                                            X
+                                                                    α∇
+                                                                   Taσi ,bσj ,cσk
+                                                                                  =                  hσi σj σk | e−τ H∇α σi′ σj′ σk′
+termined by applying the imaginary-time evolution op-                                 σi′ σj′ σk
+                                                                                               ′ a′ b′ c′
+erator exp (−τ H) to an arbitrary initial state |Ψ0 i, and
+                                                                                           ×Saα′∇b′ c′ Aa′ a [σi′ ] Ab′ b σj′ Ac′ c [σk′ ] (29)
+                                                                                                                          
+in the limit τ → ∞ the projected state exp (−τ H) |Ψ0 i
+will converge to the ground state. This projection cannot
+                                                                          β
+                                                                          △
+be performed in a single step because the two terms in            and Sade   represents the simplex tensors of the up tri-
+the Hamiltonian (26) do not commute with each other.              angles, which are renormalized in the next step of the
+To carry out the projection, we take a small value for τ          projection (below). In Eq. (29), H∇α is the Hamiltonian
+and apply the evolution operator to |Ψ0 i iteratively over        for the simplex α and the local projection operator cou-
+many steps. In the limit τ → 0, the evolution operator            ples the simplex tensor S α∇ with the three neighboring
+may be decomposed approximately into the product of               A tensors. For notational simplicity, in the remainder
+                                                                                                                                                                                          8
+
+of this section the superscript α refers to down triangles
+and β to up triangles.                                                                                                                            D=3 RVB, Poilblanc et al.(2013)
+
+
+   The next step is HOSVD, to decompose the tensor                                                                      -0.420
+                                                                                                                                                  MERA, Evenbly et al.(2010)
+
+                                                                                                                                                  Series Expansion, Singh et al.(2008)
+  α
+Taσ i ,bσj ,cσk
+                into the product of a renormalized simplex                                                                                        DMRG, Yan et al.(2011)
+
+
+
+
+                                                                                  Ground State Energy Per Site (e /J)
+                                                                                                                                                  Lanczos+VMC, Y.Iqbal et al.(2013)
+
+tensor and three renormalized projection (A) tensors. At                                                         0
+
+                                                                                                                                                  Coupled Cluster, O.Gotze et al.(2011)
+
+
+this step one should also include the renormalization ef-                                                               -0.425
+                                                                                                                                                  DMRG, Depenbrock et al.(2012)
+
+                                                                                                                                                  3-PESS
+
+
+fect of the environment tensors surrounding T α [Fig. 6].                                                                                         5-PESS
+
+                                                                                                                                                  9-PESS
+
+Here we adopt an approximate scheme to simulate the
+contribution of the environment tensors [8] by introduc-                                                                -0.430
+
+ing a positive singular bond vector λβ (or λα ) of dimen-
+sion D on each bond linking the S α (or S β ) and A ten-
+                                                                                                                        -0.435
+sors. This singular bond vector may be determined iter-
+atively by diagonalizing a density matrix W , which is de-
+fined below, and it measures the entanglement between
+                                                                                                                        -0.440
+the corresponding basis states on the two ends of the                                                                            3   4    5   6    7     8     9 10 11 12 13
+bond. This motivates the definition of an environment-                                                                                        Bond Dimension (D)
+
+renormalized T α tensor,
+              α                              α
+           T aσi ,bσj ,cσk = λβ,a λβ,b λβ,c Taσi ,bσj ,cσk
+                                                           ,         (30)
+                                                                            FIG. 7: (Color online) The dependence on bond dimension
+where the three bonds of T α are weighted by the corre-                     D of the ground-state energy of the S = 1/2 kagome Heisen-
+sponding singular bond vectors. These additional bond                       berg antiferromagnet obtained using 3-PESS, 5-PESS, and 9-
+vectors are included to mimic the renormalization effect                    PESS tensor-network representations. The upper bounds on
+from the environment tensors in an effective entangle-                      the ground-state energy obtained by a PEPS RVB ansatz [40],
+ment mean-field approach, which avoids the (computa-                        MERA [31], series-expansion methods based on valence-bond
+tionally expensive) full calculation of the tensor environ-                 crystal states [29, 30], DMRG [35], Lanczos exact diagonaliza-
+ment.                                                                       tion and VMC based on a gapless Dirac spin-liquid state [39],
+                     α                                                      and a high-order coupled-cluster expansion [44], as well as the
+   To truncate T into a tensor of lower rank, we use a
+                                                                            DMRG result obtained by extrapolation [36], are shown for
+HOSVD to decompose it according to
+                                                                            comparison.
+      α                X α
+    T aσi ,bσj ,cσk =   S a′ b′ c′ Ua′ ,aσi Ub′ ,bσj Uc′ ,cσk , (31)
+                        a′ b′ c′                                            where λ2α,a′ are the eigenvalues of W , which measure the
+                                                                                                                                   α
+         α                                        α
+where S is the core tensor of T , and satisfies two key                     weights of the corresponding basis vectors Ua′ in T .
+properties for any given index. We illustrate these using                   With the aid of the U matrices, we define the renor-
+the second index b:                                                         malized A tensor by
+(1) fully orthogonal:                                                                                                                    Aa′ a [σ] = Ua′ ,aσ λ−1
+                                                                                                                                                              β,a ,
+              D α         α
+                                 E
+               S :,b,: |S :,b′ ,: = 0, if b 6= b′ ,                         where the dimension of the a′ bond is truncated to D.
+                                                                            Finally, by keeping the first D states for all three bond
+                                                                                                       α
+       D α       α
+                        E                                                   directions, we truncate S to a D × D × D tensor S α .
+where S :,b,: |S :,b′ ,: is the inner product of the two sub-                                     α
+                                                                            This renormalized S tensor defines the new entangled
+tensors.                                                                    simplex tensor for its sublattice.
+(2) pseudodiagonal:                                                            The projection with exp (−τ H△ ) is performed in the
+                    α                   α
+                                                                            same way. By repeating this iteration procedure, an ac-
+                  S :,b,: ≥ S :,b′ ,: ,               if b < b′ ,           curate ground-state wave function is obtained after suf-
+                                                                            ficiently many steps. The truncation error in the tensors
+          α
+where S :,b,: is the norm of this subtensor, equal to the                   describing the ground-state wave function is reduced it-
+                                                                            eratively throughout this renormalization procedure, and
+square root of the sum of squares of all elements. These                    the iteration can be terminated when the truncation er-
+norms play a role similar to the singular values of the                     ror falls below a desired value.
+matrix.
+  In Eq. (31), U is a unitary matrix of dimension dD ×
+dD, determined by diagonalizing the density matrix                           B.                                         Ground-state energy for the spin-1/2 kagome
+                      X α                   α
+                                                                                                                                   antiferromagnet
+        Waσi ,aσ i =      T aσi ,bσj ,cσk T aσi ,bσj ,cσk
+                            bcσj σk                                            We have applied the simple update scheme to the
+                                                                            PESS representation of the spin-1/2 Heisenberg anti-
+                              X
+                     =                  Ua′ ,aσ1 λ2α,a′ Ua′ ,aσ1 ,
+                                   a′                                       ferromagnet on the kagome lattice. The ground state
+                                                                                                                                                   9
+
+of this frustrated spin system has long been thought                               1
+
+to be an ideal candidate quantum spin liquid, a mag-                                      D = 3 D
+                                                                                                  mps
+                                                                                                        = 25
+
+netic system with no spontaneous symmetry breaking                               0.1      D = 5 D
+                                                                                                  mps
+                                                                                                        = 60
+
+but showing specific topological order [25]. This model                                   D = 8 D
+                                                                                                  mps
+                                                                                                        = 80
+
+has been studied by approximate approaches for several                 |        0.01      Gradient = 2
+
+decades [26], with many proposals for the nature of the
+                                                                       - E
+ground state. Early numerical calculations [27] suggested
+                                                                                1E-3
+that the ground state of the model might be a valence-
+                                                                       E = |E
+                                                                                                          1E-3
+bond crystal, breaking the translational symmetry of the
+                                                                                                          1E-4
+kagome lattice, and this state has also been supported                          1E-4
+
+by analytical arguments [28], by detailed cluster calcula-                                                1E-5                D = 8
+
+                                                                                                                              = 0.002
+tions [29, 30], by the multiscale entanglement renormal-                        1E-5                      1E-6
+                                                                                                             0.00    0.01    0.02       0.03
+ization ansatz (MERA) [31], and by variational Monte
+                                                                                                                            1/D
+Carlo (VMC) studies [32]. By contrast, different analyt-                        1E-6
+                                                                                                                                  mps
+
+
+
+
+ical arguments [33] and extensive DMRG studies [34–36]                             1E-3        0.01                 0.1                        1
+
+have all found the ground state to be a spin liquid with a
+finite gap to triplet excitations; recent efforts to establish
+the topological properties of this state [36, 37] indicate
+that it is the Z2 spin liquid known from quantum dimer
+                                                                 FIG. 8: (Color online) Energy difference between up and
+models. Other authors still have suggested [38, 39] that
+                                                                 down triangles in the 3-PESS, shown for different bond di-
+the ground state is a gapless, algebraic quantum spin
+                                                                 mensions D as a function of Trotter step size τ . The dashed
+liquid. We comment here that Poilblanc and coworkers             line shows the function τ 2 , indicating that the energy differ-
+[40–42] have recently proposed a PEPS-based trial wave           ence vanishes in the limit τ → 0. For higher values of D,
+function with resonating valence-bond (RVB) character            calculations with higher values of Dmps are required for full
+specifically to study the Z2 spin-liquid phase. Their wave       convergence. Inset: the dependence of the energy difference
+function, which they found to work very well for this            on Dmps shows a rapid convergence to values Dmps of order
+model, is actually a 3-PESS with D = 3.                          D2 , followed by a slow convergence dictated by τ .
+   Before presenting our results, we discuss the calcula-
+tion of ground-state expectation values using the PESS
+wave function. The calculation of the wave function, as          ject to significant errors. We stress that our result is
+detailed in Secs. III and IVA, is a fully variational proce-     variational, hence representing an upper energy bound,
+dure and is subject to a truncation error that can be made       and that this bound can clearly be lowered quite signif-
+arbitrarily small by reducing τ . To obtain an expectation       icantly by further increasing D. We remind the reader
+value, we project the wave function onto an MPS basis            that our method is for a system infinite in size, with trun-
+and calculate the required quantities using the infinite         cation effected through D, and thus our results set an
+time-evolving block-decimation method [6]. While this            upper bound for e0 in the infinite two-dimensional limit.
+procedure is not variational, the error in this part of the      This new bound is the value we obtain for the 9-PESS at
+calculation may be obtained by systematic variation of           D = 13, e0 = −0.4364(1)J.
+the bond dimension, Dmps , of the MPS basis. When                   In fact all three PESS values for the ground-state en-
+more than 60 basis states are retained (Dmps > 60),              ergy already lie lower than the energies of the proposed
+the truncation error due to the evaluation procedure is          valence-bond-crystal states [29–31], and the best energy
+less than 10−4 for all of the 3-PESS and 9-PESS results          obtained by contractor renormalization [43], for D = 7.
+shown in Fig. 7; however, it is somewhat higher for the          Larger values of D are required before the PESS val-
+5-PESS, where it varies up to a maximum of approxi-              ues fall below the upper bound obtained by DMRG in
+mately 2 × 10−3 for D = 13, even with Dmps = 140. We             Ref. [35]. While the trend is clearly visible in Fig. 7, we
+discuss this topic in further detail below.                      have not yet been able to reach values of D sufficiently
+   Our result for the ground-state energy per site, e0 , of      large that our calculated ground-state energy falls below
+the kagome Heisenberg antiferromagnet is shown in Fig. 7         that obtained by the most sophisticated variational pro-
+as a function of the bond dimension D, for the 3-PESS,           jector quantum Monte Carlo calculations for the gapless
+5-PESS, and 9-PESS representations (Fig. 5). As ex-              spin-liquid scenario (e0 = −0.4365J) [39], from the op-
+pected, the ground-state energy falls with increasing D.         timal extrapolated value in the most detailed high-order
+In a gapped system, the ground state should converge             coupled-cluster approach (e0 = −0.4372J) [44], which fa-
+exponentially with D. However, the energies we obtain            vors a gapped spin liquid, or the approximate value esti-
+have not yet reached the exponentially converged regime          mated recently from DMRG calculations by Depenbrock
+for any of the PESS representations, even for D = 13.            et al., e0 = −0.4386(5)J [36]. This last estimate may not
+For this reason, we do not attempt an extrapolation to           be a true upper bound for e0 because it was obtained by
+the large-D limit, because the results would be of lim-          an extrapolation of DMRG results that continue to show
+ited meaning with the available data and may be sub-             a quite significant finite-size oscillation.
+                                                                                                                       10
+
+   Regarding the qualitative properties of the ground         entropy [20]. They arise naturally in the context of con-
+state whose wave function we have deduced, we make            structing trial wave functions for quantum systems on
+a further important comment concerning its symmetry.          two- or higher-dimensional lattices. For a wide variety of
+The 3-PESS and 9-PESS break the symmetry between up           systems, PESS provide an efficient representation of the
+and down triangles, while the 5-PESS breaks the three-        exponential number of coefficients by a small number of
+fold rotational symmetry of the kagome lattice. We have       parameters describing the low-energy physics of many-
+studied the energy differences induced in this way, and il-   body quantum states arising from local interactions. As
+lustrate their evolution with both Trotter step size τ and    for PEPS, PESS correlation functions are short-ranged,
+MPS bond dimension Dmps in Fig. 8 for the example             and so results obtained with the PESS representation
+of the up-down asymmetry between triangles in the 3-          should converge exponentially with increasing bond di-
+PESS. This calculation also illustrates the nature of the     mension D for sufficiently large D in a gapped system.
+truncation error in the MPS calculation of expectation        For a translationally invariant system, the PESS calcu-
+values, where the effects of finite τ , D, and Dmps are in-   lation is performed directly on an infinite lattice, by-
+terdependent. It is clear that the energy difference tends    passing completely the errors inherent in extrapolations
+to zero, restoring the symmetry of the ground-state wave      from finite-size calculations.
+function, as τ → 0 at fixed D and Dmps . This difference         PEPS and PESS are two types of trial wave function.
+is in fact a direct measure of the truncation error in the    In systems where the correlation between pairs of neigh-
+wave function, which is fully controlled by τ . The inset     boring sites are strongest, such as an AKLT state, then
+indicates that symmetry restoration is also approached        PEPS are appropriate. If correlations among all the ba-
+in the asymptotic limit of large Dmps , where again it        sis states in a simplex or a larger cluster become impor-
+is limited by the value of τ . Thus we can state with         tant, then the PESS representation is required. From
+confidence that the lattice symmetries are preserved in       our studies of the spin-1/2 kagome Heisenberg antifer-
+the true ground state. We expect that physical quan-          romagnet, the failure of PEPS to converge, contrasted
+tities calculated from the PESS wave function, includ-        with the success of PESS, indicate that the effects of
+ing single-site magnetizations and single-bond spin cor-      frustration in the kagome geometry are well accounted
+relation functions, will show the same property of weak,      for by the entangled simplex tensor Sabc . An underlying
+symmetry-broken differences tending to a uniform value        reason for the success of the PESS wavefunction on the
+in the appropriate limits.                                    kagome lattice may be that it is defined on the decorated
+   We remark again that our ground-state wave function        honeycomb lattice, which is geometrically unfrustrated.
+is obtained on the basis of the simple update approxi-        These observations suggest that the problem of geomet-
+mation. By adopting this procedure we have essentially        rical frustration in other lattices can be similarly and
+sacrificed a precise accounting for the effects of the bond   approximately solved by finding a PESS representation
+environment in exchange for the accuracy inherent in ac-      whose local tensors form an unfrustrated lattice.
+cessing larger values of the tensor dimension D. Such            PESS are also superior to PEPS in that the orders
+an approach underestimates the long-range correlation         of the local tensors are reduced in certain lattices. A
+(entanglement) of the spins. To improve on this result,       particular example is the triangular lattice, where in the
+and to calculate the correlation functions with the maxi-     PEPS representation the total number of tensor elements
+mum accuracy available within the PESS framework, one         is dD6 , while in a PESS representation (Fig. 2) the two
+should perform a full-update calculation taking complete      tensors contain only D3 and dD3 elements. Still, a rig-
+account of the bond environment. We leave this generally      orous evaluation of all local tensors in a PESS represen-
+very time-consuming task for future study.                    tation, including the corresponding expectation values,
+                                                              requires a trace over all indices. This is an exponentially
+                                                              hard problem and one not directly tractable for large lat-
+                    V.   SUMMARY                              tice systems, but approximate contraction schemes have
+                                                              been devised to overcome this limitation. In the calcu-
+  We have introduced the projected entangled simplex          lation of expectation values, there is little difference be-
+states (PESS) as a new class of tensor-network states         tween PEPS and PESS; the methods developed for evalu-
+embodying the entanglement of particles within a sim-         ating expectation values based on PEPS can be extended
+plex. It is an exact tensor-network representation of the     straightforwardly to PESS.
+simplex solid states first introduced by Arovas [21]. We         To determine the PESS wave function, we have intro-
+have demonstrated, using an SU(2) simplex solid state for     duced a simple but efficient update approach based on
+S = 2 spins on the kagome lattice, how to construct the       HOSVD. This is basically an entanglement mean-field ap-
+PESS wave function and the parent Hamiltonian. The            proach, which leads to a scalable variational method for
+discussion can be generalized to SU(N) or other groups        finding the local tensors. We have applied this method to
+and to all lattice geometries.                                the spin-1/2 Heisenberg antiferromagnet on the kagome
+  PESS, together with projected entangled pair states         lattice and obtained an excellent estimate of the ground-
+(PEPS), form a comprehensive representation of tensor-        state energy, e0 = −0.4364(1)J (from the 9-PESS with
+network states that satisfy the area law of entanglement      D = 13). This very promising result can be further im-
+                                                                                                                               11
+
+proved by enlarging the order and the bond dimension             tiferromagnetic Heisenberg model on the square lattice
+of the local tensors within the simple update scheme, or         [45–47]. Finally, by proceeding as for the development of
+more rigorously by a full update of the bond environment         fermionic PEPS [48–51], the PESS framework can also
+tensors. This latter step will allow one to evaluate ac-         be extended to include fermionic degrees of freedom.
+curately the correlation functions and the entanglement
+spectra. Efforts in this direction should help to make
+a definitive identification of the topological phase in the
+ground state of the kagome Heisenberg model.
+                                                                                      Acknowledgments
+   The PESS representation can be readily extended to
+other lattices and other models. It provides a signifi-
+cant advantage in studying the ground-state properties             We thank P. Corboz for valuable discussions, includ-
+of quantum lattice models on the triangular (Fig. 2),            ing those leading us to correct Fig. 7, and W. Li, D. Poil-
+square (Fig. 3), and other lattices, because the order of        blanc, and H. H. Tu for helpful comments. This work was
+the local tensors on these lattices is much smaller than         supported by the National Natural Science Foundation of
+for the corresponding PEPS. In particular, we believe            China (Grant Nos. 10934008, 10874215, and 11174365)
+that the PESS representation shown in Fig. 3(b) offers           and by the National Basic Research Program of China
+many advantages over PEPS for studying the J1 −J2 an-            (Grant Nos. 2012CB921704 and 2011CB309703).
+
+
+
+
+ [1] H. Niggemann, A. Klumper, and J. Zittartz, Quantum          [13] Q. N. Chen, M. P. Qin, J. Chen, Z. C. Wei, H. H. Zhao,
+     phase transition in spin-3/2 systems on the hexagonal            B. Normand, and T. Xiang, Partial Order and Finite-
+     lattice - optimum ground state approach, Z. Phys. B 104,         Temperature Phase Transitions in Potts Models on Ir-
+     103 (1997).                                                      regular Lattices, Phys. Rev. Lett. 107, 165701 (2011).
+ [2] G. Sierra and M. Martin-Delgado, Proceedings of the         [14] Z. C. Gu, M. Levin, and X. G. Wen, Tensor-entanglement
+     Workshop on the Exact Renormalization Group, (World              renormalization group approach as a unified method
+     Scientific, Singapore, 1999).                                    for symmetry breaking and topological phase transitions,
+ [3] T. Nishino, Y. Hieida, K. Okunishi, N. Maeshima, Y.              Phys. Rev. B 78, 205116 (2008).
+     Akutsu, and A. Gendiar, Two-Dimensional Tensor Prod-        [15] J. Jordan, R. Orus, G. Vidal, F. Verstraete, and J. I.
+     uct Variational Formulation, Prog. Theor. Phys. 105,             Cirac, Classical Simulation of Infinite-Size Quantum Lat-
+     409 (2001).                                                      tice Systems in Two Spatial Dimensions, Phys. Rev. Lett.
+ [4] F. Verstraete and J. I. Cirac, Renormalization algorithms        101, 250602 (2008).
+     for Quantum-Many Body Systems in two and higher di-         [16] W. Li, J. von Delft, and T. Xiang, Efficient simulation
+     mensions, unpublished (cond-mat/0407066).                        of infinite tree tensor network states on the Bethe lattice,
+ [5] G. Vidal, Efficient Classical Simulation of Slightly En-         Phys. Rev.B 86, 195137 (2012).
+     tangled Quantum Computations, Phys. Rev. Lett. 91,          [17] S. Östlund and S. Rommer, Thermodynamic Limit of
+     147902 (2003); ibid. 93, 040502 (2004).                          Density Matrix Renormalization, Phys. Rev. Lett. 75,
+ [6] G. Vidal, Classical Simulation of Infinite-Size Quantum          3537 (1995).
+     Lattice Systems in One Spatial Dimension, Phys. Rev.        [18] S. R. White, Density matrix formulation for quantum
+     Lett. 98, 070201 (2007).                                         renormalization groups, Phys. Rev. Lett. 69, 2863 (1992).
+ [7] M. Levin and C. P. Nave, Tensor Renormalization Group       [19] I. Affleck, T. Kennedy, E. H. Lieb, and H. Tasaki, Rig-
+     Approach to Two-Dimensional Classical Lattice Models,            orous results on valence-bond ground states in antifer-
+     Phys. Rev. Lett. 99, 120601 (2007).                              romagnets, Phys. Rev. Lett. 59, 799 (1987); Valence-
+ [8] H. C. Jiang, Z. Y. Weng, and T. Xiang, Accurate De-              bond ground states in isotropic quantum antiferromag-
+     termination of Tensor Network State of Quantum Lat-              nets, Commun. Math. Phys. 115, 477 (1988).
+     tice Models in Two Dimensions, Phys. Rev. Lett. 101,        [20] J. Eisert, M. Cramer, and M. B. Plenio, Colloquium:
+     090603 (2008).                                                   Area laws for the entanglement entropy, Rev. Mod. Phys.
+ [9] Z. Y. Xie, H. C. Jiang, Q. N. Chen, Z. Y. Weng, and              82, 277 (2010).
+     T. Xiang, Second Renormalization of Tensor-Network          [21] D. P. Arovas, Simplex solid states of SU(N) quantum an-
+     States, Phys. Rev. Lett. 103, 160601 (2009).                     tiferromagnets, Phys. Rev. B 77, 104404 (2008).
+[10] H. H. Zhao, Z. Y. Xie, Q. N. Chen, Z. C. Wei, J. W. Cai,    [22] H. H. Tu, private communication.
+     and T. Xiang, Renormalization of tensor-network states,     [23] L. de Lathauwer, B. de Moor, and J. Vandewalle, A Mul-
+     Phys. Rev. B 81, 174411 (2010).                                  tilinear Singular Value Decomposition, SIAM J. Matrix
+[11] Z. Y. Xie, J. Chen, M. P. Qin, J. W. Zhu, L. P. Yang,            Anal. Appl. 21, 1253 (2000).
+     and T. Xiang, Coarse-graining renormalization by higher-    [24] P. Corboz, K. Penc, F. Mila, and A. M. Läuchli, Simplex
+     order singular value decomposition, Phys. Rev. B 86,             solids in SU(N) Heisenberg models on the kagome and
+     045139 (2012).                                                   checkerboard lattices, Phys. Rev. B 86, 041106 (2012).
+[12] R. Orus, A Practical Introduction to Tensor Networks:       [25] L. Balents, Spin liquids in frustrated magnets, Nature
+     Matrix Product States and Projected Entangled Pair               464, 199 (2010).
+     States, unpublished (arXiv:1306.2164), and references       [26] V. Elser, Nuclear antiferromagnetism in a registered 3 He
+     therein.                                                         solid, Phys. Rev. Lett. 62, 2405 (1989).
+                                                                                                                              12
+
+[27] J. B. Marston and C. Zeng, Spin-Peierls and spin-liquid     [40] D. Poilblanc, N. Schuch, D. Perez-Garcia, and J. I. Cirac,
+     phases of kagome quantum antiferromagnets, J. Appl.              Topological and entanglement properties of resonating va-
+     Phys. 69, 5962 (1991).                                           lence bond wave functions, Phys. Rev. B 86, 014404
+[28] P. Nikolic and T. Senthil, Physics of low-energy singlet         (2012).
+     states of the kagome lattice quantum Heisenberg antifer-    [41] N. Schuch, D. Poilblanc, J. I. Cirac, and D. Perez-Garcia,
+     romagnet, Phys. Rev. B 68, 214415 (2003).                        Resonating valence bond states in the PEPS formalism,
+[29] R. R. P. Singh and D. A. Huse, Ground state of the spin-         Phys. Rev. B 86, 115108 (2012).
+     1/2 kagome-lattice Heisenberg antiferromagnet, Phys.        [42] D. Poilblanc and N. Schuch, Simplex Z2 spin liquids on
+     Rev. B 76, 180407 (2007).                                        the kagome lattice with projected entangled pair states:
+[30] R. R. P. Singh and D. A. Huse, Triplet and singlet exci-         spinon and vison coherence lengths, topological entropy,
+     tations in the valence bond crystal phase of the kagome-         and gapless edge modes, Phys. Rev. B 87, 140407 (2013).
+     lattice Heisenberg model, Phys. Rev. B 77, 144415 (2008).   [43] S. Capponi, V. R. Chandra, A. Auerbach, and M. We-
+[31] G. Evenbly and G. Vidal, Frustrated Antiferromagnets             instein, p6 chiral resonating valence bonds in the kagome
+     with Entanglement Renormalization: Ground State of the           antiferromagnet, Phys. Rev. B 87, 161118 (2013).
+     Spin-1/2 Heisenberg Model on a Kagome Lattice, Phys.        [44] O. Götze, D. J. J. Farnell, R. F. Bishop, P. H. Y. Li, and
+     Rev. Lett. 104, 187203 (2010).                                   J. Richter, Heisenberg antiferromagnet on the kagome lat-
+[32] Y. Iqbal, F. Becca, and D. Poilblanc, Valence-bond crys-         tice with arbitrary spin: a higher-order coupled cluster
+     tal in the extended kagome spin-1/2 quantum Heisenberg           treatment, Phys. Rev. B 84, 224428 (2011).
+     antiferromagnet: a variational Monte Carlo approach,        [45] P. Chandra and B. Douçot, Possible spin-liquid state at
+     Phys. Rev. B 83, 100404 (2011).                                  large S for the frustrated square Heisenberg lattice, Phys.
+[33] S. Sachdev, Kagome- and triangular-lattice Heisenberg            Rev. B 38, 9335 (1988).
+     antiferromagnets: ordering from quantum fluctuations        [46] R. Melzi, P. Carretta, A. Lascialfari, M. Mambrini, M.
+     and quantum-disordered ground states with unconfined             Troyer, P. Millet, and F. Mila, Li2 VO(Si,Ge)O4 , a Proto-
+     bosonic spinons, Phys. Rev. B 45, 12377 (1992).                  type of a Two-Dimensional Frustrated Quantum Heisen-
+[34] H. C. Jiang, Z. Y. Weng, and D. N. Sheng, Density                berg Antiferromagnet, Phys. Rev. Lett. 85, 1318 (2000).
+     Matrix Renormalization Group Numerical Study of the         [47] H. C. Jiang, H. Yao, and L. Balents, Spin liquid ground
+     Kagome Antiferromagnet, Phys. Rev. Lett. 101, 117203             state of the spin-1/2 square J1 -J2 Heisenberg model,
+     (2008).                                                          Phys. Rev. B 86, 024424 (2012).
+[35] S. Yan, D. A. Huse, and S. R. White, Spin-Liquid Ground     [48] P. Corboz, G. Evenbly, F. Verstraete, and G. Vidal, Sim-
+     State of the S = 1/2 Kagome Heisenberg Antiferromag-             ulation of interacting fermions with entanglement renor-
+     net, Science 332, 1173 (2011).                                   malization, Phys. Rev. A 81, 010303 (2010).
+[36] S. Depenbrock, I. P. McCulloch, and U. Schollwöck, Na-     [49] C. V. Kraus, N. Schuch, F. Verstraete, and J. I. Cirac,
+     ture of the Spin-Liquid Ground State of the S = 1/2              Fermionic projected entangled pair states, Phys. Rev. A
+     Heisenberg Model on the Kagome Lattice, Phys. Rev.               81, 052338 (2010).
+     Lett. 109, 067201 (2012).                                   [50] Q. Q. Shi, S. H. Li, J. H. Zhao, and H. Q. Zhou, Graded
+[37] H. C. Jiang, Z. H. Wang, and L. Balents, Identifying             Projected Entangled-Pair State Representations and An
+     topological order by entanglement entropy, Nature Phys.          Algorithm for Translationally Invariant Strongly Corre-
+     8, 902 (2012).                                                   lated Electronic Systems on Infinite-Size Lattices in Two
+[38] Y. Ran, M. Hermele, P. A. Lee, and X. G. Wen,                    Spatial Dimensions, unpublished (arXiv:0907.5520).
+     Projected-Wave-Function Study of the Spin-1/2 Heisen-       [51] Z. C. Gu, F. Verstraete, and X. G. Wen, Grassmann ten-
+     berg Model on the Kagome Lattice, Phys. Rev. Lett. 98,           sor network states and its renormalization for strongly
+     117205 (2007).                                                   correlated fermionic and bosonic states, unpublished
+[39] Y. Iqbal, F. Becca, S. Sorella, and D. Poilblanc, Gap-           (arXiv:1004.2563).
+     less spin-liquid phase in the kagome spin-1/2 Heisenberg
+     antiferromagnet, Phys. Rev. B 87, 060405 (2013).
+

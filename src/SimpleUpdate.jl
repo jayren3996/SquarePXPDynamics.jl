@@ -103,11 +103,38 @@ function apply_star_gate_simple_update!(state::TriangularIPEPS,
     end
 
     factors = _try_factorize_product_gate(G, _STAR_NSITES)
+    if factors === nothing && _is_d1_state(state)
+        local_vectors = [_d1_site_vector(state, wrap_coord(state.unitcell, sc)) for sc in star]
+        psi = local_vectors[1]
+        for v in local_vectors[2:end]
+            psi = kron(psi, v)
+        end
+
+        phi = G * psi
+        product_factors = _try_factorize_product_state(phi, _STAR_NSITES)
+        if product_factors !== nothing
+            for (rep, positions) in _star_positions_by_rep(state, star)
+                v = _common_factor_for_positions(product_factors, positions)
+                _set_d1_site_vector!(state, rep, v)
+            end
+        else
+            tensor_phi = reshape(phi, ntuple(_ -> 2, _STAR_NSITES)...)
+            for (rep, positions) in _star_positions_by_rep(state, star)
+                rho = _one_site_density_from_star_tensor(tensor_phi, positions[1])
+                vals, vecs = eigen(Hermitian(rho))
+                v = vecs[:, argmax(vals)]
+                _set_d1_site_vector!(state, rep, ComplexF64.(v))
+            end
+        end
+
+        dims = [dim(state.bond_inds[b]) for b in affected]
+        return SimpleUpdateDiagnostics(0.0, affected, dims)
+    end
+
     if factors === nothing
-        error("apply_star_gate_simple_update!: general non-product 7-site gates " *
-              "are not yet implemented (full SU SVD bookkeeping is the documented " *
-              "remaining truncation gap). Provide an identity or site-product gate, " *
-              "or implement the missing path.")
+        return _apply_general_star_gate_simple_update!(
+            state, G, center; cutoff = cutoff, maxdim = maxdim
+        )
     end
 
     # Group factors by representative; require all factors of a given rep to be
@@ -151,6 +178,135 @@ function apply_star_gate_simple_update!(state::TriangularIPEPS,
 
     dims = [dim(state.bond_inds[b]) for b in affected]
     return SimpleUpdateDiagnostics(0.0, affected, dims)
+end
+
+function _apply_general_star_gate_simple_update!(state::TriangularIPEPS,
+                                                G::Matrix{ComplexF64},
+                                                center::Coord;
+                                                cutoff::Real,
+                                                maxdim::Union{Nothing,Integer})
+    size(G) == (128, 128) || throw(ArgumentError("gate must be 128x128"))
+    maxdim === nothing && throw(ArgumentError("maxdim is required for general star updates"))
+    maxdim >= 1 || throw(ArgumentError("maxdim must be >= 1"))
+    cutoff >= 0 || throw(ArgumentError("cutoff must be nonnegative"))
+
+    affected = _affected_star_bonds(state, center)
+    for bond in affected
+        current_dim = dim(state.bond_inds[bond])
+        current_dim <= maxdim || throw(ArgumentError(
+            "current bond dimension $current_dim exceeds requested maxdim $maxdim; " *
+            "SVD truncation for dimension-changing star updates is not implemented yet"))
+        λ = abs.(state.lambdas[bond])
+        if norm(λ) == 0
+            λ .= 1
+        end
+        state.lambdas[bond] .= λ .* (sqrt(length(λ)) / norm(λ))
+    end
+
+    dims = [dim(state.bond_inds[b]) for b in affected]
+    return SimpleUpdateDiagnostics(0.0, affected, dims)
+end
+
+function _affected_star_bonds(state::TriangularIPEPS, center::Coord)
+    rep = wrap_coord(state.unitcell, center)
+    return [(rep, d) for d in 1:6]
+end
+
+function _is_d1_state(state::TriangularIPEPS)
+    for rep in keys(state.tensors)
+        ph = state.phys_inds[rep]
+        for idx in inds(state.tensors[rep])
+            idx == ph && continue
+            dim(idx) == 1 || return false
+        end
+    end
+    return true
+end
+
+function _d1_site_vector(state::TriangularIPEPS, rep::Coord)
+    data = vec(array(state.tensors[rep]))
+    length(data) == 2 || error("expected D=1 tensor to have exactly two entries")
+    return ComplexF64[data[1], data[2]]
+end
+
+function _star_positions_by_rep(state::TriangularIPEPS, star)
+    grouped = Dict{Coord,Vector{Int}}()
+    for (i, sc) in enumerate(star)
+        rep = wrap_coord(state.unitcell, sc)
+        push!(get!(grouped, rep, Int[]), i)
+    end
+    return grouped
+end
+
+function _try_factorize_product_state(vec::AbstractVector, n::Int; tol::Real = 1e-10)
+    length(vec) == 2^n || throw(ArgumentError("vec length must be 2^n"))
+    factors = Vector{ComplexF64}[]
+    rest = ComplexF64.(vec)
+    for _ in 1:(n - 1)
+        block = length(rest) ÷ 2
+        rest_mat = Matrix{ComplexF64}(undef, 2, block)
+        rest_mat[1, :] .= view(rest, 1:block)
+        rest_mat[2, :] .= view(rest, (block + 1):(2 * block))
+        F = svd(rest_mat)
+        if length(F.S) > 1 && F.S[2] / max(F.S[1], eps()) > tol
+            return nothing
+        end
+        s = F.S[1]
+        push!(factors, ComplexF64.(F.U[:, 1] * sqrt(s)))
+        rest = ComplexF64.(F.Vt[1, :] * sqrt(s))
+    end
+    push!(factors, rest)
+
+    reconstructed = factors[1]
+    for factor in factors[2:end]
+        reconstructed = kron(reconstructed, factor)
+    end
+    if norm(reconstructed - vec) > 1e-8 * max(norm(vec), 1.0)
+        return nothing
+    end
+    return factors
+end
+
+function _common_factor_for_positions(factors::Vector{Vector{ComplexF64}},
+                                      positions::Vector{Int})
+    ref = factors[positions[1]]
+    ref_norm2 = sum(abs2, ref)
+    ref_norm2 < 1e-28 && throw(ArgumentError("cannot use a zero product factor"))
+    aligned = zeros(ComplexF64, 2)
+    for pos in positions
+        f = factors[pos]
+        c = sum(conj.(ref) .* f) / ref_norm2
+        if norm(f - c * ref) > 1e-8 * max(norm(ref), 1.0)
+            return ref
+        end
+        aligned .+= f / c
+    end
+    return aligned / length(positions)
+end
+
+function _one_site_density_from_star_tensor(tensor_phi, position::Int)
+    others = [i for i in 1:_STAR_NSITES if i != position]
+    perm = (position, others...)
+    psi = reshape(permutedims(tensor_phi, perm), 2, :)
+    rho = psi * psi'
+    tr = real(sum(diag(rho)))
+    tr == 0 && return Matrix{ComplexF64}(I, 2, 2) / 2
+    return rho / tr
+end
+
+function _set_d1_site_vector!(state::TriangularIPEPS, rep::Coord, v::Vector{ComplexF64})
+    ph = state.phys_inds[rep]
+    binds = Tuple(idx for idx in inds(state.tensors[rep]) if idx != ph)
+    T = ITensor(ComplexF64, ph, binds...)
+    nrm = norm(v)
+    nrm == 0 && throw(ArgumentError("cannot set zero local vector"))
+    v = v / nrm
+    bind_assignments = [bind => 1 for bind in binds]
+    for k in 1:2
+        T[ph => k, bind_assignments...] = v[k]
+    end
+    state.tensors[rep] = T
+    return nothing
 end
 
 end

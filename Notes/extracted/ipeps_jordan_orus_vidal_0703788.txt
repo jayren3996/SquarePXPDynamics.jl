@@ -1,0 +1,257 @@
+                                                                 Classical simulation of infinite-size quantum lattice systems in two spatial dimensions
+                                                                                           J. Jordan1 , R. Orús1 , G. Vidal1 , F. Verstraete2 , J. I. Cirac3
+                                                                                   1
+                                                                                   School of Physical Sciences, The University of Queensland, QLD 4072, Australia
+                                                                                      2
+                                                                                        Fakultät für Physik, Universität Wien, Boltzmanngasse 3, A-1090 Wien
+                                                                            3
+                                                                              Max-Planck-Institut für Quantenoptik, Hans Kopfermann-Str. 1, Garching, D-85748, Germany
+
+                                                                         We present an algorithm to simulate two-dimensional quantum lattice systems in the thermodynamic limit.
+                                                                      Our approach builds on the projected entangled-pair state algorithm for finite lattice systems [F. Verstraete
+
+
+
+
+arXiv:cond-mat/0703788v4 [cond-mat.str-el] 2 Oct 2008
+                                                                      and J.I. Cirac, cond-mat/0407066] and the infinite time-evolving block decimation algorithm for infinite one-
+                                                                      dimensional lattice systems [G. Vidal, Phys. Rev. Lett. 98, 070201 (2007)]. The present algorithm allows for
+                                                                      the computation of the ground state and the simulation of time evolution in infinite two-dimensional systems that
+                                                                      are invariant under translations. We demonstrate its performance by obtaining the ground state of the quantum
+                                                                      Ising model and analysing its second order quantum phase transition.
+
+                                                                      PACS numbers:
+
+
+                                                           Strongly interacting quantum many-body systems are of                 the critical point of its second order quantum phase transition
+                                                        central importance in several areas of science and technol-              and estimate the critical exponent β.
+                                                        ogy, including condensed matter and high-energy physics,                    We point out that the algorithms of Ref. [6] have already
+                                                        quantum chemistry, quantum computation and nanotechnol-                  addressed the computation of the ground state of infinite two-
+                                                        ogy. From a theoretical perspective, the study of such systems           dimensional systems, by analysing an infinite transfer matrix
+                                                        often poses a great computational challenge. Despite the ex-             problem with a MPS. A major difference in our approach is
+                                                        istence of well-stablished numerical techniques, such as exact           how this is handled. Instead of DMRG techniques (which
+                                                        diagonalization, quantum monte carlo [1], the density matrix             consider an increasingly large chain with a finite MPS), we
+                                                        renormalization group [2] or series expansion [3] to mention             use the iTEBD algorithm [9], based on a power method that
+                                                        some, a large class of two-dimensional lattice models involv-            uses an infinite MPS (iMPS) from the start. This seems to
+                                                        ing frustrated spins or fermions remain unsolved.                        significantly improve the results reported in Ref. [6].
+                                                           Fresh ideas from quantum information have recently led                   Finite PEPS algorithm.— We start by recalling some ba-
+                                                        to a series of new simulation algorithms based on an effi-               sic facts of the PEPS algorithm for a finite system [7]. Con-
+                                                        cient representation of the lattice many-body wave-function              sider a two-dimensional lattice L where each site, labeled by
+                                                        through a tensor network. This is a network made of small                a vector ~r, is represented by a Hilbert space V [~r] ∼   = Cd of
+                                                        tensors interconnected according to a pattern that reproduces            finite dimension   d, so that the Hilbert space of the lattice is
+                                                                                                                                         N
+                                                        the structure of entanglement in the system. Thus, a matrix              VL = ~r∈L V [~r] . For concreteness, we address the case of
+                                                        product state (MPS) [4], a tensor network already implicit               a square lattice, with N × N sites labelled by a pair of inte-
+                                                        in the density matrix renormalization group, is used in the              gers ~r = (x, y), x, y = 1, · · · , N . [However, the key ingre-
+                                                        time-evolving block decimation (TEBD) algorithm to sim-                  dients of the algorithm for infinite systems to be considered
+                                                        ulate time evolution in one-dimensional lattice systems [5],             here are still valid for any type of regular lattice.]
+                                                                                                                                                                                      P The model
+                                                        whereas a tensor product state [6] or projected entangled-pair           is further characterized by a Hamiltonian H = ~r1 ,~r2 h[~r1~r2 ]
+                                                        state (PEPS) [7] is the basis to simulate two-dimensional lat-           that decomposes as a sum of terms h[~r1~r2 ] involving pairs of
+                                                        tice systems. In turn, the multi-scale entanglement renormal-            nearest neighbor sites ~r1 , ~r2 ∈ L. A pure state |Ψi ∈ VL of
+                                                        ization ansatz accuratedly describes critical and topologically          the lattice is represented by a PEPS, namely a set of N × N
+                                                        ordered systems [8].                                                     tensors {A[~r] }~r∈L , interconnected into a network P that fol-
+                                                           In this work we explain how to modify the PEPS algorithm                                                                             [~
+                                                                                                                                                                                                 r]
+                                                                                                                                 lows the pattern of L (Figs. 1.i and 1.ii). Tensor Asudlr
+                                                        of Ref. [7] to simulate two-dimensional lattice systems in the
+                                                                                                                                 is made of complex numbers labelled by one physical index
+                                                        thermodynamic limit. By addressing an infinite system di-
+                                                                                                                                 s and four bond indices u, d, l and r. The physical index
+                                                        rectly, the infinite PEPS (iPEPS) algorithm can analyse bulk
+                                                                                                                                 runs over a basis {|si}s=1,··· ,d of V [~r] , whereas each bond
+                                                        properties without dealing with boundary effects or finite-size
+                                                                                                                                 index takes D values and connects the tensor with the ten-
+                                                        corrections. This is achieved by generalizing, to two dimen-
+                                                                                                                                 sors in nearest neighbor sites. Thus, |Ψi is written in terms
+                                                        sions, the basic ideas underlying the infinite TEBD (iTEBD)
+                                                                                                                                 of O(N 2 D4 d) parameters, from which the dN complex am-
+                                                        [9]. Namely, we exploit translational invariance (i) to obtain
+                                                                                                                                 plitudes hs(1,1) s(1,2) · · · s(N,N )|Ψi can be recovered by fixing
+                                                        a very compact PEPS description with only two independent
+                                                        tensors and (ii) to simulate time evolution by just updating             the physical index of each tensor A[~r] in P and by contracting
+                                                        these two tensors. We describe the essential new ingredients             all the bond indices.
+                                                        of the iPEPS algorithm, which is based on numerically solv-                 Given a PEPS for some state |Ψ0 i ∈ VL , the algorithm of
+                                                        ing a transfer matrix problem with an MPS. We then use it                Ref. [7] allows to perform e.g. the following two tasks: (i)
+                                                        to compute the ground state of the quantum Ising model with              computation of expected values hΨ0 |O|Ψ0 i for a local opera-
+                                                        transverse magnetic field, evaluate local observables, identify          tor O, such as the energy, a local order parameter or two-point
+                                                                                                                                 correlators, and (ii) update of the PEPS after a gate g [~r1~r2 ] has
+                                                                                                                                                      2
+
+
+
+
+Figure 1: (color online) Diagramatic representations of (i) a PEPS
+tensor Asudlr with one physical index s and four inner indices u,d, l
+and r; (ii) local detail of the tensor network P for an iPEPS. Copies
+of tensors A and B are connected through four types of links; (iii)
+reduced tensor a of Eq. (2); and (iv) local detail of the tensor network
+E.                                                                         Figure 2: The environment E [~r1 ,~r2 ] for a link of type r is first approx-
+                                                                           imated by an infinite strip F [~r1 ,~r2 ] and then by a six-tensor network
+                                                                           G [~r1 ,~r2 ] . These reductions can be performed according to either a
+been applied on two nearest sites r~1 , ~r2 ∈ L. The second task           vertical/horizontal scheme (ii.a) or a diagonal scheme (ii.b). Ten-
+can be used to simulate an evolution according to Hamiltonian              sors A, A⋆ , B and B ⋆ are not part of the environment.
+H, both in real time and in imaginary time,
+                                                e−Hτ |Ψ0 i
+        |Ψt i = e−iHt |Ψ0 i,        |Ψτ i =                  ,      (1)    variant under shifts by one lattice site, we need to understand
+                                              ||e−Hτ |Ψ0 i||
+                                                                           how to efficienlty contract an infinite environment E [~r1 ,~r2 ] .
+in the sense of obtaining a new PEPS representation that ap-               Translational invariance allows us to represent the state |Ψi
+proximates the states |Ψt i and |Ψτ i. This is achieved by                 in terms of only two tensors A and B that are repeated indefi-
+breaking the evolution operators e−iHt and e−Hτ into a se-                 nitely in P (Fig. 1),
+quence of local gates, using a Suzuki-Trotter expansion [10],
+and by updating the PEPS after applying each of these gates.
+In particular, one can approximate the ground state of Hamil-                   A[(x,x+2y)] = A, A[(x,x+2y+1)] = B, x, y ∈ Z,                       (3)
+tonian H through simulating an evolution in imaginary time
+for large time τ , starting from a product state |Ψ0 i (for which
+                                                                           so that the iPEPS depends on just O(D4 d) coefficients. No-
+a PEPS can be trivially constructed).
+                                                                           tice that E [~r1 ,~r2 ] is also made of infinitely many copies of just
+   Let E denote the network made by the N × N reduced ten-                 two reduced tensors a and b, defined in terms of A and B ac-
+sors a[~r] (Figs. 1.iii and 1.vi),                                         cording to Eq. (2). Then its contraction is achieved in two
+                  [~
+                   r]
+                            X [~r]      [~
+                                         r]                                steps, as illustrated in Fig. (2): first we approximate E [~r1 ,~r2 ]
+                aūd¯l̄r̄ ≡   As udlr (As u′ d′ l′ r′ )∗ ,    (2)
+                                                                           with an infinite strip F [~r1 ,~r2 ] ; then we approximate F [~r1 ,~r2 ]
+                           s
+                                                                           with a small set of tensors G [~r1 ,~r2 ] = {G1 , · · · , G6 }. This can
+where ū represents the double bond index (u, u′ ) and the                 be achieved using a vertical/horizontal scheme or a diagonal
+physical index s has been contracted, and let r~1 , ~r2 ∈ L de-            scheme as illustrated in Figs. 2-3.
+note two nearest neighbor sites. Then the environment E [~r1 ,~r2 ]           The first step considers a transfer matrix R consisting of an
+for these two sites is the network obtained by removing the                infinite strip of reduced tensors a and b (Fig. 3). R can be
+tensors a[~r1 ] and a[~r2 ] from E. By "contracting a tensor net-          regarded as a linear operator acting on an infinite chain where
+work" we mean "summing over all the indices that connect                   each site is described by a vector space of dimension D2 . Let
+any two tensors of the network". It turns out that both (i) the            |Φi denote the dominant eigenvector of R—that is, the eigen-
+computation of an expected value hΨ|O[~r1 ,~r2 ] |Ψi and (ii) the          vector of R, R|Φi = λ|Φi, with the eigenvalue λ of largest
+update of the PEPS after a gate g [~r1~r2 ] can be achieved by con-        absolute value. Here we assume that the dominant eigenvec-
+tracting E [~r1 ,~r2 ] . However, the cost of this contraction grows       tor is unique [11]. By construction R is invariant under shifts
+exponentially with N . The core of the PEPS algorithm [7] is               by two sites of the infinite chain – and so is |Φi. We use
+an approximate, efficient (quadratic in N ) scheme to contract             an iMPS, characterized by just two tensors {C, D} and with
+E [~r1 ,~r2 ] , based on MPS simulation techniques.                        Schmidt rank χ, to represent an approximation of |Φi. We
+    Infinite PEPS algorithm.— In order to consider the limit               obtain this iMPS by simulating (repeated) multiplication by
+of an infinite lattice, N → ∞, where both |Ψi and H are in-                R on an initial state |Φ0 i with the iTEBD algorithm [9] and
+                                                                                                                                           3
+
+
+
+
+                                                                         Figure 4: Transverse magnetization mx and energy per site e as a
+                                                                         function of the transverse magnetic field h. The continuous line
+                                                                         shows series expansion results (to 26th and 16th order in perturba-
+                                                                         tion theory) for h smaller and larger than hc ≈ 3.044 [14]. Increas-
+                                                                         ing D leads to a lower energy per site e. For instance, at h = 3.1,
+                                                                         e(D = 2) ≈ −1.6417 and e(D = 3) ≈ −1.6423.
+
+Figure 3: Transfer matrices R (i.a) and S (i.b) for the verti-
+cal/horizontal contraction scheme. Multiplication of an iMPS by R
+                                                                         e−iHu δt , where δt is some small time step. Each of these op-
+using the iTEBD algorithm comes at a computational time that scales      erators further decomposes into a product of identical two-site
+as O(χ3 D6 +χ2 D8 d) (similar costs apply to multiplying by S). This     unitary gates g ≡ e−ihδt acting on all pairs of sites connected
+cost is lower in diagonal contraction scheme (ii.a) and (ii.b), namely   by a link of the proper type. For instance, for links of type r
+O(χ3 D4 + χ2 D6 d), but a slightly larger χ is required in order to      we have
+retain the same accuracy.                                                                                Y           ′
+                                                                                             e−iHr δt =       g [~r~r ] .            (6)
+                                                                                                            (~  r ′ )r
+                                                                                                             r ,~
+
+by using the fact that                                                   Without loss of generality, we need to address only the up-
+                                                                         date of tensors A and B after applying e−iHr δt to |Ψi. Let
+                                   Rp |Φ0 i                              us assume that the gate g is applied on just one of the r-links.
+                     |Φi = lim                .                   (4)
+                             p→∞ ||Rp |Φ0 i||                            In that case, in order to update the iPEPS we would (i) com-
+                                                                         pute the environment for that specific r-link following Figs.
+The iMPS for |Φi accounts for an infinite half plane of the              2-3, and (ii) determine the optimal new tensors A′ and B ′ for
+environment E [~r1 ,~r2 ] . Similarly, we use another iMPS with          the link, using the optimization techniques of [7] (sweeping
+tensors {C ′ , D′ } to encode the left dominant eigenvector hΦ′ |        over just the two sites involved). We notice, however, that the
+of R, hΦ′ |R = λhΦ′ |, which also accounts for an infinite half          above A′ and B ′ already define an iPEPS for e−iHr δ |Ψi –
+plane. Then F [~r1 ,~r2 ] is built from these two iMPS and a strip       that is, with gates g acting on all r-links. Indeed, this follows
+of reduced tensors a and b.                                              from translation invariance and the fact that a unitary gate g
+   In the second step, a transfer matrix S is defined in terms of        on a given r-link does not affect the environment on any other
+the tensors {a, b, C, D, C ′ , D′ } (Fig. 3). S can be regarded as       r-link. In other words, the update of tensors A and B on each
+a linear operator acting on three sites with local vector space          r-link is identical and need only be performed once.
+dimensions χ, D2 and χ. Again, its dominant eigenvector                     The above argumentation fails for an evolution e−Hτ in
+|Ωi, encoded in a three-legged tensor X, is computed from an             imaginary time, since the gate g ′ ≡ e−hδτ is no longer uni-
+initial state |Ω0 i using the fact that                                  tary. In this case, a gate applied on, say, an r-link modifies the
+                                                                         environment on the rest of r-links. Nevertheless, as in one-
+                                   S q |Ω0 i                             dimensional systems [9], the same algorithm can still be used
+                     |Ωi = lim                 .                  (5)
+                             q→∞ ||S q |Ω0 i||                           to find the ground state of the system through imaginary-time
+                                                                         evolution, provided that a sufficiently small δτ (leading to al-
+Let X ′ be the tensor for the left dominant eigenvector hΩ′ |            most unperturbed environments) is used at the last stages of
+of S. Then G [~r1~r2 ] is a (circular) MPS consisting of the six         the simulation.
+tensors {C, D, C ′ , D′ , X, X ′ }.
+                                                                            Quantum phase transition.— To demonstrate the perfor-
+   Simulation of time evolution.— We decompose the                       mance of the iPEPS algorithm, we have simulated an evolu-
+       P as H = Hr + Hd + Hl + Hu , where the operator
+Hamiltonian                                                              tion in imaginary time to obtain the ground state |Ψλ i of the
+Hr = (~r1 ,~r2 )r h[~r1~r2 ] collects all interactions along r-links     quantum Ising model with transverse magnetic field,
+(and similarly for d-, l- and u-links), and consider a Suzuki-                                      X               ′      X
+Trotter expansion of the time-evolution operator e−iHt of                              H(λ) ≡ −         σz[~r] σz[~r ] − λ   σx[~r] .   (7)
+Eq. (1) in terms of operators e−iHr δt , e−iHd δt , e−iHl δt and                                  (~ r′ )
+                                                                                                   r,~                   ~
+                                                                                                                         r
+                                                                                                                                             4
+
+                                                                          Then we have computed the energy per site e and the trans-
+                                                                          verse and parallel magnetizations mx and mz (Figs. 4-5),
+
+                                                                              mx (λ) = hΨλ |σx |Ψλ i,          mz (λ) = hΨλ |σz |Ψλ i,      (8)
+
+                                                                          and the two point correlator Szz (l) (Fig. 6)
+
+                                                                                     Szz (l) ≡ hΨλ |σz[~r] σz[~r+lêx ] |Ψλ i − (mz )2 .    (9)
+
+                                                                             Comparison with series expansion results of Ref. [14]
+                                                                          shows remarkable agreement for all local observables on both
+                                                                          sides of the critical point, which Monte Carlo calculations [13]
+
+
+                                                                                   QMC Ref. [13] D=2 iPEPS D=3 iPEPS D=3 VDMA Ref. [6]
+                                                                              λc      3.044         3.10          3.06              3.2
+Figure 5: (color online) Magnetization mz (λ) as a function of the            β       0.327         0.346        0.332               –
+transverse magnetic field λ. Dashed lines are a guide tp the eye.
+We have used the diagonal scheme for (D, χ) = (2, 20), (3, 25)                 Table I: Critical point and exponent β as a function of D.
+and (4, 35) [12] (the vertical/horizontal scheme leads to comparable
+results with slightly smaller χ.) The inset shows a log plot of mz        indicate to be at magnetic field λMC ≈ 3.044. We also obtain
+versus |λ − λc |, including our estimate of λc and β. The continuous      accurate estimates of the critical magnetic field λc and critical
+line shows the linear fit.                                                exponent β, which for D = 2 and D = 3 agree with Monte
+                                                                          Carlo results within 5.8% and 1.5% respectively.
+                                                                             In conclusion, we have presented an algorithm to simulate
+                                                                          infinite two-dimensional lattice systems. We have tested its
+                                                                          performance in the context of the quantum Ising model, where
+                                                                          our results can compete quantitatively with those obtained us-
+                                                                          ing long-established methods, such as quantum Monte Carlo
+                                                                          [1] or perturbative series expansions [3]. The iPEPS algorithm
+                                                                          can now be applied to address problems beyond the reach of
+                                                                          quantum Monte Carlo (since it has no sign problem) and se-
+                                                                          ries expansion methods (since it does not rely on an expansion
+                                                                          around an exactly solvable model). Thus we expect it to be-
+Figure 6: (color online) Two-point correlator Szz (l) near the critical   come a useful new tool in the study of strongly interacting
+point, λ = 3.05. For nearest neighbors, the correlator quickly con-       lattice models.
+verges as a function of D, whereas for long distances we expect to           Support from the Australian Research Council (APA,
+see convergence for larger values of D.                                   DP0878830 and FF0668731) is acknowledged.
+
+
+
+
+ [1] D.M. Ceperley and B.J. Alder, Phys. Rev. Lett. 45, 566 (1980).        [9] G. Vidal, Phys. Rev. Lett. 98, 070201 (2007). R. Orús, G. Vidal,
+ [2] S. R. White, Phys. Rev. Lett. 69, 2863 (1992).                            arXiv:0711.3960.
+ [3] J. Oitma, C. Hamer, W. Zheng, Series expansion methods               [10] M. Suzuki, Phys. Lett. A 146, 6 (1990) 319-323; J. Math Phys.
+     for strongly interacting lattice models, Cambridge University             32, 2 (1991) 400-407. For third and forth order expansions see
+     Press, 2006.                                                              also A. T. Sornborger and E. D. Stewart, quant-ph/9809009.
+ [4] M. Fannes, B. Nachtergaele, R. Werner, Commun. Math. Phys.           [11] We find that the dominant eigenvector is unique both at the dis-
+     144, 443 (1992). S. Ö stlund and S. Rommer, Phys. Rev. Lett.              ordered and ordered phases of the quantum Ising model. In the
+     75, 3537 (1995).                                                          ordered phase, spontaneous symmetry breaking seems to be di-
+ [5] G. Vidal, Phys. Rev. Lett. 91, 147902 (2003); ibid. 93, 040502            rectly responsible for this uniqueness.
+     (2004).                                                              [12] Given a value of the bond dimension D, we choose χ large
+ [6] N. Maeshima, Y. Hieida, Y. Akutsu, T. Nishino, K. Okunishi,               enough so that the results do no longer depend significantly on
+     Phys. Rev. E64 (2001) 016705. Y. Nishio, N. Maeshima, A.                  χ.
+     Gendiar, T. Nishino, cond-mat/0401115.                               [13] H. W. J. Blote and Y. Deng, Phys. Rev. E 66, 066110 (2002).
+ [7] F. Verstraete, J. I. Cirac, cond-mat/0407066. V. Murg, F. Ver-       [14] H.-X. He, C. J. Hammer and J. Oitmaa, J. Phys. A: Math. Gen.
+     straete, J. I. Cirac, Phys. Rev. A 75, 033605 (2007)                      23 (1990) 1775-1787. J. Oitmaa, C. J. Hamer and W. H. Zheng,
+ [8] G. Vidal, Phys. Rev. Lett. 99, 220405 (2007); G. Vidal,                   J. Phys. A: Math. Gen. 24 (1991) 2863-2867.
+     arXiv:quant-ph/0610099; M. Aguado and G. Vidal, Phys. Rev.
+     Lett. 100, 070404 (2008).
+

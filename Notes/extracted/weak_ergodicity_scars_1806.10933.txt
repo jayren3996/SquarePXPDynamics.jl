@@ -1,0 +1,1775 @@
+                                                       Quantum scarred eigenstates in a Rydberg atom chain: entanglement, breakdown of
+                                                                         thermalization, and stability to perturbations
+                                                                           C. J. Turner1 , A. A. Michailidis2 , D. A. Abanin3 , M. Serbyn2 , and Z. Papić1
+                                                                      1
+                                                                          School of Physics and Astronomy, University of Leeds, Leeds LS2 9JT, United Kingdom
+                                                                                     2
+                                                                                       IST Austria, Am Campus 1, 3400 Klosterneuburg, Austria and
+                                                                                         3
+                                                                                           Department of Theoretical Physics, University of Geneva,
+                                                                                            24 quai Ernest-Ansermet, 1211 Geneva, Switzerland
+                                                                                                          (Dated: July 17, 2018)
+                                                                     Recent realization of a kinetically-constrained chain of Rydberg atoms by Bernien et al. [Nature
+                                                                  551, 579 (2017)] resulted in the observation of unusual revivals in the many-body quantum dy-
+
+
+
+
+arXiv:1806.10933v2 [cond-mat.quant-gas] 16 Jul 2018
+                                                                  namics. In our previous work, Turner et al. [arXiv:1711.03528], such dynamics was attributed to
+                                                                  the existence of “quantum scarred” eigenstates in the many-body spectrum of the experimentally
+                                                                  realized model. Here we present a detailed study of the eigenstate properties of the same model. We
+                                                                  find that the majority of the eigenstates exhibit anomalous thermalization: the observable expec-
+                                                                  tation values converge to their Gibbs ensemble values, but parametrically slower compared to the
+                                                                  predictions of the eigenstate thermalization hypothesis (ETH). Amidst the thermalizing spectrum,
+                                                                  we identify non-ergodic eigenstates that strongly violate the ETH, whose number grows polynomi-
+                                                                  ally with system size. Previously, the same eigenstates were identified via large overlaps with certain
+                                                                  product states, and were used to explain the revivals observed in experiment. Here we find that
+                                                                  these eigenstates, in addition to highly atypical expectation values of local observables, also exhibit
+                                                                  sub-thermal entanglement entropy that scales logarithmically with the system size. Moreover, we
+                                                                  identify an additional class of quantum scarred eigenstates, and discuss their manifestations in the
+                                                                  dynamics starting from initial product states. We use forward scattering approximation to describe
+                                                                  the structure and physical properties of quantum-scarred eigenstates. Finally, we discuss the sta-
+                                                                  bility of quantum scars to various perturbations. We observe that quantum scars remain robust
+                                                                  when the introduced perturbation is compatible with the forward scattering approximation. In con-
+                                                                  trast, the perturbations which most efficiently destroy quantum scars also lead to the restoration of
+                                                                  “canonical” thermalization.
+
+
+                                                                      I.     INTRODUCTION                              tors, Ki , which commute with the system’s Hamiltonian,
+                                                                                                                       [H, Ki ] = 0. For example, in many-body localized phases
+                                                         In recent years, significant efforts have been focused        Ki correspond to deformations of simple number opera-
+                                                      on understanding the process of quantum thermaliza-              tors of Anderson localized single-particle orbitals.15 The
+                                                      tion, i.e., the approach to equilibrium of quantum sys-          presence of such operators prevents the system, initial-
+                                                      tems which are well-isolated from any external thermal           ized in a random state, from fully exploring all allowed
+                                                      bath. The considerable interest in this problem has come         configurations in the Hilbert space, leading to strong er-
+                                                      hand in hand with the experimental advances in control-          godicity breaking.
+                                                      lable, quantum-coherent systems of ultracold atoms,1,2              Despite significant progress in theoretical understand-
+                                                      trapped ions,3 and nitrogen-vacancy spins in diamond.4           ing of fully thermalizing16 and many-body localized sys-
+                                                      These systems allow one to realize highly tunable lattice        tems,17 much less is known about the possibility of more
+                                                      models of interacting spins, bosons or fermions, and to          subtle intermediate behaviors. In particular, can ergod-
+                                                      characterize their quantum thermalization.5                      icity be broken in interacting, translationally invariant
+                                                         The process of quantum thermalization is believed to          quantum systems? In the classical case, non-thermalizing
+                                                      be controlled by the properties of the system’s many-            behavior without disorder is well-known in the context
+                                                      body eigenstates, in which physical observables have             of structural glasses.18–20 The mechanism of this type of
+                                                      thermal expectation values. This scenario where each of          behavior is the excluded volume interactions that impose
+                                                      the system’s eigenstates forms its own “thermal ensem-           kinetic constraints on the dynamics.21,22 Similar type of
+                                                      ble” is known as the Eigenstate Thermalization Hypoth-           physics has recently been explored in quantum systems
+                                                      esis (ETH).6,7 Despite the lack of a formal proof of the         where a “quasi many-body localized” behavior was pro-
+                                                      ETH, various numerical studies of the systems of spins,          posed to occur in the absence of disorder.23–35
+                                                      fermions, and bosons in 1D and 2D8,9 suggest that in                Recently, a striking phenomenon suggestive of a differ-
+                                                      many cases when the system thermalizes, all of its highly        ent mechanism of weak ergodicity breaking was discov-
+                                                      excited eigenstates obey the ETH,10 i.e., they are typical       ered experimentally.36 A Rydberg atoms platform36–38
+                                                      thermal states and akin to random vectors.                       was used to realize a quantum model with kinetic con-
+                                                         However, not all quantum systems obey the ETH.                straints induced by strong nearest-neighbour repulsion
+                                                      Indeed, in integrable systems11 and many-body local-             between atoms in excited states. The experiment ob-
+                                                      ized phases12–14 the ETH is strongly violated due to             served persistent many-body revivals after a quench from
+                                                      the appearance of extensively many conserved opera-              a Néel-type state. In contrast, other initial configura-
+                                                                                                                                2
+
+tions probed in the experiment exhibited fast equilibra-      anomalous expectation values of local observables, low
+tion without any revivals. The unexpected many-body           entanglement entropy, and enhanced overlap with cer-
+revivals are inconsistent with ergodicity and thermaliza-     tain product states to be the key features distinguish-
+tion. Moreover, the strong dependence of relaxation dy-       ing quantum scarred eigenstates. Using these signatures,
+namics on the initial state is unusual: for example, many-    we find an additional family of quantum scarred eigen-
+body localized systems fail to thermalize irrespective of     states. These states manifest themselves in anomalous
+their initial state.17                                        many-body revivals starting from a period-3 density wave
+   In Ref. 39, we attributed the observed slow equilibra-     initial states.
+tion and revivals to a special band of highly non-thermal        In order to understand the properties of quantum
+eigenstates, and proposed an analogy to quantum scars         many-body scars, in Sec. IV we formulate the forward
+first discovered in single-particle chaotic billiards.40 In   scattering approximation (FSA), originally introduced in
+the semiclassical quantization of single-particle chaotic     Ref. 39. After illustrating the FSA on a toy example of
+billiards, scars represent an enhancement of eigenfunc-       a free paramagnet, we describe in detail the approximate
+tion density along the trajectories of classical periodic     construction of scarred eigenstates, and demonstrate that
+orbits. Even though such classical orbits are unstable,       the FSA method can be efficiently implemented in large
+they nevertheless leave a “scar” on the states of the cor-    systems using techniques of matrix product states. This
+responding quantum system. The enhancement of the             allows one to accurately capture even non-local proper-
+eigenstate probability density near a classical orbit im-     ties of quantum scarred eigenstates such as the entangle-
+plies the breakdown of ergodicity in scarred eigenstates.     ment entropy.
+Moreover, quantum scars are surprisingly robust to per-          Finally, in Sec. V we investigate the stability of quan-
+turbations, and their experimental signatures have been       tum scars to various perturbations to the considered
+detected in a variety of systems, including microwave cav-    model. Using the intuition provided by the FSA, we clas-
+ities,41 quantum dots,42 and quantum wells.43                 sify perturbations according to how effective they are in
+   In the single-particle case quantum scars are often        destroying the quantum scarred eigenstates. We show
+probed by preparing a particle in a Gaussian wave packet      that perturbations that are most effective in destroying
+localized near the classical periodic trajectory. By anal-    the band of scarred eigenstates are also the ones that lead
+ogy, in Ref. 39 an anomalous concentration of special         to the fastest thermalization according to the ETH. We
+eigenstates in the Hilbert space was demonstrated, thus       conclude with the summary of main results and a dis-
+providing phenomenological support to the quantum scar        cussion of open questions in Sec. VI. Various technical
+analogy. In addition, we presented an explicit method         details are delegated to the Appendices.
+that allowed us to construct these special eigenstates,
+and demonstrated the absence integrability in the stud-
+                                                                  II.    KINETICALLY CONSTRAINED PXP
+ied model. At the same time, many properties of these                             MODEL
+quantum scarred eigenstates remained unexplored. For
+example, what is the entanglement structure of special
+eigenstates? How many different classes of quantum scars         In this Section we start with the derivation of the ef-
+exist? What is the relation between the presence of quan-     fective Hamiltonian from the microscopic description of
+tum scarred eigenstates and thermalization?                   the Rydberg atom chain. Next, we consider the Hilbert
+                                                              space structure of the constrained model. Finally, we
+   In this paper we present a detailed study of the prop-
+                                                              discuss the symmetries of the model.
+erties of scarred eigenstates which addresses the above
+questions. We start by introducing the model of the
+experimentally-realized Rydberg chain in Sec. II, and dis-          A.    Derivation of effective Hamiltonian
+cuss the structure of its Hilbert space. In Sec. III we in-
+vestigate properties of the eigenstates of this model from
+the point of view of the ETH and quantum entangle-              The microscopic Hamiltonian describing a chain of Ry-
+ment. We find that the many-body spectrum is distin-          dberg atoms36–38 is given by
+guished by the presence of special eigenstates, which have                   L                          L
+atypical expectation values of local observables and thus
+                                                                             X   Ω                        X
+                                                                        H=             Xj − ∆Qi       +         Vi,j Qi Qj ,   (1)
+strongly violate the ETH. At the same time, the majority                     j=1
+                                                                                   2                      i<j
+of eigenstates in the spectrum appear thermal; yet, the
+diagonal matrix elements of local observables converge to     where Ω is the Rabi frequency, ∆ is the detuning param-
+the prediction of the Gibbs ensemble much more slowly         eter, and Vi,j ∝ 1/|i−j|6 is the van der Waals interaction
+compared to other, non-constrained models. We further         between the atoms. We assume that each atom can be
+test the ETH by studying off-diagonal matrix elements         either in the ground state (|◦i) or in a particular excited
+of local operators, and find that the spectral function of    state (|•i), thus the effective Hilbert space is that of L
+local observables has an unusual, non-monotonic form,         spin-1/2 degrees of freedom. The Rabi term is repre-
+with a peak at the frequency coinciding with the energy       sented by the Pauli operator Xj which flips the atom
+separation between special eigenstates. We identify the       at site j between |◦i and |•i states. The diagonal term
+                                                                                                                          3
+
+Qj = (1 + Zj )/2 is given by the Pauli Z matrix and
+corresponds to the density of excitations on a given site.
+Note, this density is not conserved, and atoms interact
+with each other only when they are in the excited state.
+It will be convenient to introduce the projector Pj onto
+|◦i state at site j:
+
+                                     1 − Zj
+                 Pj ≡ |◦j ih◦j | =          .          (2)
+                                       2
+This projector corresponds to the local density of atoms
+in the ground state. It is related to the density of exci-
+tations as Qj = 1 − Pj and obeys Xj Pj = Qj Xj .
+  We are interested in the limit of strong nearest-           Figure 1. Graph representation of the PXP model with L = 8
+                                                              sites. The vertices of the graph are labelled by product state
+neighbour interactions which we denote as V = Vi,i+1 ,
+                                                              configurations of the atoms, where ◦ denotes an atom in the
+V  Ω, and we set ∆ = 0, unless specified other-              ground state and • is an atom in the excited state. Edges
+wise. Rescaling the Hamiltonian by the (inverse) nearest-     connect those configurations that map into each other under
+neighbour interaction strength, 1/V , and introducing the     the action of the Hamiltonian. Horizontal axis shows the min-
+small parameter  = Ω/(2V ), we obtain the Hamiltonian        imal number of excitations required to reach the Néel state
+                          X               X                   from any given vertex, which coincides with the Hamming
+        H = H0 + H1 =        Qj Qj+1 +      Xj .     (3)    distance, DZ2 .
+                             j                  j
+
+The dominant term H0 counts the number of adjacent            Hilbert space. Restricting to the lowest-energy subspace
+excitations; accordingly, its eigenvalues are the non-        defined by the projector P in Eq. (4) amounts to ex-
+negative integers and they are highly degenerate. The         cluding configurations with two adjacent excitations, ••.
+perturbation term H1 is the trivial paramagnet; its eigen-    Considering the simplest example of two sites, it is clear
+values are every other integer between −L and +L inclu-       that the lowest-energy subspace, spanned by configura-
+sive, where L is the number of atoms.                         tions {◦◦, •◦, ◦•}, cannot be obtained as a tensor product
+   In the limit of strong interactions (small ), we derive   of local on-site Hilbert spaces. We note that, similar to
+the effective Hamiltonian via the Schrieffer-Wolff trans-     other kinetically constrained models, in the lowest-energy
+formation.44,45 First, we introduce the low-energy sub-       sector the model (4) has a “flat” potential energy land-
+space spanned by configurations with no adjacent excited      scape.
+states. The projector onto this subspace can be written          It is easy to see that the Hilbert space dimension of the
+as                                                            PXP model in Eq. (5) grows according to the Fibonacci
+                        Y                                     sequence. Indeed, we first note that configurations of the
+                   P=      (1 − Qj Qj+1 ).              (4)   constrained Hilbert space of an open system of L sites
+                        j                                     can end with either • or ◦. A configuration ending with
+                                                              a • state can be obtained by appending ◦• to a specific
+Since the leading part of the Hamiltonian (3) vanishes in     product state of a system with L − 2 sites. On the other
+this subspace, we must consider the first non-trivial order   hand, a configuration ending with ◦ can be obtained by
+that is given by HSW = PH1 P. Removing the overall           adding ◦ to a specific configuration of a system with L−1
+scale , we obtain the resulting effective “PXP” model,       sites. Therefore, the dimension of the Hilbert space with
+                       L
+                                                              L sites, dL , satisfies the linear recurrence equation:
+                       X
+                  H=         Pj−1 Xj Pj+1 ,            (5)                        dL = dL−1 + dL−2 ,                    (6)
+                       j=1
+                                                              with initial conditions d0 = 1, d1 = 2. This is the
+with the effective constraint that no two excitations may     well-known Fibonacci recurrence, hence dL for OBC co-
+be adjacent. This model will be the focus of Secs. III-IV.    incides with (L + 2)th Fibonacci number, dL = FL+2 .
+Periodic boundary conditions (PBC) are imposed in the         The Hilbert space for L sites with PBC can be formed
+usual manner by identifying atoms L + 1 and 1, while          by taking the Hilbert space of the same number of sites
+for open boundary conditions (OBC) we add boundary            with open boundary conditions and removing all con-
+terms X1 P2 and XL−1 PL .                                     figurations which both begin and end with •, hence
+                                                              dPBC
+                                                                L   = dL − dL−4 = FL−1 + FL+1 .
+                                                                 Finally, as illustrated in Fig. 1, the Hilbert space
+B.   Structure of the Hilbert space and symmetries            and the Hamiltonian of the PXP model have a useful
+                                                              graph representation. It is instructive to first
+                                                                                                           P consider
+  The constraint on the dynamics in Eq. (5) is rather un-     the free paramagnet Hamiltonian, HPM =          i Xi , act-
+usual as it destroys the tensor product structure of the      ing in the full Hilbert space of 2L product state config-
+                                                                                                                                4
+
+urations. Such a Hilbert space and the action of the                            III. THERMALIZATION AND
+Hamiltonian can be conveniently represented as a L-                           ENTANGLEMENT OF EIGENSTATES
+dimensional hypercube. All vertices of the hypercube
+can be uniquely labelled by product state configurations,                In this Section, we investigate properties of eigenstates
+e.g., {◦◦, •◦, ◦•, ••} for L = 2, and edges connect con-              of the model in Eq. (5) using exact diagonalization and
+figurations that differ by the state of any single atom.              shift-invert algorithm.48 First, we directly test the ETH
+The Hamiltonian of the free paramagnet HPM is formally                using the diagonal and off-diagonal matrix elements of
+equal to the adjacency matrix of the hypercube graph.                 local observables between the system’s eigenstates. We
+                                                                      find that the majority of the eigenstates appear thermal;
+   Next, we can consider the action of the PXP Hamil-                 however, the convergence of the observables to the value
+tonian in the full Hilbert space discussed above. Due to              dictated by the Gibbs ensemble is found to be paramet-
+projectors dressing the X operator in Eq. (5), the state              rically slower compared to the ETH predictions. In addi-
+of a given atom can be flipped only if its nearest neigh-             tion, we find a small number of “special” eigenstates that
+bours are both in the ◦ state. Thus, any local two-site               strongly violate the ETH. Further, we study the eigen-
+configuration, . . . •• . . ., is frozen regardless of the state of   state entanglement entropy, finding that the majority of
+other atoms, and a hypercube graph splits into a number               states follow the usual scaling of entanglement entropy
+of disjoint components. The largest of these components               with the volume of the subsystem. In contrast, the spe-
+contains the state |◦◦◦ . . . ◦◦i and coincides with the sub-         cial eigenstates exhibit a small, sub-thermal amount of
+space defined by the projector P in Eq. (4). Notably, this            entanglement.
+implies that the Hilbert space of the PXP Hamiltonian                    Finally, we show that the special eigenstates, identi-
+can be viewed as a subgraph of the L-dimensional hyper-               fied as violating the ETH and having low entanglement
+cube. This graph is known in the mathematical and com-                entropy, in fact coincide with the anomalous eigenstates
+puter science literature under the names of Fibonacci46               which are responsible39 for the many-body revivals ob-
+and Lucas cube47 for OBC and PBC, respectively.                       served experimentally. The number of special eigenstates
+                                                                      scales algebraically with the system size L, while the total
+                                                                      number of eigenstates scales exponentially. Nevertheless,
+   Fig. 1 shows the graph representation of the con-                  the special eigenstates are of physical significance ow-
+strained Hilbert space and PXP Hamiltonian for L = 8                  ing to their high overlap with the simple charge-density-
+sites with PBC. Vertices of the graph are classical prod-             wave product states, which have been prepared in ex-
+uct states of atoms, which have been arranged according               periment.36 While our previous paper39 focused on the
+to the Hamming distance from the particular product                   Néel (|Z2 i) initial state and anomalous states which have
+state, |•◦•◦• . . .i, where atoms on odd numbered sites are           a high overlap with that state, here we establish another
+in the excited state. This representation of the Hilbert              set of special eigenstates which are distinguished by their
+space will play a crucial role in the forward scattering              overlap with Z3 product state. These special states give
+approach in Sec. IV.                                                  rise to a different pattern of many-body revivals for the
+                                                                      dynamics initialized in |Z3 i state.
+   Finally, we consider symmetries of the PXP model in
+Eq. (5). Restriction to a particular symmetry sector al-
+lows to reach larger system sizes in exact diagonalization               A.    Breakdown of ETH in special eigenstates
+which will be used below. Moreover it is also crucial
+for the study of thermalization of eigenstates. The PXP                  Thermalization in ergodic systems is explained by the
+model has a discrete spatial inversion symmetry I which               powerful conjecture regarding the nature of eigenstates
+maps site j 7→ L − j + 1. With PBCs, the PXP model                    — the eigenstate thermalization hypothesis (ETH).6,7,9
+also has translation symmetry.
+                           Q       In, addition, the exis-            The ETH states that in ergodic systems, the individ-
+tence of the operator C = i Zi anticommuting with the                 ual excited eigenstates have thermal expectation values
+Hamiltonian (5) leads to the particle-hole symmetry of                of physical observables, which are identical to those ob-
+the many-body spectrum: each eigenstate at energy E                   tained using the microcanonical and Gibbs ensembles.
+has a partner at energy −E.                                           The expectation value of a physical observable associ-
+                                                                      ated with an operator O is given by the diagonal matrix
+  Unless specified otherwise, our results below are for               element Oαα = hα| O |αi, where |αi is an eigenstate of
+PBCs where translational and inversion symmetries are                 H, H |αi = Eα |αi. Further, to describe how the sys-
+explicitly taken into account. This allows us to obtain               tem approaches the thermal state, Srednicki introduced
+the complete set of eigenstates of large systems of up to             an ansatz for the matrix elements of physical operators
+L = 32 sites (at this system size, the zero momentum                  in the basis of system’s eigenstates:49,50
+inversion-symmetric sector of the Hilbert space contains                       Oαβ = O(E)δαβ + e−S(E)/2 f (E, ω)Rαβ .         (7)
+D0+ = 77436 states). Shift-invert algorithm allows us to
+extract a subset of eigenstates for larger systems of up to           The first term describes the diagonal part of the operator
+L = 36 sites with D0+ = 467160.                                       in the eigenstate basis, and O(E) is a smooth function of
+                                                                                                                                              5
+
+ (a)−0.3                                         (b)              L = 26        −3        [∆Z1 ] ∼ d−0.34
+                                                                  L = 28                            L
+                                                    60
+                                                                            ln ∆Z1
+                                                                  L = 30
+    −0.4                                                          L = 32        −4
+ hZ1 i                                         p(|∆Z1 |)
+                                                    40
+
+    −0.5                                                                        −5
+                                                    20                                       104        105
+                                                                                              dL
+
+    −0.6                 Canonical
+                                                       0
+               −10        0          10                    0.00     0.05                 0.10
+                          E                                                |∆Z1 |
+
+
+Figure 2. (a) Strong violation of the ETH revealed by the eigenstate expectation values hOZ i ≡ hZ1 i, plotted as function of
+energy (color scale indicates the density of data points). While the majority of points are concentrated in the vicinity of the
+canonical ensemble prediction, the band of special eigenstates (indicated by crosses) is also clearly visible. For these eigenstates,
+hOZ i strongly deviates from the canonical prediction at the corresponding energy. The system contains L = 30 atoms in the
+zero momentum, inversion-symmetric sector. (b) Probability distribution for the difference in expectation value of the local
+observable OZ between eigenstates adjacent in energy. Inset: Mean ∆OZ decays with a power ≈ 1/3 of the Hilbert space
+dimension dPBC
+             L    as the system size is increased (shown up to L = 32). Averaging is performed over eigenstates in an interval
+between adjacent special states in the middle of the spectrum. The line shown is a linear regression to the three largest system
+sizes. (c) Off-diagonal matrix elements are a smooth function of the energy difference. Moreover, f 2 (ω) does not depend on the
+system size, consistent with the ETH. At the same time, a number of features are visible in f 2 (ω) at the frequency coinciding
+with the energy separation of special eigenstates in panel (a). The inset shows that f 2 (ω), plotted as a function of energy in
+units of many-body level spacing ∆, does not have a well-developed plateau until ω ≤ ∆.
+
+
+
+energy that coincides with the canonical ensemble predic-                  zero-momentum sector and L/2 states in π-momentum
+tion. The second term describes off-diagonal matrix ele-                   sector, resulting in the same total count. The special
+ments, where S(E) is the thermodynamic entropy at the                      eigenstates belonging to this band can be viewed as par-
+average energy E = (Eα +Eβ )/2, and f (E, ω) is a smooth                   ent states that define the ETH-breaking “towers”, visible
+function of E and the energy difference ω = Eα −Eβ . Fi-                   in Fig. 2(a). Lower states in the towers also break the
+nally, Rαβ is a random number with zero mean and unit                      ETH, though more weakly.
+variance. We note that the ETH ansatz (7) for the ma-                         In Fig. 2(b) we show the distribution of differences
+trix elements has been verified in several low-dimensional                 in the expectation value of OZ between eigenstates ad-
+models,16,51–53 while it was found to break down in many-                  jacent in energy, ∆OiZ = |Oi+1,i+1
+                                                                                                          Z
+                                                                                                                 − OiiZ
+                                                                                                                        |. Consistent
+body localized systems.54,55                                               with the ETH prediction, we observe that this distribu-
+   In Fig. 2(a) we test the ansatz (7) for the diagonal                    tion narrows around ∆OZ = 0 upon increasing the sys-
+                                                  PL                       tem size. However, despite fluctuations of ∆OZ decaying
+matrix elements of the operator OZ = (1/L) j=1 Zj                          with the system size, this decay is parametrically slower
+in the PXP model in Eq. (5). With translation symme-                       compared to the standard ETH prediction. The inset
+try, this is equivalent to the expectation value of the Z                  of Fig. 2(b) shows that the mean ∆OZ decays approx-
+operator on the first site, hZ1 i. Moreover, due to the                                     1/3
+existence of the Hilbert space constraint, the operator                    imately as 1/D0+ whereas the ETH ansatz (7) would
+OZ can be related to the nearest neighbour correlation                     suggest a decay which is inversely proportional
+                                                                                                                    √          to the
+                         PL                                                square root of the density of states, 1/ D0+ . A recent
+function OZZ = (1/L) j=1 Zj Zj+1 . Note that, because
+                                                                           study56 of the same model with OBC also reports the
+of the constraint, all eigenstates have negative values for
+                                                                           scaling of diagonal matrix elements to be slower than ex-
+hOZ i, rather than hOZ i ≈ 0 which would be expected
+                                                                           pected from the ETH. Note, however, that only the few
+in a generic thermalizing system with an unconstrained
+                                                                           largest system sizes in Fig. 2(b) appear to be in the scal-
+Hilbert space. Fig. 2(a) shows that most of the expec-
+                                                                           ing regime, which means that it is possible that the power
+tation values of OZ are close to the canonical predic-
+                                                                           governing the decay of the diagonal matrix element con-
+tion, O(E), which is calculated from the Gibbs states
+                                                                           verges to 1/2 in larger systems.
+defined by the density matrix ρ ∝ exp(−βH). The value
+                                                                              Finally, we test the ETH ansatz for the off-diagonal
+of β ∈ (−∞, +∞) is extracted by relating the observ-
+                                                                           matrix elements. Using Eq. (7) we define the average
+able expectation value to the mean energy in the Gibbs
+                                                                           matrix element at a given energy separation,
+ensemble. However, Fig. 2 also shows that there is a num-
+ber of special states that clearly violate the ETH. These                            f 2 (ω) = eS(E) h| hβ| OZ |αi |2 δ(Eα − Eβ − ω)iα,β ,   (8)
+states (denoted by crosses) form a distinct band, which
+includes the ground state of the system and extends all                    which is rescaled by the density of states. In what follows,
+the way up to the middle of the spectrum. The number                       we refer to f 2 (ω) as the infinite temperature spectral
+of states in this band is L+1 for OBC. For the case of sys-                function, since averaging in Eq. (8) is performed over the
+tems with even L and PBC, there are L/2 + 1 states in                      middle 2/3 eigenstates in the spectrum, denoted by α, β.
+                                                                                                                            6
+
+If the off-diagonal matrix elements obey the ETH, the                      B.    Entanglement of eigenstates
+function f 2 (ω) ought to be smooth and independent of
+the system size. This is indeed confirmed by Fig. 2(c),
+which shows the collapse of f 2 (ω) for different system           Quantum entanglement is a complementary probe of
+sizes. With the previously chosen normalization for the         thermalization and its breakdown, which provides ad-
+operator OZ , in Fig. 2(c) we have multiplied f 2 (ω) by        ditional insights compared to matrix elements of phys-
+L, which yields the best collapse of the curves within          ical observables. Equivalence of all observables to their
+the available system sizes.16,57 Moreover, f 2 (ω) decays       canonical values imposed by the ETH implies that the
+exponentially at large ω, as expected from the locality of      von Neumann entanglement entropy of a subregion A in
+the Hamiltonian.16,58                                           an eigenstate α, S α = −trA (ρα        α
+                                                                                                 A ln ρA ), is equal to the
+                                                                thermodynamic entropy of A at temperature T which
+                                                                corresponds to the eigenstate energy Eα . Here, the en-
+   Surprisingly, in the intermediate range of frequencies
+                                                                tanglement of an eigenstate is defined in terms of its re-
+we observe non-monotonic behavior of f 2 (ω). The posi-
+                                                                duced density matrix ραA = trB |αi hα| that is obtained by
+tions of the characteristic features in f 2 (ω) coincide with
+                                                                tracing out the degrees of freedom in the complement of
+the energy separation between the ETH-breaking eigen-
+                                                                the spatial region A, denoted as B. Thermodynamic en-
+states in Fig. 2(a). Such a behavior, to the best of our
+                                                                tropy scales proportionally to the volume of region A and
+knowledge, has not been reported before in the context
+                                                                is maximal in the middle of the band where the density
+of translationally invariant systems without disorder.57
+                                                                of states is highest.
+(Note that Ref. 16 observed features in the spectral func-
+tion at energies O(1/L) for a system of hard-core bosons
+with dipolar interactions in a harmonic trap that breaks           Fig. 3(a) shows that entanglement entropy S for the
+translational invariance.) In contrast, in disordered sys-      majority of eigenstates exhibits behavior that is consis-
+tems, the emergence of a similar peak was interpreted as        tent with the predictions of the ETH. Finite-size scaling
+a signature of local resonances.55 In addition, the inset of    of states with large entropy (S & 5) reveals volume-law
+Fig. 2(c) shows that f 2 (ω) does not have a well-developed     scaling, S ∝ L (not shown). However, in addition to the
+plateau until ω becomes     of the order of the many-body       bulk of typical highly-entangled states, we also observe
+                      √                                         outliers with much lower entropy. The outlier states with
+level spacing, ∆ ∝ L/D0+ . Such a plateau is typical
+for thermalizing systems, and it sets the energy scale (the     the lowest entanglement, labeled as 0, . . . , 7 in Fig. 3(a),
+Thouless energy) below which the system essentially can         span the entire bandwidth. Note that we do not label
+be described by a random matrix ensemble.16                     states at E > 0, as they are related to states 0, . . . , 7 by
+                                                                particle-hole symmetry.
+
+  From the absence of saturation in the matrix elements            For even system size L, there are L/2 + 1 special eigen-
+at small energies, we expect the level statistics to show       states in the zero momentum sector, and L/2 − 1 such
+deviations from the Wigner-Dyson form. Indeed, previ-           states in π-momentum sector. Thus in total, we observe
+ously it was demonstrated39 that for small system sizes         L+1 special states. These states coincide with the states
+L ≤ 28 the level statistics is approximately described          that maximally violate the ETH, depicted by crosses in
+by the Semi-Poisson distribution.59 This is consistent          Fig. 2(a). Furthermore, as shown in Ref. 39, and as we
+with the approximately critical form of f 2 (ω) for ω ≥ ∆       discuss in more detail in the following Section, these spe-
+in Fig. 2(c).55,60 In addition, we also expect the level        cial states can also be identified as ones that have highest
+compressibility to be enhanced compared to the Wigner-          overlap with |Z2 i product state defined in Eq. (9) below,
+Dyson ensemble. However, the slow development of the            as illustrated in Fig. 3(b).
+plateau for L ≥ 30 suggests that both the level statistics
+and compressibility approach the Wigner-Dyson ensem-               In Sec. IV we present an approach based on forward
+ble for larger system sizes.                                    scattering, which accurately captures the highly excited
+                                                                eigenstates with low-entropy labeled in Fig. 3. (A brief
+                                                                account of this approach was presented in Ref. 39.)
+   The absence of a Thouless plateau in the off-diagonal        Within the forward scattering approximation, we will
+matrix elements, along with the slow decay of fluctua-          be able to demonstrate that these special eigenstates
+tions in diagonal matrix elements, ∆OZ , and deviations         are highly atypical from the entanglement point of view:
+from purely Wigner-Dyson level statistics, suggests that        their entanglement entropy scales with the logarithm of
+thermalization of the bulk of eigenstates in the PXP            system size, i.e., S ∝ ln L. This type of behavior, which
+model may not fully follow the ETH. We return to the            is very different from the ETH prediction, is commonly
+discussion of thermalization in Sec. V. There we will show      encountered in ground states of critical systems61 and
+that full thermalization is restored, and the system fol-       systems with Fermi surfaces.62,63 Similar phenomenology
+lows the canonical ETH predictions, once the PXP model          is found in recent work,64,65 where exact expressions for
+is perturbed in a way that fully destroys the special bands     special excited eigenstates in the non-integrable AKLT
+of eigenstates.                                                 model were found.
+                                                                                                                                              7
+
+
+  (a) 6                                                         140   states
+                                                                120
+                                                                100                     |Zk i = | . . . •◦ . . . ◦} • . . .i,
+                                                                                                        | {z                             (9)
+                     4                                          80                                           k
+         S
+                                                                60    where the atoms in the excited state are separated by
+                     2                3 4 5 6 7                 40    k − 1 atoms in the ground state. In this Section we show
+                                 12                             20    that the simplest CDW states, the period-2 (Z2 or Néel)
+                             0
+                     0                                                state and the period-3 (Z3 ) state, allow one to identify a
+                      −20             −10         0   10   20         dominant subset of special states in the PXP model.
+                                                  E
+  (b)                                                           40
+                                                                         Fig. 3(b) shows the squared overlap between all the
+                     0                                          35    eigenstates of the PXP model and |Z2 i product state on
+                                              5 6 7
+
+ log10 |Z2 | ψ|2
+                                          4                     30    the logarithmic scale. From this plot, we see that there
+               −3                     3                               exists a set of eigenstates with anomalously large over-
+                                 2                              25
+                                                                20    lap, which form regular tower structures. The states at
+                             1
+               −6                                               15    the top of towers coincide with the special eigenstates
+                         0                                      10    identified via the breakdown of the ETH in Fig. 2(a) and
+               −9                                               5     entanglement entropy in Fig. 3(a). We also see that for
+                                                                      each of the special states labeled 0, . . . 7, there are further
+                     −20              −10         0   10   20         eigenstates belonging to the same tower (i.e., with sim-
+                                                  E
+                                                                      ilar eigenenergy), which have much larger overlap with
+                                                                      the Néel state compared to the majority of thermalizing
+Figure 3. (a) Bipartite entanglement entropy of eigenstates,          states.
+S, as a function of energy E. Region A is chosen as one half
+                                                                         Interestingly, the L/2 + 1 special eigenstates from the
+of the chain. The bulk of the states have large volume-law
+entropy (S & 5), however some outliers with anomalously low
+                                                                      zero-momentum sector, half of which are highlighted in
+entropy (S . 2) are also visible. These states are labelled by        Fig. 3, are nearly equidistant in energy. Near the cen-
+0, . . . , 7, and they span the entire energy range between the       ter of the many-body band, they are separated in en-
+ground state (state 0) and the middle of the band (state 7).          ergy by ∆E ≈ 2.66. In addition, the L/2 − 1 special
+(b) Density plot showing the joint distribution of energy and         states from the π-momentum inversion-antisymmetric
+overlap with |Z2 i product state among the energy eigenstates.        sector have energies exactly between the special states
+The states with largest overlap are identified with the low           from the zero-momentum sector. Thus, combining both
+entropy states from the top panel. Data shown is for L = 30           sectors, the energy separation between special states be-
+sites in the zero-momentum and inversion symmetric sector.
+
+
+                                                                            1.34
+
+                                                                            1.32
+    C.               Overlap of special eigenstates with product
+                                     states                            ∆E   1.30
+
+                                                                            1.28        ∆FSA E1                  ∆E2
+  We have demonstrated that the PXP model breaks                                        ∆FSA E2                  ∆E3
+the ETH because of the existence of a relatively small                                  ∆E1
+                                                                            1.26
+(algebraic in the system size) number of highly atypi-
+cal, non-thermal eigenstates. These states are distin-                         0.00     0.02         0.04         0.06          0.08   0.10
+guished by anomalous matrix elements of local observ-                                                       1/L
+ables, Fig. 2(a), as well as by sub-thermal entanglement
+entropy, Fig. 3(a). However, there exist only L + 1 such              Figure 4.     Finite size scaling of the energy gaps between
+states embedded among an exponentially many (slowly)                  special states closest to the middle of the spectrum shows
+thermalizing eigenstates. Hence, naively one may expect               the convergence of all gaps to the same value in the ther-
+that these states do not have direct physical relevance, as           modynamic limit. Note that adjacent special states belong
+                                                                      to different momentum sectors. The gaps accurately follow
+they might be hidden by the contribution of a much larger
+                                                                      quadratic dependence on 1/L in the range of available system
+number of typical eigenstates. Below we show that this is             sizes L = 10, . . . , 36. The prediction of the forward scatter-
+not the case because special eigenstates have anomalously             ing approximation, discussed in Sec. IV for systems with up
+high overlaps with certain product states. This implies               to L = 48 sites, is shown by blue/orange points, correspond-
+that superpositions of special eigenstates can be experi-             ing to the two states closest to the middle of the spectrum.
+mentally prepared and probed using a global quench. For               Within this approximation, the energies appear to follow lin-
+example, a class of product states which was studied in               ear dependence in 1/L (dashed line).
+recent experiments36 are the charge density wave (CDW)
+                                                                                                                                       8
+
+                    (a)                 (b)                                     1.0                                            d=2
+
+
+
+log10 |hZ3 | ψi|2
+            −2.5                                                                                                               d=3
+                                        −2                                      0.8                                            d=4
+
+
+                                                                    | hZd | Zd (t)i |2
+            −5.0
+                                                                                0.6
+                                        −3
+            −7.5                                                                0.4
+
+       −10.0                            −4
+                                                                                0.2
+            −20 −10       0   10   20     −2.5   0.0       2.5
+                          E                       E
+                                                                                0.0
+                                                                                          0            10           20            30
+Figure 5. (a) The overlap between eigenstates of the PXP                                                       t
+model and |Z3 i state as a function of energy E reveals another
+special band of eigenstates. (b) Same plot but zoomed in          Figure 6. Quantum fidelity shows periodic in time revivals
+around energy E = 0. Black dots mark individual eigenvalues,      for |Z2 i and |Z3 i initial product states. In contrast, |Z4 i initial
+while the blue curve is a Gaussian convolution of the overlap     state shows a complete absence of revivals. Data is for system
+probability |hZ3 |ψ(E)i|2 viewed as a function of energy. This    with L = 24 sites with periodic boundary conditions.
+reveals a number of peaks subdividing the interval between
+the highest overlap states. Both plots are for L = 30 in the
+zero-momentum and inversion symmetric sector together with
+the ±2π/3 momentum sectors.                                         D.                   Dynamical signatures of special eigenstates
+
+                                                                     Anomalously high overlaps of special eigenstates with
+                                                                  product states like |Z2 i or |Z3 i make them amenable to
+                                                                  a simple experimental probe – global quench. In partic-
+comes ∆E ≈ 1.33 in the middle of the spectrum. Fig. 4             ular, the quench from |Z2 i state was studied experimen-
+shows the finite-size scaling of the energy gaps between          tally in Ref. 36 and in numerical simulations on small
+the four special eigenstates closest to the energy E = 0.         systems.66–68 We initialize the system at time t = 0 in
+All the gaps accurately follow the finite size scaling            the state |ψ(0)i = |Zk i, and then follow the evolution
+∆Ei = 1.337+ci /L2 , where a linear term is absent. Con-          of this initial state with the PXP Hamiltonian, Eq. (5),
+stants ci depend on the chosen pair of eigenstates, with          |ψ(t)i = exp(−iHt) |ψ(0)i. This evolution is determined
+c1 = 0.582 corresponding to the gap between the special           by how |ψ(0)i is decomposed in terms of the system’s
+state at E = 0 and the closest one with non-zero energy.          eigenstates.
+In contrast, the distance between special eigenstates at             Figs. 3(b) and 5(a) demonstrate that there are a few
+the edge of the spectrum, e.g., the ground state (0th             eigenstates with high overlaps and constant energy sep-
+special eigenstate), which always belongs to the zero-            aration in the middle of the band where the overlaps are
+momentum sector, and the first special eigenstate that            largest (see Fig. 4). Therefore, we expect that quantum
+lives in π-momentum sector is ∆E0 ≈ 0.96. This behav-             quench from |Z2 i or |Z3 i product state will give rise to co-
+ior should be contrasted with the AKLT model,64 where             herent oscillations, with a frequency determined by the
+the special excited states are equidistant in energy.             energy separation between the towers of special states
+                                                                  in Fig. 3 or Fig. 5. These oscillations in the dynam-
+   Finally, we note that in addition to the special states        ics can be observed by measuring the expectation values
+identified via the overlap with |Z2 i state, there are fur-       of certain local observables,36,39 or more generally, using
+ther states that also violate the ETH but more weakly.            the quantum fidelity (or return probability) defined as
+To identify some of them, in Fig. 5(a) we plot the over-          | hZk | exp(−iHt) |Zk i |2 .
+lap of PXP eigenstates with |Z3 i product state. Here we             Fully consistent with the expectations described above,
+can also observe the existence of a band of states with           fidelity for quenches from |Z2 i, |Z3 i initial states shown in
+anomalously high overlap. In contrast to the Z2 case,             Fig. 6 reveals pronounced periodic revivals. The period of
+this band is less clearly separated from the bulk of the          these revivals is given by TZ2 = 2π/∆E∞ , where ∆E∞ ≈
+spectrum. A natural question is whether the set of spe-           1.33 is the energy separation between the |Z2 i special
+cial states revealed by |Z2 i intersects with that of |Z3 i.      states. We note that revivals of a local observable – the
+Cross comparison of overlaps (not shown) reveals that             density of domain walls – were found in Ref. 36 for the
+these two sets of special states are different from each          |Z2 i case. The frequency of these revivals is identical
+other. Zooming in on the overlap plot around energy               to the frequency found here using quantum fidelity. By
+E = 0, shown in Fig. 5(b), we can observe several “mini-          contrast, for |Z4 i initial state, we do not observe any
+towers” between the highest overlap states. This feature          revivals in the fidelity. This is in agreement with the
+will give rise to more complicated dynamics in the Z3             absence of anomalously high overlaps between eigenstates
+case, which is discussed in the following Section.                and |Z4 i product state.
+                                                                                                                           9
+
+   The return probability in Fig. 6 shows that |Z3 i initial       that the FSA is exact. After explaining the basics of the
+state also exhibits many-body revivals. The period of              method on this simple model, we consider the more inter-
+these revivals is approximately given by TZ3 ≈ (3/4)TZ2 .          esting case of the PXP Hamiltonian (5). This model dif-
+In addition to the revivals, the dynamics displays a beat-         fers from a free paramagnet by the projection imposed on
+ing pattern modulating the amplitude of the revivals.              the Hilbert space, which makes the FSA scheme approxi-
+These modulations can be attributed to additional tow-             mate. We formulate the FSA scheme for the PXP model
+ers of special states, which are illustrated by the blue line      and benchmark it on a number of different properties
+in Fig. 5(b). These additional towers are situated be-             (more detailed analysis of errors introduced by the FSA
+tween the highest overlap states. This secondary band of           scheme can be found in Appendix B). We demonstrate
+special eigenstates generally has enhanced overlaps with           that the FSA can be efficiently implemented in large sys-
+product states containing a domain wall between two dif-           tems using matrix product state methods. Finally, in
+ferent Z3 patterns, each spanning one half of the system,          the last part of this Section we discuss the notion of a
+e.g., ◦◦• . . . ◦◦•|◦•◦ . . . ◦•◦. The existence of such a state   trajectory which allows us to relate special eigenstates
+in a finite system requires L to be divisible by 6, L = 6`.        to quantum scars in the many-body case. In addition,
+These “secondary” special states introduce an additional           we discuss the implications of the FSA for the stabil-
+frequency that is ` = L/6 times smaller compared to the            ity of special eigenstates to various perturbations of the
+energy difference between the adjacent |Z3 i special states        Hamiltonian.
+from all momentum sectors. Consequently, the beating
+pattern also appears for system sizes divisible by 6, and
+in Fig. 6 for L = 24 we observe an enhancement of every
+` = 4 revival.
+                                                                         A.   Forward scattering on the hypercube
+   Finally, we mention that the PXP model, in addition
+to special eigenstates, also exhibits an exponentially large
+number of states with energy E = 0. These states can                  We start with the FSA on the L-dimensional hyper-
+be understood as arising from the intricate interplay be-          cube graph corresponding to the free paramagnet Hamil-
+                                                                                     PL
+tween the bipartite structure of the graph which describes         tonian, HPM = i=1 Xi . Hence there is no constraint
+the Hilbert space and Hamiltonian (see Fig. 1) and inver-          imposed on the Hilbert space throughout this subsection.
+sion symmetry present in the problem. In Appendix A we             In this case the FSA method is exact, and it results in
+discuss these zero-energy states in greater detail and ob-         a Hamiltonian whose non-zero matrix elements are those
+tain the lower bound on their number that was reported             of the spin operator 2S x for a spin of size L/2. Although
+in Ref. 39.                                                        this result can be obtained via other means, the approach
+   In the following Section, we introduce a forward scat-          outlined here allows us to introduce the basic ingredients
+tering method that allows us to construct accurate ap-             that will be needed for the non-trivial case of the PXP
+proximations of special eigenstates in the PXP model.              model.
+Moreover, this method allows to build special eigenstates             The FSA method is a version of the Lanczos recur-
+starting from |Z2 i and |Z3 i product states, explaining           rence.69 Lanczos recurrence is used to construct the
+the anomalously enhanced overlaps. In addition, forward            Krylov subspace and obtain an approximation to the
+scattering will provide an insight into the different dy-          given Hamiltonian by its projection onto this subspace.
+namical behavior of the PXP model depending on the                 The usual Lanczos iteration starts with a given vector in
+initial state.                                                     the Hilbert space, v0 , usually chosen to be random. The
+                                                                   orthonormal basis is constructed by recursive application
+                                                                   of the Hermitian matrix H (i.e., the Hamiltonian) to the
+           IV.    FORWARD-SCATTERING                               starting vector. The basis vector vj+1 is obtained from
+                  APPROXIMATION                                    vj by applying H and orthogonalizing against vj−1 :
+
+   So far we have studied spectral properties of the PXP                      βj+1 vj+1 = Hvj − αj vj − βj vj−1 ,       (10)
+model using exact diagonalization and identified a set of
+special eigenstates. Here we explicitly construct a sub-
+set of those eigenstates which are related to |Z2 i product        where αj = hHvj | vj i and β > 0 are chosen such that
+state, and whose number scales linearly with the system            kvj k = 1. Here we observe that the action of H re-
+size. The basic idea behind the construction of these spe-         sults in the next vector vj+1 (“forward propagation”),
+cial states is a modification of the Lanczos iteration.69          but also gives some weight on the previous basis vector,
+Below we start with applying this modification, dubbed             vj−1 (“backward propagation”).
+“forward scattering approximation” (FSA), to the solv-                In the case of the free paramagnet Hamiltonian, the
+able example of a free paramagnet. In this toy exam-               above scheme can be simplified. Let us choose the spe-
+ple, the Hilbert space and the Hamiltonian can be repre-           cific initial vector as the Néel basis state v0 = |Z2 i =
+sented as a hypercube and its adjacency matrix, respec-            |•◦•◦
+                                                                   P . . .i. Moreover, we split the Hamiltonian HPM =
+tively (see Sec. II B). The advantage of this toy model is            i Xi = H+ + H− into the forward and backward scat-
+                                                                                                                               10
+
+tering operators,                                                     tri-diagonal matrix form of HFSA in the basis of vj :
+                                                                                                                
+                                                                                             0 β1
+                         X                X
+                H+ =             σj− +             σj+ ,    (11a)
+                                                                                            β1 0 β2             
+                        j∈ odd           j∈ even                                                                
+                                                                                                        . .     
+                                                                                  HFSA =       β2 0         .   .         (16)
+                         X                X
+                H− =             σj+ +             σj− .    (11b)
+                                                                                           
+                                                                                                                 
+                        j∈ odd           j∈ even
+                                                                                                   .    .
+                                                                                                      .. .. β   
+                                                                                                               L
+                                                                                           
+                                                                                                         βL 0
+For the free paramagnet considered in this section, it can
+be seen that H+ and H− obey the standard algebra of                   Taking into account the expression for βj , we see that
+spin raising and lowering operators. This can be used to              this matrix coincides with the 2S x operator for a spin of
+immediately write down the Hamiltonian matrix. Nev-                   size L/2, resulting in a set of L + 1 equidistant energy
+ertheless, we show how the same result can be obtained                levels. Likewise, the wave functions in the basis of vj can
+via a more general procedure, which can be directly gen-              be obtained from the Wigner rotation matrix.
+eralized to the PXP model.
+  Let us consider the first step of the recurrence (10) in
+this case. Operator H− annihilates the state |•◦•◦ . . .i,                   B.   Forward scattering for PXP model
+and we obtain the vector β1 v1 = H+ |Z2 i, which is an
+equal superposition of all states with a single spin flip on             Above we demonstrated how the FSA allows to find
+top of |Z2 i,                                                         a subset of eigenstates in the case of a free paramag-
+                                                                      net. Now we return to the problem of the constrained
+ β1 v1 = |◦◦•◦•◦ . . .i + |•••◦•◦ . . .i + |•◦◦◦•◦ . . .i + . . . .   PXP model that is defined on the subgraph of the L-
+                                                             (12)     dimensional hypercube, where the FSA method is no
+Hence we see that H+ ensures forward propagation in                   longer exact. To see this, we again start the FSA from
+this case, and the action of H− has vanished. The vector              v0 = |Z2 i state, and split the Hamiltonian Eq. (5)
+v1 is automatically
+           √          orthogonal to v0 , thus we set α0 = 0,          into the forward and backward propagating parts, H =
+and β1 = L by normalization.                                          H+ + H− with
+  In the second step of the recurrence, we can observe                           X                   X
+that the action of H+ on v1 will produce a state contain-                  H± =     Pj−1 σj± Pj+1 +     Pj−1 σj∓ Pj+1 .  (17)
+ing a pair of defects atop the Néel state, which is thus                       j∈ even              j∈ odd
+orthogonal to both v1 , and v0 . On the other hand, the
+action of the backward-scattering part gives us the orig-             Similar to the case of free paramagnet, in such a decom-
+inal state v0 , H− v1 = β1 v0 , where we explicitly used the          position H+ always increases the Hamming distance from
+value of β1 . In the case of a free paramagnet, one can               the Néel state and H− always decreases it. In the Hilbert
+show that                                                             space graph in Fig. 1, H+ always corresponds to moving
+                                                                      from left to right. Hence, the FSA recurrence closes after
+                        H− vj = βj vj−1                       (13)    L+1 steps once forward propagation reaches the opposite
+                                                                      edge of the graph, |Z02 i.
+holds more generally at every step of the iteration. This                Now, we observe that the key property that enabled
+allows to cancel H− vj with the last term in Eq. (10),                the FSA recurrence, Eq. (13), holds only approximately.
+yielding the FSA recurrence:                                          More specifically, if one starts from the Néel state,
+                                                                      Eq. (13) is exact for j = 1, 2, but at the third step of the
+                      βj+1 vj+1 = H+ vj ,                     (14)    recurrence this property does not hold any more. Never-
+                                                                      theless, we can still apply the FSA recurrence as defined
+                                                                      in Eq. (14). The error is quantified by the vector
+where we also omitted the αj vj term since all αj = 0.
+This follows from the fact that H± operators change the                              δwj = H− vj−1 − βj−1 vj−2 .             (18)
+Hamming distance from |Z2 i state by ±1. Hence, the
+new state vj+1 is always orthogonal to vj . Moreover,                 The error per individual step of the FSA iteration can be
+by the same argument, the FSA recurrence closes after                 shown to depend on the commutator [H+ , H− ], and will
+L+1 steps as it reaches the vector vL = |Z02 i = |◦•◦• . . .i,        be discussed in more detail in Appendix B. Generally, this
+which is the translated Néel state that vanishes under the           error is smaller for states that are closest to the middle
+action of H+ .                                                        of the spectrum. This is because, as shown in Fig. 7(a),
+  Finally, using induction one can demonstrate that                   the special eigenstates closest to E = 0 have their wave
+                            p                                         function concentrated near the edges of the graph. As the
+                     βj =       j(L − j + 1),                 (15)    first few steps of the FSA approximation near the edges
+                                                                      of the graph are exact, we expect it to better capture
+which, as anticipated, is the well-known matrix element               those states that are close to zero energy. In contrast, the
+of a spin ladder operator. This reesults in the effective             ground state and other low-lying special eigenstates live
+                                                                                                                           11
+
+(a)                          (b)                             1.0
+                                                                       C.   Extracting physical properties of special
+                                                             0.8
+                                                                                  eigenstates within FSA
+                                                             0.6
+
+                                                             0.4
+                                                                      Diagonalizing the tridiagonal matrix with βj deter-
+                                                             0.2
+                                                                   mined either directly from Eq. (14) or via linear recur-
+                                                             0
+                                                                   rence method explained in Appendix C, we obtain a set
+                                                                   of approximate eigenvectors and their energies. Pre-
+Figure 7. Two eigenstates of the PXP model represented
+                                                                   viously, in Ref. 39 we demonstrated that eigenenergies
+on the Hilbert space graph for L = 10 sites and PBC. The
+color of the vertices reflects the weight of the corresponding     agree within a few percent with exact diagonalization
+product state in the eigenvector, where the largest weight is      data for the largest available system of L = 32 atoms.
+normalized to one. Similar to Fig. 1, the Néel states are the     Here we perform a more detailed study of scaling of the
+left/right most vertices of the graph, while the fully polarized   FSA results. The finite size scaling in Fig. 4 reveals that
+state is located in the center of the graph. (a) Wave function     the energy spacing between special eigenstates within the
+of the special eigenstate closest to zero energy is concentrated   FSA approximation saturates to a value that differs by
+in the vicinity of the Néel states. In contrast, the wave func-   ≈ 2.6% from the one extracted from exact diagonaliza-
+tion of the ground state (b) is concentrated in the center of      tion. Moreover, finite-size corrections to the FSA energy
+the graph.                                                         are linear in 1/L, while exact results appear to follow
+                                                                   1/L2 corrections. The origin of this discrepancy remains
+                                                                   to be understood.
+                                                                      Moreover, earlier we reported a good agreement be-
+primarily in the center of the graph, i.e., in the vicinity        tween the FSA eigenvectors and the projection of exact
+of the fully polarized state, |◦◦◦ . . .i, as seen in Fig. 7(b).   eigenvectors onto the FSA basis.39 The FSA also cor-
+                                                                   rectly reproduces the expectation values of local observ-
+   The resulting vectors vj obtained from the FSA re-              ables. In particular, crosses in Fig. 2(a) represent the
+currence, Eq. (14), starting from v0 = |Z2 i, form an or-          expectation values of local observables within the FSA
+thonormal subspace because each is in a different Ham-             for a chain with L = 30 sites. They agree very well
+ming distance sector and the recurrence closes after L+1           with the exact diagonalization data. Given the ability of
+steps. At present we do not have closed analytical expres-         the FSA to capture the values of local observables, it is
+sions for βj coefficients, however they can be obtained by         natural to ask if it also describes non-local properties of
+a number of efficient means for systems on the order of            special eigenstates, such as entanglement.
+L . 100 sites, as we discuss in Appendix C.                           Fig. 8 shows the scaling of the bipartite entanglement
+   Diagonalizing the tridiagonal matrix of size (L + 1) ×          entropy in special eigenstates extracted using a MPS im-
+(L+1) with βj determined either directly from Eq. (14) or          plementation of the FSA. Despite entropy being a non-
+via linear recurrence method explained in Appendix C,              local quantity, we again find good agreement between the
+one can obtain a set of approximate eigenenergies and              FSA and exact diagonalization results for system sizes
+eigenvectors in the FSA basis. However, rotating the               up to L = 30. The logarithmic growth of entanglement
+eigenvectors to the physical basis requires one to store at        entropy with system size L suggests that special eigen-
+least L + 1 FSA basis vectors, each of the dimension of            states cannot be efficiently represented by MPS in the
+the full Hilbert space, i.e., exponentially large in L. Ear-       thermodynamic limit. We note that jumps in the entropy
+lier we demonstrated in Fig. 3(a) that special eigenstates         growth of special eigenstates obtained via exact diagonal-
+have considerably lower entropy than other eigenstates             ization, visible in Fig. 8, can be understood as accidental
+at the same energy density. This suggests that matrix              hybridization with eigenstates in the bulk. Because the
+product state (MPS)70 representation of the FSA basis              majority of eigenstates carry an extensive amount of en-
+and special eigenstates should be highly efficient in the          tropy (volume-law) in the middle of the spectrum, such
+present case.                                                      jumps can be attributed to two-eigenstate resonances.
+                                                                      Notably, the FSA overestimates the entanglement en-
+   In order to formulate the FSA recurrence in the MPS             tropy for L ≤ 30. This trend is even more pronounced
+basis, we use the matrix product operator representation           in the inset of Fig. 8, which shows the scaling of the
+of H+ from Eq. (17) and construct the basis by applying            ground state entanglement entropy obtained with the
+the MPS operator to the Néel state. The only difference           FSA. From exact diagonalization it is known that the sys-
+with respect to the exact FSA is that a compression sim-           tem is gapped, and the bipartite entanglement entropy is
+ilar to DMRG algorithms70 is performed every time an               expected to saturate at the value S ≈ 0.346 in the ther-
+operator is applied to a state or two states are summed.           modynamic limit. The observed slow linear growth is an
+That is, we truncate the state for all bipartitions, so that       indication of the error of the FSA and we expect it to re-
+for each reduced density matrix the truncated probabil-            side within all eigenstates. However, since the prefactor
+ity is < 10−8 , and then renormalize the state. Below              of the observed linear growth is very small, for the sys-
+we discuss the physical properties of special eigenstates          tem sizes considered, it is not visible in the logarithmic
+obtained within the FSA.                                           entropy growth of the highly excited states.
+                                                                                                                           12
+
+    3.5                               0.40                       which allows to systematically construct a manifold of
+                 FSA E ≈ 1.33
+                 FSA E ≈ 2.66
+                                                                 low-entangled states that furnish an effective “semiclas-
+    3.0          Exact E ≈ 1.33
+                                  S   0.37                       sical” description of many-body dynamics. In particular,
+                 Exact E ≈ 2.66
+                                                                 Ref. 36 captured the revivals using bond dimension 2
+                                      0.34                       variational ansatz for the collective Rabi oscillations of
+S   2.5                                      25   50   75        atoms •◦ ↔ ◦• between two different configurations of
+                                                   L
+                                                                 the unit cell. These oscillations can be viewed as a tra-
+    2.0                                                          jectory connecting |Z2 i = |•◦•◦ . . .i product state and its
+                                                                 translated version, |Z02 i = |◦•◦• . . .i. In recent work,72
+    1.5                                                          the TDVP approach was extended to a wider class of
+                                                                 spin models, thus providing a general framework to ex-
+                 16        24     32     40 48         64   80   plore quantum scarring in the dynamics of many-body
+                                  L                              systems by an analogy with the single-particle case.
+                                                                    While the TDVP approach allows one to extract some
+Figure 8. Logarithmic scaling of entropy for two adjacent        characteristics of special eigenstates (for example, the os-
+FSA eigenstates in the middle of the spectrum. Black trian-      cillation frequency approximately agrees with the energy
+gles correspond to the state at energy E1 ≈ 1.33 and blue
+                                                                 separation between adjacent special eigenstates), it is not
+crosses to E2 ≈ 2.66 (the two eigenstates have approximately
+the same entanglement entropy with difference ∆S ∼ 0.1%).        clear if such an approach can be used for describing the
+The fit gives S ∝ 0.48 log(L). Green curve corresponds to        properties of individual scarred eigenstates, such as the
+the entropy of the exact special eigenstate at E1 ≈ 1.33. The    entanglement structure and expectation values of local
+non-monotonic behavior of entropy in this case is attributed     observables, and for understanding the finite-size behav-
+to weak hybridization with volume-law entangled states at        ior. In this respect the FSA approach provides a descrip-
+nearby energies. The inset displays the entropy of the FSA       tion of the nearly periodic Hilbert-space trajectory that is
+ground state. The weak growth of entropy with L is an arte-      complementary to TDVP. Above we demonstrated that
+fact of the approximation, since the exact ground state is       the FSA constructs a basis of L + 1 states directly in
+gapped and obeys area law for entropy.                           the many-body Hilbert space of a finite-size system. The
+                                                                 special property of this basis is that it effectively cap-
+                                                                 tures the unitary evolution e−iHt |Z2 i that connects the
+   We demonstrated that the FSA allows one to extract            Néel state and its translated version, |Z02 i. Indeed, the
+eigenenergies and other characteristics of special eigen-        dynamics in the many-body Hilbert space starting from
+states. Overall, we find good agreement of these results         v0 = |Z2 i = |•◦•◦ . . .i proceeds via an increasing number
+with exact diagonalization. The fact that one can cap-           of flips that are generated by the forward-propagation
+ture many-body eigenstates in the Hilbert space (that            part of the Hamiltonian, H+ . In particular, at the first
+scales exponentially in L) with a basis of L + 1 vectors is      step the dynamics generates one delocalized defect within
+unexpected. As we discuss below, this reflects the rela-         |Z2 i state. This state coincides with the second basis vec-
+tion between special eigenstates and unstable periodic or-       tor in the FSA basis, v1 , see Eq. (12). Similarly, the v2
+bits. The FSA provides a basis in the many-body Hilbert          vector from the FSA, with two defects on top of |Z2 i
+space that approximately captures the dynamics associ-           initial state, corresponds to the second step of the tra-
+ated with the periodic orbit.                                    jectory. Hence, we conclude that the FSA captures the
+                                                                 dominant subspace of the Hilbert space where the dy-
+                                                                 namics connecting |Z2 i and |Z02 i states occurs. This is
+ D.       FSA subspace as a basis for quantum scarred            further supported by Fig. 12 in Appendix.
+                       eigenstates                                  Finally, let us discuss other families of quantum scarred
+                                                                 eigenstates within the language of TDVP and FSA. In ad-
+   Until now we have discussed the phenomenology of              dition to special eigenstates with enhanced overlap with
+special eigenstates. Several properties of these special         the |Z2 i product state, we also observed |Z3 i-generated
+eigenstates suggest their similarity to quantum scarred          band of special states in Fig. 5. This shows that the
+eigenstates in single-particle systems. In particular, spe-      PXP model has more than one periodic trajectory that
+cial eigenstates are concentrated in parts of the Hilbert        leads to quantum scars. In particular, the |Z3 i-band of
+space,39 have approximately equal energy spacing, and            special eigenstates is related to oscillations between the
+are easily accessible by preparing the system in certain         three-site configuration, •◦◦, and configurations ◦•◦, ◦◦•,
+product states. However, in order to put the relation be-        obtained from it by translations. These oscillations can
+tween special eigenstates and quantum scars on a firm            also be described within TDVP.72,73 We note that it is
+basis, one needs to generalize the notion of a classical         also possible to describe the corresponding scarred eigen-
+trajectory to the many-body quantum case.                        states using the FSA scheme starting from |Z3 i product
+   One promising route for defining an analogue of a             state. Moreover, the first step of the FSA recurrence
+classical trajectory in the many-body case is provided           still remains exact. However, in this case the FSA re-
+by the time dependent variational principle (TDVP),71            currence is frustrated: starting from •◦◦ state, forward
+                                                                                                                                    13
+
+                                                                         2 PH1 P(1) + (1/2)P(2) H1 P, where P(1,2) are projec-
+                                                                                                    
+propagation brings one into either of the translated con-
+figurations, ◦•◦ or ◦◦•. This fact may potentially explain               tors onto subspaces with one or two adjacent excitations.
+the observation that the |Z3 i-band of special eigenstates               The last perturbation, δHnnn , physically corresponds to
+is less separated from the continuum of other eigenstates                correlated next-nearest neighbour flips. We note that
+in Fig. 5(a). In other words, the trajectory starting from               these perturbations lift the zero-mode degeneracy as they
+|Z3 i product state is more unstable, leading to weaker                  commute with both particle-hole symmetry and inversion
+quantum many-body scars. Nevertheless, one still ob-                     operators. Thus, all perturbations in Eq. (19) effectively
+serves distinct periodic revivals of the many-body fidelity              remove the bipartite structure of the Hilbert space graph
+starting from |Z3 i state, see Fig. 6.                                   that is responsible for the appearance of zero modes, see
+   The observation of |Z2 i and |Z3 i trajectories and un-               Appendix A.
+derlying sets of scarred eigenstates naively suggests that                  As we discussed in Section IV D, the FSA allows to
+density wave states with larger periods will also give rise              quantify the structure of the Hilbert-space orbit under-
+to scars. Clearly, Fig. 6 shows that this is not the case as             lying quantum-scarred eigenstates. Hence, we use the
+already |Z4 i product state features a complete absence                  intuition provided by the FSA to qualitatively under-
+of revivals. We attribute this to the fact that the FSA                  stand sensitivity to different perturbations in Eq. (19).
+approximation ceases to be exact at the first step for |Zn i             In the case when the PXP model is perturbed by the uni-
+product state with n ≥ 4. This signals that the underly-                 form chemical potential, Eq. (19a), the FSA recurrence
+ing trajectories become too unstable to produce quantum                  remains exact at the first and second steps. However,
+scars. On the other hand, product states that contain do-                δH0 will introduce on-site energies in the FSA, mak-
+main walls between different |Z2 i and |Z3 i patterns can                ing the diagonal of the tridiagonal matrix in Eq. (16)
+potentially lead to another set of scarred eigenstates. We               non-zero. Hence, we expect that δH0 will change the
+leave a detailed investigation of this issue to future work.             frequency of oscillations and also contribute to their de-
+                                                                         phasing by removing the periodic energy spacing between
+                                                                         special eigenstates. For the weak perturbation g0 = 0.2,
+ V.    STABILITY AGAINST PERTURBATIONS                                   we demonstrated almost no change in oscillations, see the
+                                                                         Supplementary Material of Ref. 39. Moreover, in Fig. 9
+   Our discussion so far has demonstrated that the FSA                   we compare the structure of the spectral function in the
+is helpful for developing intuition about the structure of               PXP model to that in the perturbed model with g0 = 1.
+various families of quantum scarred eigenstates at high                  We observe that the peak in off-diagonal matrix elements
+energy densities. Here we investigate the stability of |Z2 i             f 2 (ω) at ω ≈ 2.66 shifts to slightly larger frequencies, but
+special eigenstates with respect to various perturbations                still remains strongly pronounced.
+of the Hamiltonian. We will rely on the FSA to develop                      Next, we consider the case of the nearest neighbour
+intuition why special eigenstates are robust with respect                hopping perturbation. This perturbation leaves the first
+to certain perturbations, or which kind of perturbations                 step of the FSA exact, but introduces an error already at
+are most efficient in removing the periodic orbits. Fur-                 the second step. Yet, Fig. 9 shows that the peak in the
+thermore, we discuss several deformations that bring the                 spectral function associated with the separation between
+PXP model to exactly solvable points. Some of these                      special eigenstates shifts while keeping the same magni-
+deformations were found in Refs. 74 and 75. Below we                     tude when we add nearest neighbor hopping, gnn = 0.5.
+demonstrate that these perturbations are strong and re-                  Note that the magnitude of the perturbation is chosen in
+move the special eigenstates that are found in the PXP                   such a way that it has comparable operator norm to the
+model.                                                                   previously considered chemical potential with g0 = 1.
+                                                                            Finally, we considered next nearest neighbor correlated
+                                                                         flips, Eq. (19c), as a perturbation that introduces error
+              A.       Physical perturbations
+                                                                         even at the first step of the FSA approximation. Hence,
+                                                                         we expect such a term to have the strongest effect of all
+  We consider the following perturbations of the PXP                     three terms considered in Eq. (19). Fully consistent with
+Hamiltonian,                                                             these expectations, we observe that the perturbation of
+              X                                                          magnitude gnnn = 0.25, which has operator norm com-
+     δH0 = g0    Qj ,                            (19a)
+                                                                         parable to earlier perturbations, suffices to significantly
+                   j
+                   X                                                     broaden the peak in the spectral function. In addition,
+      δHnn = gnn               Pj−1 (σj+ σj+1
+                                          −
+                                              + σj− σj+1
+                                                     +
+                                                         )Pj+2 , (19b)   we observe in Fig. 10 that this perturbation is the most
+                       j                                                 efficient one in damping the oscillations of the local two-
+                       X                                                 site entanglement after about three periods. We note
+    δHnnn = gnnn                Pj−1 Xj Pj+1 Xj+2 Pj+3 .        (19c)
+                                                                         that while the perturbations gnnn = 0.25 and g0 = 1
+                           j
+                                                                         both lead to the strongly enhanced growth of bipartite
+The uniform chemical potential, δH0 , and constrained                    entanglement with very similar slopes (not shown), the
+nearest neighbour hopping, δHnn , result from the                        former is more efficient in damping the local oscillations.
+                                               (2)
+second order Schrieffer-Wolf transformation, HSW =                          Above we observed that perturbations δH0 and δHnn
+                                                                                                                              14
+
+
+
+
+Figure 9.    Peak in the energy dependence of matrix ele-         Figure 10. The dynamics of two-site entanglement in the
+ments of the unperturbed PXP model at ω ≈ 2.66 softens            quantum quench from |Z2 i initial state is strongly influenced
+and shifts upon the addition of perturbations. Moreover, the      by perturbations to the PXP model. We note that nearest-
+inset shows that the plateau in f 2 (ω) only slightly increases   neighbor hopping is the least effective in damping the oscilla-
+its size when the added perturbation is chemical potential        tions. In contrast, for the perturbation gnnn = 0.25, when the
+or correlated hopping. In contrast, upon adding δHnnn , the       bulk of eigenstates becomes fully thermal, the oscillations in
+plateau increases to values of ω/∆ ≤ 200, fully consistent        entanglement and local observables are strongly damped. The
+with the restoration of conventional thermalization.              entanglement is normalized by the maximal possible value
+                                                                  for two sites, which is equal to ln 3 due to the presence of a
+                                                                  constraint. The data is obtained with iTEBD, the maximal
+                                                                  evolution time is limited by the bond dimension χ = 1200.
+are less effective in destroying the special eigenstates and
+the corresponding oscillations in the PXP model. The
+correlated flips δHnnn is most effective in destroying the
+oscillations. At the same time, we observe that the latter        bonacci anyonic model.76 In addition, there exist a one-
+perturbation is most effective at removing the traces of          parameter family of frustration-free Hamiltonians that
+“slow” thermalization in the bulk of other eigenstates. In        includes the PXP term.75
+particular, Fig. 2(b) demonstrated that while the fluctu-           In particular, by adding the operator
+ations in local observables decay exponentially with the
+system size, this decay is slower than expected from the
+                                                                               X
+                                                                                       P vQj−1 Qj+1 + v −1 − v Qj P
+                                                                                                              
+                                                                     δHv = −                                                (20)
+ETH. We checked that for gnnn = 0.25 the fluctuations                              j
+of local observables decay asp  a square root of the Hilbert
+space dimension, ∆OZ ∝ 1/ D0+ , fully consistent with             with one free real parameter v to the Hamiltonian of the
+the ETH expectations. In addition, the inset of Fig. 9            PXP model, we obtain a Bethe-ansatz solvable model.74
+shows that δHnnn perturbation corresponds to the best-            For v = 1 this perturbation amounts to the constant
+developed plateau in the spectral function at small energy        next-nearest neighbor interaction of Rydberg atoms. An-
+separations.                                                      other special point is v = 2−1/4 , when the total norm of
+   Thus we conclude that the existence of well-defined            the operators in Eq. (20) takes a minimal value. More-
+special eigenstates on the one side, and anomalies in ther-       over, this integrable√line has a quantum critical/tricritical
+malization of the bulk of eigenstates on the other hand,          point at v3,2 = ∓(( 5 + 1)/2)5/2 , respectively.74,77
+are related to each other. In other words, the existence             In the integrable models all eigenstates violate conven-
+of strongly scarred quantum many-body eigenstates and             tional ETH and can be described only via the generalized
+their “protection” from the bulk of other eigenstates is in-      Gibbs ensemble that incorporates additional conserved
+tertwined with slower thermalization of other eigenstates.        quantities. At the same time, we explicitly checked for all
+                                                                  these cases that the special eigenstates, found in unper-
+                                                                  turbed PXP model via overlap with Z2 product state, are
+     B.   Integrable deformations of PXP model                    either strongly perturbed or completely destroyed. More-
+                                                                  over, we did not observe any low-entanglement eigen-
+   After illustrating that perturbations that are effective       states at energy E close to zero, unlike for the unper-
+in restoring “canonical ETH” thermalization also destroy          turbed PXP model, see Fig. 3.
+the bands of special eigenstates, we discuss deformations            Another family of perturbations with a free parame-
+of the PXP model that make it exactly solvable. PXP               ter z,
+Hamiltonian can be deformed to become integrable by a
+one-parameter family of deformations.74 The set of inte-
+                                                                              X
+                                                                      δHz =    (zPj−1 Pj Pj+1 + z −1 Pj−1 Qj Pj+1 ),        (21)
+grable models includes the so-called “golden chain” Fi-                        j
+                                                                                                                        15
+
+brings the PXP model into a frustration-free Hamilto-        the case when the system is initialized in |Z3 i product
+nian, which allows for the exact solution of its ground      state, with some additional features compared to the |Z2 i
+state75 for any real value of z. When z → 0 (z → ∞),         case, and we identified the corresponding family of spe-
+the first (second) term dominates, and this perturbation     cial eigenstates.
+always has finite magnitude O(1) for any values of z.           The phenomenology of the special eigenstates de-
+Analytically minimizing the energy of the PXP model          scribed above allowed us to draw parallels with the ubiq-
+Eq. (5) using a frustration-free√ MPS ansatz  √ of Ref. 75   uitous phenomenon of quantum scarring, thus lending
+results in the value zPXP = ( 5 + 1)1/2 /(2 2) ≈ 0.636.      support to the term quantum many-body scars. In the
+Such an approximation reproduces local observables of        case of a single particle in a chaotic billiard, a single un-
+the exact ground state, such as energy density, with high    stable periodic classical orbit leads to a set of scarred
+precision. Perturbing the PXP model using δHz , we find      eigenstates.40 These eigenstates have their wave func-
+that fidelity oscillations always decay faster compared to   tions localized in the vicinity of their parent trajectory,
+the unperturbed PXP model. For z ∼ zPXP we find the          and can be efficiently prepared by initializing the wave
+slowest decay for all z so that the perturbation δHzPXP      packet near the classical orbit. Moreover, in chaotic bil-
+has weakest effect. Damping of oscillations increases with   liards one usually finds more than one periodic trajectory
+increasing |z − zPXP |.                                      that gives rise to quantum scars. The classical trajecto-
+   In summary, we observed that deforming the PXP            ries which are less unstable give rise to more localized
+model to nearby solvable points does not improve the ro-     wave functions, corresponding to stronger scarring. Fi-
+bustness of quantum scarred eigenstates. Instead, such       nally, one also expects some degree of stability of quan-
+deformations either strongly perturb these states or lead    tum scars to perturbing the system, unless the perturba-
+to their complete disappearance. This result suggests        tion destroys the periodic trajectory.
+that it is the unperturbed PXP model that should be             Similarly, in the PXP model, we observed a set of L+1
+viewed as a parent model for the quantum-scarred eigen-      special eigenstates that are well described within the FSA
+states, and despite proximity of several integrable points   basis, whose dimension scales linearly with the system
+to this model, Bethe-ansatz integrability cannot be used     size. This suggests that special eigenstates are concen-
+to explain this behavior.                                    trated in a small part of the Hilbert space, analogous to
+                                                             the case of a chaotic billiard. The system effectively ac-
+                                                             cesses these eigenstates when prepared in the initial |Z2 i
+       VI.   DISCUSSION AND OUTLOOK                          state or its translated partner, |Z02 i. Additionally, in this
+                                                             work we reported a second family of scarred eigenstates
+   In this paper we studied the eigenstate and dynamical     arising from |Z3 i density wave product state. This second
+properties of the PXP model, which describes a chain         family of eigenstates has larger entanglement, suggesting
+of Rydberg atoms realized in recent experiments.36 We        that the underlying orbit is less stable. The enhanced sta-
+found that the majority of the eigenstates of this model     bility of |Z2 i special eigenstates compared to their |Z3 i
+thermalize more slowly compared to other microscopic         counterparts can also be understood within the FSA.
+models that are usually used to test the ETH.16 On the          Finally, we demonstrated the stability of the many-
+one hand, the origin of such behavior may be related         body revivals with respect to perturbations of the PXP
+to the constraints in the PXP model, which make the          model. We confirmed that perturbations which do not
+Hamiltonian sparse in the Hilbert space. On the other        introduce any immediate errors in the FSA approach are
+hand, conventional ETH was shown to hold for other           less effective in destroying the bands of special eigen-
+kinematically constrained models.78 Hence, we speculate      states and the revivals. We also identified a perturbation
+that anomalies in the thermalization in the PXP model        that quickly removes the non-ergodic scarred eigenstates,
+may be related to the existence of quantum scarred eigen-    restoring the ETH for all states. In addition, we also con-
+states.                                                      sidered several deformations of the PXP model that bring
+   These quantum scarred eigenstates, identified in          it to solvable points. Although the PXP model can be de-
+Ref. 39, strongly violate the ETH. In particular, these      formed into Bethe-ansatz integrable models which do not
+special eigenstates stand out due to their anomalous ex-     follow the ETH, the characteristic many-body revivals
+pectation values of local observables, as well as their      from simple product states do not persist in these inte-
+much smaller entanglement entropy compared to thermal        grable models. Thus, the proximity of those integrable
+eigenstates with similar energies. Besides the ETH viola-    lines is likely unrelated to the weak ergodicity breaking
+tion, special eigenstates are characterized by their large   in the PXP model.
+overlaps with charge density wave states |Z2 i and |Z3 i.       While our study sheds new light onto the structure and
+The energies of these special eigenstates are (approxi-      stability of quantum many-body scars, many interesting
+mately) multiples of the same fundamental frequency.         questions remain open. We used the FSA approximation
+Consequently, as discussed in Ref. 39 and in this paper,     throughout this paper and provided a simple estimate of
+these eigenstates play a key role in the experimentally      the incurred errors in Appendix B. However, quantify-
+observed many-body revivals in the quantum quench            ing the final error in the FSA remains an open problem.
+setup.36 We also predicted the existence of revivals for     Furthermore, it would be highly desirable to identify a
+                                                                                                                     16
+
+parameter that governs the stability of quantum scars         AKLT model with logarithmic scaling of the entangle-
+in the generic case. Better understanding of the errors       ment entropy. As discussed in Ref. 65, the existence of
+in the FSA would allow to obtain more rigorous under-         such eigenstates is suggestive of the presence of quantum
+standing of quantum-scarred eigenstates in the thermo-        scars in the AKLT model.
+dynamic limit. While the FSA suggests their persistence,         Furthermore, during the completion of this
+numerical studies have revealed an onset of accidental hy-    manuscript, we became aware of two related works
+bridizations between scarred eigenstates and the thermal-     on the PXP model.56,72 In Ref. 72, a generalization
+izing bulk of eigenstates. These hybridizations resulted      of the TDVP approach for various spin models and a
+in irregular behavior of entanglement entropy for larger      connection with periodic orbits has been developed. In
+system sizes L ≥ 34, despite the energies of special eigen-   a different direction, Ref. 56 has argued that special
+states still following accurate finite-size scaling. Gener-   properties of the PXP model result from a “proximate
+ally, one may expect special eigenstates to get “dissolved”   integrable point”, to which the model can be driven by
+in the bulk in the thermodynamic limit. Nevertheless,         applying a particular perturbation.
+there will be signatures remaining in the properties of
+local operators and dynamics at short and intermediate
+time scales. In particular, the structure of the spectral                      ACKNOWLEDGMENTS
+function reported in this work is expected to be robust
+in the thermodynamic limit. For instance, the unusual           We thank Paul Fendley, Misha Lukin, Hannes Pichler,
+peaks in the off-diagonal matrix elements at the energy       Marcos Rigol, Harry Levine, and Wen Wei Ho for illumi-
+difference of order one, shown in Fig. 2(c) and Fig. 9, are   nating discussions. C.J.T. and Z.P. acknowledge support
+converged with the system size. Revealing and identify-       by EPSRC grants EP/P009409/1 and EP/M50807X/1,
+ing other experimentally observable signatures remains        and the Royal Society Research Grant RG160635. D.A.
+an interesting problem.                                       acknowledges support by the Swiss National Science
+   More broadly, it would be desirable to understand          Foundation. A.M. and M.S. acknowledge support pro-
+whether there are wider classes of models that display        vided by J. Kiss and A. Schlögl from the HPC Scientific
+quantum scars. On the one hand, the FSA suggests that         Service Unit of IST Austria. Statement of compliance
+the constraint present in the PXP model plays a crucial       with EPSRC policy framework on research data: This
+role in protecting and enabling such behavior. There-         publication is theoretical work that does not require sup-
+fore, it would be natural to search for other types of        porting research data.
+(constrained) Hilbert spaces and models with similar be-
+havior. For example, we note that the model in Eq. (5)
+is related to a class of models that represent interactions              Appendix A: Zero-energy states
+between fundamental excitations in topological phases
+of matter in two dimensions.33,76,78–83 A wide class of
+                                                                 In the main text it was mentioned that one of the spe-
+such phases are the fractional quantum Hall states, in
+                                                              cial features of the PXP model is the existence of an
+which electrons fractionalize into Abelian or non-Abelian
+                                                              exponentially large number of states which are annihi-
+anyons. In particular, in a ν = 12/5 fractional quan-
+                                                              lated by the PXP Hamiltonian in Eq. (5). In Ref. 39
+tum Hall state, the fundamental excitation is a Fibonacci
+                                                              (see also Ref. 85) it was shown that the degeneracy of
+anyon τ .84 The rules of anyon fusion place a formally
+                                                              this zero-energy subspace, ZL , grows with system size
+similar constraint to the allowed number of anyons as
+                                                              according to a Fibonacci number F . More precisely, for
+our constraint on the allowed excitations in the Rydberg
+                                                              open boundaries, depending on whether the system size
+atom chain. Thus, it would be interesting to explore
+                                                              L is even or odd, we have
+analogous models (in the context of cold atomic gases or
+trapped ions) for different types of anyon models, and in-
+                                                                        Z2n = Fn+1 ,            Z2n+1 = Fn .       (A1)
+vestigate the occurrence and stability of quantum scars
+in them.                                                      For periodic boundaries in the zero-momentum sector
+   Finally, the issues discussed above naturally connect
+to questions about practical uses of quantum many-body                   (0)
+                                                                       Z2n = Fn−1 ,
+                                                                                                (0)
+                                                                                              Z2n+1 = Fn−1 ,       (A2)
+scars and their dynamical signatures. Preparing the sys-
+tem in a superposition of quantum-scarred eigenstates         whilst in the π-momentum sector instead
+effectively shields it from thermal relaxation for much
+longer times. Hence, a better understanding of funda-                                  (π)
+                                                                                    Z2n = Fn−2 .                   (A3)
+mental properties of quantum many-body scars, their
+stability and tunability may be of potential use in experi-   We note that there are zero energy levels in other sym-
+ments studying dynamics of non-equilibrium many-body          metry sectors, but they are fewer in number and they
+quantum systems.                                              will not be explicitly considered here.
+   Note added.— Very recently, Ref. 65 has analytically         In this Appendix, we formally derive the above count-
+constructed a set of non-thermalizing eigenstates in the      ing for both OBC and PBC (in the zero momentum sec-
+                                                                                                                    17
+
+tor). The key to this is the particle-hole symmetry, gen-    subspaces spanned by even invariant elements Ke and
+erated by the operator                                       odd invariant elements Ko . Each two-element orbits con-
+                             Y                               tains one inversion-even irreducible representation and
+                        C=      Zi                  (A4)     one inversion-odd irreducible representation. We denote
+                                i                            these as M±   o/e , where + means reflection even and −
+                                                             means reflection odd. In what follows we will use Latin
+which anticommutes with the PXP Hamiltonian, CH =
+                                                             letters for the dimension of the vector spaces labelled by
+−HC. Each eigenstate |ψi with energy E 6= 0 therefore
+                                                             the corresponding script letter.
+has a partner C|ψi with energy −E. The graph has a
+bipartite structure with vertex subsets that are even and       In each of the I-sectors there is a lower bound on the
+odd in the number of excitations, which are measured         number of zero energy states given by the difference be-
+by C. It is well known that the difference in dimensions     tween the dimensions of the subspaces of even and odd
+of these two subspaces lower bounds the number of zero       numbers of excitations. Putting this together,
+energy states.86,87 However, applying this idea directly,      ZL ≥ |M+              +            −       −
+                                                                        e ⊕ Ke | − |Mo ⊕ Ko | + |Me | − |Mo |
+gives us the difference between sectors with an even and
+odd number of excitations to be at most one, which is             = |Me + Ke − Mo − Ko | + |Me − Mo |
+not a useful lower bound. Missing from this analysis is           ≥ |Ke − Ko |,                             (A8)
+consideration of the inversion symmetry I,
+                                                             where we have used the triangle inequality. All that re-
+                 I:         j 7→ L − j + 1,          (A5)    mains is to calculate the vector space dimensions Ke and
+                                                             Ko .
+which commutes with C and hence in its symmetry sec-           Before deriving general expressions for Ke and Ko , we
+tors the bipartite structure is preserved. The combined      present a simple example to illustrate the above. For a
+action of these two symmetries will be shown to provide      chain of size L = 4 with OBC, the Hilbert space contains
+a tight bound for the number of zero energy states. We       8 states in total, four of which are even in the number of
+note that the exponentially-large number of zero-energy      excitations,
+states is an interesting feature of the PXP model because
+energy E = 0 corresponds to the middle of the many-                    •◦•◦,      •◦◦•,   ◦•◦•,   ◦◦◦◦,           (A9)
+body spectrum. By contrast, in 2D models endowed with
+supersymmetry, exponentially many zero-energy states         and four odd ones,
+can occur in the ground state manifold.88
+  Curiously, the zero-mode degeneracy is robust for                    •◦◦◦,   ◦•◦◦,      ◦◦•◦,   ◦◦◦•.          (A10)
+P L to
+even
+          j
+              perturbation by the staggered magnetic field
+   j (−1)   Z j , yielding for open boundary conditions      Two of these (•◦◦•,◦◦◦◦) are invariant under I, while the
+                                                             rest can be organized into two-dimensional orbits. Thus,
+           Z2n = Fn+1 ,              Z2n+1 = 0.      (A6)                    n              o
+                                                                      M+ e =   •◦•◦ +  ◦•◦•  ,
+For periodic boundaries, the staggered field explicitly                      n                            o
+breaks translation symmetry to a ZL/2 subgroup, thereby               M+ o = •◦◦◦ + ◦◦◦•, ◦•◦◦ + ◦◦•◦ ,
+combining the zero- and π-momentum sectors                                   n              o
+                   (0,π)
+                                                                        Ke = •◦◦•, ◦◦◦◦ ,
+                 Z2n       = Fn−1 + Fn−2 .           (A7)                    no
+                                                                        Ko =     ,
+From the analysis below, it follows that zero modes are                      n              o
+generally present if the Hamiltonian anticommutes with                M− e =   •◦•◦ −  ◦•◦•  ,
+the product of particle-hole symmetry C and inversion I.                     n                            o
+Staggered field is a special case of this as it commutes              M− o = •◦◦◦ − ◦◦◦•, ◦•◦◦ − ◦◦•◦ .
+with particle-hole symmetry C and anticommutes with
+inversion I.                                                 Plugging into Eq. (A8), we find ZL=4 ≥ |3 − 2| + |2 − 1| =
+                                                             2, which indeed agrees with the exact result ZL=4 = 2.
+                                                                Next, we consider the case of general L. For any con-
+                      1.   Open chain                        figuration An−1 on the open chain of length n−1, there is
+                                                             a corresponding invariant element on the length L = 2n
+  Our Hilbert space H = C[V ], where V is the vertex         chain (with C = +1) given by
+set, decomposes into subspaces containing states with
+even and odd numbers of excitations. Those are mea-                             An−1 ◦◦ATn−1 ∈ Ke ,              (A11)
+sured by C, and will be denoted by subscripts e and o.
+Each of these subspaces further decomposes into orbits       where ATn is the spatially reversed pattern of An . Ev-
+under the action of the inversion operator I. The or-        ery element of Ke is of this form because the central two
+bits of I are either one- or two-dimensional. Denote the     sites cannot contain excitations as they would then be
+                                                                                                                      18
+
+adjacent. These configurations are in one-to-one corre-      which is tight, i.e., matches the exact number of zero-
+spondence and therefore Ke = Fn+1 and Ko = 0, giving         energy states in the presence of staggered field.
+Z2n = Fn+1 for open chains with even length.                    Interestingly, for odd L the situation is completely dif-
+  Similarly, for L = 2n + 1 odd, there is again a one-       ferent. Now the S-blocks go along the diagonal, which
+to-one correspondence between invariant configurations       removes the bipartite structure. Thus, we do not expect
+of fixed excitation parity and configurations of smaller     any zero-energy states in this case, which is indeed con-
+open chains. In particular, the invariant configurations     firmed by exact calculation.
+can be constructed for the two sectors as follows               Beyond this example we can see that the bipartite
+                                                             block-structure between H↑ and H↓ is undisturbed by
+     C = +1        :            An ◦ATn ∈ Ke ,      (A12)    the addition of terms to the Hamiltonian which anticom-
+     C = −1        :     An−1 ◦•◦ATn−1 ∈ Ko .       (A13)    mute with CI and do not violate the adjacency constraint.
+                                                             This is because H↑ and H↓ are the subspace of CI = +1
+This reveals that Ke = Fn+2 and Ko = Fn+1 for odd            and −1 respectively since C measures the number parity
+length open chains, which altogether gives Z2n+1 = Fn .      of excitations.
+
+        2.   Open chain with alternating field
+                                                                                3.     Periodic chain
+
+  In this subsection we generalize the lower bound on
+                                                               For a periodic chain, in addition to C and I, we also
+the zero-energy degeneracy to the casePof open chains in
+                                                             need to consider the cyclic translation generator σ,
+the presence of a staggered field S ≡ j (−1)j Zj . First,
+notice that                                                                σ:         j 7→ (j + 1)     mod L.     (A17)
+                     (
+                       −IS, if L even,                       Every translation orbit of a periodic chain of length L
+                SI =                               (A14)
+                       +IS, if L odd,                        that is left invariant by I contains at least one element
+                                                             invariant under I or Iσ, i.e., under either a site or a bond
+i.e., [S, I] = 0 if L is odd and {S, I} = 0 if L is even,    inversion.
+where I is the inversion symmetry in Eq. (A5).                 First, take L = 2n + 1 odd, and consider the orbits
+   Assume L even and let X be our unperturbed Hamilto-       which are excitation odd; the inversion invariant orbits
+nian. We can partition the Hilbert space in the following    must contain at least one element of the form
+manner,
+                                                                                            ◦•◦
+          M+   −  +    −
+           o Me Me Ke Mo                                                                A      AT
+                 X X S M+
+                              
+                                                                                            ◦◦
+        
+                            o
+                                H↓                                                                                (A18)
+                 S    X M− e
+ X + S ≃                   + )    . (A15)
+                         Me
+         X  S                                               This diagram depicts a configuration wrapped around a
+                         
+        
+          X                Ke   H↑                           ring. As before, A denotes an arbitrary pattern (which
+          S  X            M−o                                connects to ◦◦ and ◦•◦ on its two ends), while AT is the
+In this block diagram, an X or S denotes a non-zero block    spatially reversed pattern of A. Suppose then that this
+of X +S according to the partitioning of the Hilbert space   configuration is non-unique with
+in terms of orbits of C and I that was discussed in the
+previous section. Note that Ko does not appear because                              ◦•◦          ◦•◦
+it’s trivial for L even.                                                        A      AT = σ j B B T             (A19)
+   The block structure arises from symmetry considera-                              ◦◦           ◦◦
+tions. Since X anticommutes with C and commutes with         for some j and B 6= A. Take these two mirror planes
+I, its non-zero matrix elements couple sectors which have    and generate the full set of mirror planes. The invariant
+different excitation parities and the same inversion pari-   element then takes the form
+ties. Opposite to this, S commutes with C and anticom-
+mutes with I. Accordingly, its non-zero matrix elements                                   Y ◦•◦ Y T
+couple sectors with the same excitation parities but dif-                              ◦◦         ◦◦
+ferent inversion parities.                                                              T          Y
+                                                                                      Y
+   The blocks in Eq. (A15) have been judiciously arranged                              ◦•          ◦
+                                                                                                   •
+                                                                                        ◦         ◦
+to reveal a bipartite structure between subspaces H↑ and                                  Y ◦◦ Y T
+                                                                                                                  (A20)
+H↓ . This occurs because X + S anticommutes with CI.
+From this bipartite structure we get a bound on the zero-    from which it follows that both A and B must have
+energy degeneracy,                                           the form ◦Y ◦◦Y T ◦•◦Y , thus they are equal. This
+                                                             demonstrates that the inversion-invariant element in each
+    Z2n ≥ |H↑ − H↓ | = |Me + Ke + Mo − Mo − Me |
+                                                             inversion-invariant translation orbit is unique. This one-
+                     = Ke = Fn+1 ,           (A16)           to-one correspondence with the allowed configurations of
+                                                                                                                                    19
+
+                                              (0)
+open chains of length n − 2 provides Ko = Fn . If the                      0.3
+orbit is instead excitation even, the diagram is instead
+                              ◦
+                                                                           0.2
+                         A     AT                                         √
+                             ◦◦                             (A21)   kδvj k L
+
+and the same reasoning can be applied to find Ke =
+                                                            (0)            0.1
+                                                                                                           L = 24              L = 50
+Fn+1 .                                                                                                     L = 32              L = 80
+  Now take L = 2n even and consider the excitation-odd                                                     L = 40
+inversion-invariant translation orbits; these must contain                 0.0
+an inversion-invariant element of the form                                                0.0            0.2             0.4
+                             ◦•◦                                                                  (j − 3)/(L − 6)
+                         A      AT .                        (A22)
+                              ◦                                       Figure
+                                                                      √       11. Normalized errors kδvj k rescaled by a factor of
+                                                                        L for PBC in in the parity symmetric sector. With this
+The previous reasoning can again be applied to find                   rescaling, the errors for different L are well collapsed, sug-
+  (0)
+Ko = Fn .                                                             gesting kδvj k2 = O(j 2 /L3 ).
+   The final case is that of L even and excitation-even
+orbits. An elementary method like the previous is more
+involved for this case because the invariant elements are                      Appendix B: Errors in forward scattering
+no longer unique. We instead observe that our lower                                        approximation
+bound for Z is K − 2Ko where K = Ke + Ko is the
+number of invariant elements irrespective of excitation                 Here we present a more detailed analysis of the er-
+parity. The number K can be found as K = 2(M +                        ror made in individual steps of the forward-scattering
+K) − (2M + K), where M = Me + Mo is the number of                     approximation. The vector δwj introduced in Eq. (18)
+two-element orbits irrespective of excitation parity. Note            corresponds to the error made in a single FSA iteration.
+2M +K is the number of translation orbits and M +K is                 The squared-norm of the error vector can be brought to
+the number of orbits of the combined dihedral symmetry                the following form
+of translation and inversion symmetry. These are integer
+sequences of system size and can be found in the OEIS                      kδwj k2 = hvj−1 |[H+ , H− ]|vj−1 i + βj2 − βj−1
+                                                                                                                       2
+                                                                                                                           .      (B1)
+as A000358 and A129526 respectively.89,90 The ordinary
+generating functions of these sequences are known to be               From here it is clear that this error is governed by the
+                                                                      commutator [H+ , H− ] between forward and backward
+                   X φ(k)                 1                           propagation terms in the Hamiltonian. Explicit evalu-
+  2M + K = [xN ]              ln                            (A23)
+                         k         1 − xk (1 + xk )                   ation of this commutator gives:
+                   k≥1
+                    X
+                    1     φ(k)           1                               [H+ , H− ] = −
+                                                                                          X
+                                                                                              (−)j Pj−1 Zj Pj+1
+   M + K = [xN ]               ln                   (A24)
+                    2      k      1 − x (1 + xk )
+                                       k
+                                                                                          j
+                      k≥1
+                             1 (1 + x)(1 + x2 )
+                                                
+                           −                                                                      L X
+                                                  .                                    = D̂Z2 −     −   (−)j Pj−1 Pj Pj+1 , (B2)
+                             2 x4 + x2 − 1                                                        2   j
+where φ(k) is the Euler totient function, i.e., the num-                                           P             P
+ber of positive integers up to k that are relatively prime            where the operator D̂Z2 = j∈ odd Pj + j∈ even Qj is
+to k. Taking the appropriate linear combination of the                diagonal in the basis of product states with eigenvalues
+generating functions                                                  giving the Hamming distance of a given product state
+                                                                      from |Z2 i state. The final term in Eq. (B2) measures
+                                          (1 + x)(1 + x2 )            the imbalance of “forward-holes” and “backward-holes”.
+   2(M + K) − (2M + K) = −[xN ]                            ,
+                                            x4 + x2 − 1               Here we define forward-hole as a pattern ◦◦◦ centered on
+                                                        (A25)         a site with odd j, where H+ could introduce an excita-
+we recognize on the right hand side the generating func-              tion in the middle. Using the fact that for j = 1, 2 no
+tion of the Fibonacci sequence, hence                                 forward/backward holes exist in the system, and using
+                                                                      explicit values of β1,2 from Eq. (15) one can check that
+       2(M + K) − (2M + K) = FbN/2c+2 .                     (A26)     Eq. (B1) indeed gives kδwj k2 = 0.
+                                                                         Fig. 11 shows the normalized errors kδvj k, obtained
+                                                      (0)
+From here we arrive at the desired result Ke = Fn+1 ,                 numerically from the definition in Eq. (18), where we
+which completes the derivation of the zero energy de-                 have introduced the error vector δvj , defined as βj δvj =
+generacy for even L in the zero momentum sector of a                  δwj . This represents the relative error in the Lanczos
+periodic chain.                                                       vector vj . Moreover, in Fig. 11 we have rescaled kδvj k
+                                                                                                                                              20
+
+    1.0                                                           duced here:
+                                            R=     j |uj uj |
+                                            R = |Z2 Z2 |                                  βj vj = H+ vj−1 .                               (C1)
+    0.8
+                                                                  Similarly, we must have
+    0.6
+F
+                                                                                            βj vj−1 = H− vj .                               (C2)
+    0.4
+                                                                  Calculating the off-diagonal elements of the Hamiltonian
+    0.2                                                           matrix directly from these formulas is, however, ineffi-
+                                                                  cient due to an exponential growth of the dimension of
+    0.0                                                           the connected subspace. For this reason, in this Ap-
+            0          10             20           30             pendix we develop a more efficient method. First, in
+                                  t                               Eq. (C5), it will be shown that β coefficients are deter-
+                                                                  mined by the number of loops reaching a given distance
+Figure 12.      Red curve shows the time dependence of the        from the initial state. Recursive expressions for these
+probability to be found within the forward-scattering sub-        loop countings will then be derived for OBC, yielding as
+space, measured by Eq. (B3). Blue curve shows the fidelity        main results Eqs. (C9), (C10) and (C11). Analogous ex-
+for the Néel initial state. Data is for system size L = 32.
+                                                                  pressions for PBC are given in Eqs. (C17), (C18) and
+                                                                  (C20). These results allow for an efficient and high-
+               √                                                  precision implementation of the FSA approximation in
+by a factor of L. Fig. 11 shows that the error for fixed
+                                                                  large systems on the order of L . 100 sites.
+j decreases with L, which is promising for applications
+of the FSA method to larger systems. However, a more
+complete error analysis requires an analytical description
+                                                                  1.    Off-diagonal matrix elements from loop counting
+of how the errors in the individual steps compound to
+produce final errors in the physical quantities of interest.
+This is a more challenging question that requires further              By repeated application of Eqs. (C1)-(C2) we obtain
+investigation.
+                                                                                   βj2 = hvj−1 |H− H+ |vj−1 i
+   In Fig. 12 we assess the quality of the forward-
+                                                                                                        j           j
+scattering approximation for the dynamics. The red                                        hv0 | (H− ) (H+ ) |v0 i
+curve tracks the probability that the system remains                                  =           Qj−1 2
+                                                                                                    k=1 βk
+within the forward-scattering subspace over time, start-                                                    j           j
+ing out in the Néel state. This is quantified by calculating                               hv0 | (H− ) (H+ ) |v0 i
+                                                                                      =                 j−1             j−1
+                                                                                                                                        .   (C3)
+the generalization of quantum fidelity defined as                                         hv0 | (H− )           (H+ )           |v0 i
+                F = hZ2 | eiHt Re−iHt |Z2 i ,             (B3)    From this, we recognize the amplitude
+                              P                                                                                 j           j
+where the operator R =          j |uj ihuj | projects onto the                      WN,j = hv0 | (H− ) (H+ ) |v0 i                          (C4)
+forward-scattering subspace spanned by vectors |uj i. In
+the same figure, we also show the actual fidelity (return         as the number of shortest closed paths reaching a dis-
+probability) for the Néel state, since Eq. (B3) reduces to       tance j from the initial state. Subscript N indicates the
+F = | hZ2 | e−iHt |Z2 i |2 , when R = |Z2 ihZ2 |. The fact        dependence of Wj ’s on the system size, which we denote
+that the generalized fidelity changes over time indicates         by N in this section. In terms of W ’s, the off-diagonal
+that the weight of the wave function contained within             matrix elements are
+the FSA subspace is not invariant under unitary evolu-                                      s
+tion generated by H. Equivalently, this implies that the                                        WN,j
+                                                                                      βj =            .               (C5)
+operator R is only an approximate integral of motion.                                          WN,j−1
+The gap between the revival probability and the sub-
+space probability shows the effect of dephasing within            Our goal here is to derive a linear recurrence system for
+the forward-scattering subspace. Thus, we observe that            calculating WN,j and our strategy will be to count loops
+the leakage of the many-body wave function outside the            recursively in terms of loops on smaller subsystems. We
+FSA subspace is the main cause of fidelity decay in a             will first present results for OBC and then generalize to
+quantum quench.                                                   PBC.
+
+
+          Appendix C: Linear recurrence method                                2.     Loop counting for open chains
+
+  The forward-scattering approximation in the main text            Consider a loop of valid spin flips on an open system of
+was defined by the recurrence in Eq. (14), which is repro-        N sites. This loop can be projected into two subsystems
+                                                                                                                                                  21
+
+where each flip is assigned to the subsystem in which the                  These equations can be made explicit by introducing
+spin in flips is located. We will choose the two subsystems              the counting sequences for the classes. Let fN,j be the
+to comprise of the two leftmost spins and the remaining                  number of shortest loops on the open chain of N sites
+N −2 sites of the system. These subsystem loops are valid                reaching a Hamming distance of j from the Néel state
+                                                                                                                         a,b
+loops on the corresponding open systems of 2 and N − 2                   where the leftmost spin is invariant, and let lN,j  count
+sites. The original loop is one of the ways in which the                 those loops where the leftmost spin is flipped. These are
+spin flips of the subsystem loops can be interlaced such                 the counting sequences for F and L, respectively. The
+that the constraints are never violated. Given a pair                    previous equations (C7)-(C8) then become
+of loops on the two subsystems, we only need to know                                                   X a0 ,b0
+when the left-most spin of the right subsystem and the                         fN,j = fN −2,j +         lN −2,j ,                               (C9)
+right-most spin of the left subsystem are flipped, if at all,                                          a0 ,b0
+in order to count ways in which they can be interlaced.                         a,b
+                                                                                                       X               0
+                                                                                                                       a ,b    0       0   0
+Because the loops discussed are properly shortest loops,                       lN,j = fN,j−1 +                  T a,a lN −2,j−2 T
+                                                                                                                                  b,b
+                                                                                                                                      ,        (C10)
+these boundary spins are either flipped once moving away                                               a0 ,b0
+from the Néel state and once again on the return journey,                                                                         0
+or not at all.                                                           where we have introduced T a,a = min(a, a0 + 1).
+   The most general shortest loop looks like a word                      Eq. (C9) captures the idea that we may glue two addi-
+                                                                         tional sites and the loop of doing nothing onto any loop
+                             c                d
+                          z }| { z             }|        {               on the reduced system. Eq. (C10) captures the idea that
+  A · · · AL |A · · · AR
+                       {z A · · · A | A ·
+                                  } | {z }· · A LA · · · A RA · · · A    the loop that flips only the leftmost spin may be glued
+                       a                b                                to any loop on the reduced system, but when the interior
+                                                                         site is excited in the left-subsystem then the leftmost site
+  |             {z               } |               {z              }
+                 j                                  j
+                                                                         right-subsystem must first have its excitation removed.
+                                                                  (C6)
+                                                                         Finally, the class of all loops in F + L can be counted by
+where the symbol A represents any spin flip (and each
+instance is different) of a bulk spin, L represents flipping                                         WN,j = fN +2,j ,                          (C11)
+the leftmost spin and R the rightmost spin. The verti-
+cal line separates the forward and backward steps in the                 because for every loop on N sites we may glue the trivial
+loop. The order in which the L and R flips appear, if at                 loop on two sites onto its left boundary to get a distinct
+all, in the forward and backward half-words is not fixed,                loop on N + 2 sites, and for every loop on N + 2 sites we
+Eq. (C6) represents only one possible ordering.                          may cut off the leftmost two sites to get a distinct loop
+   We will start by considering only the case of open                    on N sites.
+boundaries. Let F be the combinatorial class of forward-                    Let us illustrate how the recurrence works on an exam-
+scattering loops on a system with open boundaries where                  ple with N = 4 site open chain. Directly from Eq. (C4),
+the left-most spin remains fixed throughout the process.                 it is easy to show that the number of loops for different
+This class is graded by the size of the system N and the                 j sectors is given by W4,1 = 2, W4,2 = 5, W4,3 = 13,
+number of forward and backward transitions j. Similarly,                 and W4,4 = 25. Using the recurrence, we can obtain
+let L be the class where the left-most spin is flipped at                these values starting from a smaller N = 2 site chain. In
+some point of the process and is additionally graded by                  that case, the admissible j are given by 0, 1 and 2, and
+                                                                                                                      0,0    1,1
+a and b. The index a specifies the number of forward                     the only non-zero coefficients are f2,0 = l2,1   = l2,2 = 0.
+steps which follow the flip of the leftmost spin, b is the               Then, applying Eqs. (C11), (C9), and (C10), we have
+number of backward steps preceding the return flip of the                                                    X a,b
+leftmost spin. These classes are defined recursively from                               W4,1 = f6,1 = f4,1 +      l4,1 ,
+the following equations,                                                                                                           a,b=0
+                                                                                               X a0 ,b0
+                                                                                        f4,1 =  l2,1 = 1,
+                F = •◦
+                    •◦ ∗ (F + L)                                  (C7)                               a0 ,b0
+                                                                                         a,b
+                                   •◦                                                   l4,1 = f4,0 = 1,                                       (C12)
+                    •◦             ◦◦
+                    ◦◦             ◦•
+                L = ◦◦ ∗ (F + L) + ◦• ∗ L                         (C8)   thus we get W4,1 = 1+1 = 2. Analogous calculation gives
+                    •◦             ◦◦                                    W4,2 = 5. For W4,3 we need to include the T tensors. We
+                                   •◦
+                                                                         have
+where the ∗ operation glues a two-site system onto the                                                   2
+left, and for each pair of elements in the classes appearing                                                      a,b
+                                                                                                         X
+                                                                           W4,3 = f6,3 = f4,3 +                  l4,3 ,
+on the left and right hand sides produces all the interlac-                                             a,b=0
+ings that satisfy the Fibonacci constraint. The vertical
+direction in the loop diagrams are successive steps in the                  f4,3 = 0,
+                                                                                                          0        0       0   0
+                                                                             a,b                                  a ,b
+                                                                                            X
+loop and the horizontal line separates the forward steps                    l4,3 = f4,2 +            T a,a T b,b l2,1  = 1 + T a,0 T b,0 . (C13)
+from the backward steps.                                                                    a0 ,b0
+                                                                                                                                               22
+
+                                                                            3.       Loop counting on periodic chains
+                                                    direct
+                                                    efficient
+                                                                    For periodic boundaries we must keep track of what
+    5
+                                                                 happens at the subsystem right boundary, to retain the
+                                                                 information required to ensure the constraints are not vi-
+β                                                                olated when the left and right sides are glued together.
+    4                                                            We reinterpret F and L with the additional requirement
+                                                                 that for the loops in theses classes the rightmost site is
+                                                                 at no point excited. This gives us two new classes, R and
+    3                                                            M, which are the analogs of F and L, except that the
+                                                                 rightmost site is now excited at some point of the pro-
+                     5               10               15         cess. These classes are graded by indices c and d which
+                                 j                               mark when the the right boundary site is excited and
+                                                                 unexcited. The new classes satisfy analogous equations
+Figure 13.    A demonstration of exact agreement between         to the previous classes
+direct computation of β coefficients from Eq. (C1) and com-
+putation from the efficient recurrence, Eq. (C11). Data is for                       R = •◦ ∗ (R + M)                                       (C15)
+N = 16 site chain with open boundary conditions.                                         •◦
+                                                                                                    •◦
+                                                                                     •◦             ◦◦
+                                                                                     ◦◦             ◦•
+                                                                                 M = ◦◦ ∗ (R + M) + ◦• ∗ M.                                 (C16)
+                                                                                     •◦             ◦◦
+                                                                                                    •◦
+Therefore, we obtain                                             This is because the gluing process never changes whether
+                                                                 the rightmost site is excited or left invariant.
+                                                                   Keeping track of how all these indices are changed as
+                                                                 loops are interlaced during gluing results in the following
+          2                                                      set of equations:
+          X
+ W4,3 =       (1 + min(a, 1) min(b, 1)) = 9+4 = 13, (C14)               c,d     c,d
+                                                                                         X a0 ,b0 ,c,d
+        a,b=0
+                                                                       rN,j = rN  −2,j +    mN −2,j ,                  (C17)
+                                                                                                       a0 ,b0
+                                                                               c−δ(c≥a), d−δ(d≥b)
+                                                                   ma,b,c,d
+                                                                    N,j     = rN,j−1
+                                                                                                                0     0   0   0   0   0
+                                                                                                       T c,c ,a,k maN ,b ,c ,d
+                                                                                          X
+                                                                                                                               d,d ,b,m
+                                                                                 +                                    −2,j−2 T          ,   (C18)
+as anticipated. Repeating this procedure and using                                    a0 ,b0 ,c0 ,d0
+Eq. (C5), we can obtain the set of N + 1 coefficients
+βj that form the tridiagonal matrix in the forward-              where
+scattering approximation.
+                                                                                          min(a0 ,a−1)
+                                                                        a,c,a0 ,c0
+                                                                                                X
+                                                                    T                = δa6=c             δk6=c δc0 , c−δ(c≥a)−δ(c≥k) .      (C19)
+   The β calculated by the linear recurrence system,
+                                                                                                k=0
+Eqs. (C9) and (C10), are compared against direct com-
+putation with Eq. (C1) in Fig. 13. The two methods               Finally, the total number of loops is found by demanding
+indeed agree to machine precision for the given system           compatibility between the left and right boundaries
+size, but the recurrence method provides much higher                                  X a,b
+                                                                                                         ma,b,c,d
+                                                                                                  X
+accuracy in larger system sizes. Computation time for                WN,j = fN,j +       lN,j +            N,j    . (C20)
+calculating βN,N/2 for an open chain of N sites is found                                          a,b               a>c, b>d
+to scale roughly as ∝ N 5 .
+
+
+1
+  T. Kinoshita, T. Wenger, and D. S. Weiss, A quantum              localization in a quantum simulator with programmable
+  Newton’s cradle, Nature 440, 900–903 (2006).                     random disorder, Nat Phys 12, 907–911 (2016).
+2                                                                4
+  M. Schreiber, S. S. Hodgman, P. Bordia, H. P. Lüschen,          G. Kucsko, S. Choi, J. Choi, P. C. Maurer, H. Sumiya,
+  M. H. Fischer, R. Vosk, E. Altman, U. Schneider, and             S. Onoda, J. Isoya, F. Jelezko, E. Demler, N. Y. Yao,
+  I. Bloch, Observation of many-body localization of inter-        and M. D. Lukin, Critical thermalization of a disordered
+  acting fermions in a quasirandom optical lattice, Science        dipolar spin system in diamond, ArXiv e-prints (2016),
+  349, 842–845 (2015).                                             arXiv:1609.08216.
+3                                                                5
+  J. Smith, A. Lee, P. Richerme, B. Neyenhuis, P. W. Hess,         A. M. Kaufman, M. E. Tai, A. Lukin, M. Rispoli, R. Schit-
+  P. Hauke, M. Heyl, D. A. Huse, and C. Monroe, Many-body          tko, P. M. Preiss, and M. Greiner, Quantum thermaliza-
+                                                                                                                               23
+
+                                                                   26
+   tion through entanglement in an isolated many-body sys-            N. Y. Yao, C. R. Laumann, J. I. Cirac, M. D. Lukin, and
+   tem, Science 353, 794–800 (2016).                                  J. E. Moore, Quasi-many-body localization in translation-
+ 6
+   J. M. Deutsch, Quantum statistical mechanics in a closed           invariant systems, Phys. Rev. Lett. 117, 240601 (2016).
+                                                                   27
+   system, Phys. Rev. A 43, 2046–2049 (1991).                         Z. Papić, E. M. Stoudenmire, and D. A. Abanin, Many-
+ 7
+   M. Srednicki, Chaos and quantum thermalization, Phys.              body localization in disorder-free systems: The importance
+   Rev. E 50, 888–901 (1994).                                         of finite-size constraints, Annals of Physics 362, 714 – 725
+ 8
+   M. Rigol, V. Dunjko, V. Yurovsky, and M. Olshanii, Re-             (2015).
+                                                                   28
+   laxation in a completely integrable many-body quantum sys-         M. van Horssen, E. Levi, and J. P. Garrahan, Dynamics of
+   tem: An Ab Initio study of the dynamics of the highly ex-          many-body localization in a translation-invariant quantum
+   cited states of 1d lattice hard-core bosons, Phys. Rev. Lett.      glass model, Phys. Rev. B 92, 100305 (2015).
+                                                                   29
+   98, 050405 (2007).                                                 T. Veness, F. H. L. Essler, and M. P. A. Fisher, Disorder-
+ 9
+   M. Rigol, V. Dunjko, and M. Olshanii, Thermalization               free localization, ArXiv e-prints (2016), arXiv:1611.02075.
+                                                                   30
+   and its mechanism for generic isolated quantum systems,            I. H. Kim and J. Haah, Localization from superselection
+   Nature 452, 854–858 (2008).                                        rules in translationally invariant systems, Phys. Rev. Lett.
+10
+   H. Kim, T. N. Ikeda, and D. A. Huse, Testing whether all           116, 027202 (2016).
+                                                                   31
+   eigenstates obey the eigenstate thermalization hypothesis,         H. Yarloo, A. Langari, and A. Vaezi, Anyonic self-induced
+   Phys. Rev. E 90, 052105 (2014).                                    disorder in a stabilizer code: Quasi many-body localization
+11
+   B. Sutherland, Beautiful Models: 70 Years of Exactly               in a translational invariant model, Phys. Rev. B 97, 054304
+   Solved Quantum Many-body Problems (World Scientific,               (2018).
+                                                                   32
+   2004).                                                             A. A. Michailidis, M. Žnidarič, M. Medvedyeva, D. A.
+12
+   D. Basko, I. Aleiner, and B. Altshuler, Metal–insulator            Abanin, T. c. v. Prosen, and Z. Papić, Slow dynamics in
+   transition in a weakly interacting many-electron system            translation-invariant quantum lattice models, Phys. Rev. B
+   with localized single-particle states, Annals of Physics 321,      97, 104307 (2018).
+                                                                   33
+   1126 – 1205 (2006).                                                Z. Lan, M. van Horssen, S. Powell, and J. P. Garrahan,
+13
+   M. Serbyn, Z. Papić, and D. A. Abanin, Local conservation         Quantum slow relaxation and metastability due to dynam-
+   laws and the structure of the many-body localized states,          ical constraints, ArXiv e-prints (2017), arXiv:1706.02603.
+                                                                   34
+   Phys. Rev. Lett. 111, 127201 (2013).                               A. Smith, J. Knolle, R. Moessner, and D. L. Kovrizhin,
+14
+   D. A. Huse, R. Nandkishore, and V. Oganesyan, Phe-                 Absence of ergodicity without quenched disorder: From
+   nomenology of fully many-body-localized systems, Phys.             quantum disentangled liquids to many-body localization,
+   Rev. B 90, 174202 (2014).                                          Phys. Rev. Lett. 119, 176601 (2017).
+15                                                                 35
+   P. W. Anderson, Absence of diffusion in certain random             M. Brenes, M. Dalmonte, M. Heyl, and A. Scardicchio,
+   lattices, Phys. Rev. 109, 1492–1505 (1958).                        Many-body localization dynamics from gauge invariance,
+16
+   L. D’Alessio, Y. Kafri, A. Polkovnikov, and M. Rigol,              ArXiv e-prints (2017), arXiv:1706.05878.
+                                                                   36
+   From quantum chaos and eigenstate thermalization to                H. Bernien, S. Schwartz, A. Keesling, H. Levine, A. Om-
+   statistical mechanics and thermodynamics, Advances in              ran, H. Pichler, S. Choi, A. S. Zibrov, M. Endres,
+   Physics 65, 239–362 (2016).                                        M. Greiner, V. Vuletic, and M. D. Lukin, Probing many-
+17
+   D. A. Abanin, E. Altman, I. Bloch, and M. Serbyn, Ergod-           body dynamics on a 51-atom quantum simulator, Nature
+   icity, Entanglement and Many-Body Localization, ArXiv              551, 579 (2017).
+                                                                   37
+   e-prints (2018), arXiv:1804.11065.                                 P. Schauß, M. Cheneau, M. Endres, T. Fukuhara, S. Hild,
+18
+   K. Binder and A. P. Young, Spin glasses: Experimental              A. Omran, T. Pohl, C. Gross, S. Kuhr, and I. Bloch,
+   facts, theoretical concepts, and open questions, Rev. Mod.         Observation of spatially ordered structures in a two-
+   Phys. 58, 801–976 (1986).                                          dimensional Rydberg gas, Nature 491, 87 EP – (2012).
+19                                                                 38
+   L. Berthier and G. Biroli, Theoretical perspective on the          H. Labuhn, D. Barredo, S. Ravets, S. de Léséleuc,
+   glass transition and amorphous materials, Rev. Mod. Phys.          T. Macrı̀, T. Lahaye, and A. Browaeys, Tunable two-
+   83, 587–645 (2011).                                                dimensional arrays of single Rydberg atoms for realizing
+20
+   G. Biroli and J. P. Garrahan, Perspective: The glass transi-       quantum Ising models, Nature 534, 667 EP – (2016).
+                                                                   39
+   tion, The Journal of Chemical Physics 138, 12A301 (2013).          C. J. Turner, A. A. Michailidis, D. A. Abanin, M. Ser-
+21
+   G. H. Fredrickson and H. C. Andersen, Kinetic ising model          byn, and Z. Papic, Weak ergodicity breaking from quantum
+   of the glass transition, Phys. Rev. Lett. 53, 1244–1247            many-body scars, Nature Physics (2018), 10.1038/s41567-
+   (1984).                                                            018-0137-5.
+22                                                                 40
+   R. G. Palmer, D. L. Stein, E. Abrahams, and P. W. An-              E. J. Heller, Bound-state eigenfunctions of classically
+   derson, Models of hierarchically constrained dynamics for          chaotic hamiltonian systems: Scars of periodic orbits,
+   glassy relaxation, Phys. Rev. Lett. 53, 958–961 (1984).            Phys. Rev. Lett. 53, 1515–1518 (1984).
+23                                                                 41
+   G. Carleo, F. Becca, M. Schiró, and M. Fabrizio, Localiza-        S. Sridhar, Experimental observation of scarred eigenfunc-
+   tion and glassy dynamics of many-body quantum systems,             tions of chaotic microwave cavities, Phys. Rev. Lett. 67,
+   Scientific Reports 2, 243 (2012).                                  785–788 (1991).
+24                                                                 42
+   W. De Roeck and F. Huveneers, Asymptotic quantum                   C. M. Marcus, A. J. Rimberg, R. M. Westervelt, P. F.
+   many-body localization from thermal disorder, Communi-             Hopkins, and A. C. Gossard, Conductance fluctuations
+   cations in Mathematical Physics 332, 1017–1082 (2014).             and chaotic scattering in ballistic microstructures, Phys.
+25
+   M. Schiulaz and M. Müller, Ideal quantum glass transi-            Rev. Lett. 69, 506–509 (1992).
+                                                                   43
+   tions: Many-body localization without quenched disorder,           P. B. Wilkinson, T. M. Fromhold, L. Eaves, F. W. Sheard,
+   in American Institute of Physics Conference Series, Ameri-         N. Miura, and T. Takamasu, Observation of scarred wave-
+   can Institute of Physics Conference Series, Vol. 1610 (2014)       functions in a quantum well with chaotic electron dynam-
+   pp. 11–23, arXiv:1309.1082.                                        ics, Nature 380, 608 EP – (1996).
+                                                                                                                                24
+
+44                                                                  65
+   J. R. Schrieffer and P. A. Wolff, Relation between the An-          S. Moudgalya, N. Regnault, and B. A. Bernevig, Entangle-
+   derson and Kondo Hamiltonians, Phys. Rev. 149, 491–492              ment of Exact Excited States of AKLT Models: Exact Re-
+   (1966).                                                             sults, Many-Body Scars and the Violation of Strong ETH,
+45
+   S. Bravyi, D. P. DiVincenzo, and D. Loss, Schrieffer–wolff          ArXiv e-prints (2018), arXiv:1806.09624.
+                                                                    66
+   transformation for quantum many-body systems, Annals of             B. Sun and F. Robicheaux, Numerical study of two-body
+   Physics 326, 2793 – 2826 (2011).                                    correlation in a 1d lattice with perfect blockade, New Jour-
+46
+   W. J. Hsu, Fibonacci cubes-a new interconnection topology,          nal of Physics 10, 045032 (2008).
+                                                                    67
+   IEEE Transactions on Parallel and Distributed Systems 4,            B. Olmos, R. González-Férez, and I. Lesanovsky, Collec-
+   3–12 (1993).                                                        tive rydberg excitations of an atomic gas confined in a ring
+47
+   E. Munarini, C. P. Cippo, and N. Z. Salvi, On the Lucas             lattice, Phys. Rev. A 79, 043419 (2009).
+                                                                    68
+   cubes, Fibonacci Quarterly 39, 12–21 (2001).                        B. Olmos, R. González-Férez, I. Lesanovsky,            and
+48
+   V. Hernandez, J. E. Roman, and V. Vidal, Slepc: A scal-             L. Velázquez, Universal time evolution of a rydberg lattice
+   able and flexible toolkit for the solution of eigenvalue prob-      gas with perfect blockade, Journal of Physics A: Mathemat-
+   lems, ACM Trans. Math. Softw. 31, 351–362 (2005).                   ical and Theoretical 45, 325301 (2012).
+49                                                                  69
+   M. Srednicki, Thermal fluctuations in quantized chaotic             Z. Bai, J. Demmel, J. Dongarra, A. Ruhe, and H. van der
+   systems, Journal of Physics A: Mathematical and General             Vorst, Templates for the solution of algebraic eigenvalue
+   29, L75 (1996).                                                     problems: a practical guide (SIAM, 2000).
+50                                                                  70
+   M. Srednicki, The approach to thermal equilibrium in quan-          U. Schollwöck, The density-matrix renormalization group
+   tized chaotic systems, Journal of Physics A: Mathematical           in the age of matrix product states, Annals of Physics 326,
+   and General 32, 1163 (1999).                                        96 – 192 (2011).
+51                                                                  71
+   E. Khatami, G. Pupillo, M. Srednicki, and M. Rigol,                 J. Haegeman, J. I. Cirac, T. J. Osborne, I. Pižorn,
+   Fluctuation-dissipation theorem in an isolated system of            H. Verschelde, and F. Verstraete, Time-dependent varia-
+   quantum dipolar bosons after a quench, Phys. Rev. Lett.             tional principle for quantum lattices, Phys. Rev. Lett. 107,
+   111, 050403 (2013).                                                 070601 (2011).
+52                                                                  72
+   R. Steinigeweg, J. Herbrych, and P. Prelovšek, Eigenstate          W. W. Ho, S. Choi, H. Pichler, and M. D. Lukin, Peri-
+   thermalization within isolated spin-chain systems, Phys.            odic orbits, entanglement and quantum many-body scars in
+   Rev. E 87, 012118 (2013).                                           constrained models: matrix product state approach, ArXiv
+53
+   W. Beugeling, R. Moessner, and M. Haque, Off-diagonal               e-prints (2018), arXiv:1807.01815.
+                                                                    73
+   matrix elements of local operators in many-body quantum             A. A. Michailidis et al., in preparation, .
+                                                                    74
+   systems, Phys. Rev. E 91, 012144 (2015).                            P. Fendley, K. Sengupta, and S. Sachdev, Compet-
+54
+   M. Serbyn, Z. Papić, and D. A. Abanin, Criterion                   ing density-wave orders in a one-dimensional hard-boson
+   for many-body localization-delocalization phase transition,         model, Phys. Rev. B 69, 075106 (2004).
+                                                                    75
+   Phys. Rev. X 5, 041047 (2015).                                      I. Lesanovsky, Liquid ground state, gap, and excited states
+55
+   M. Serbyn, Z. Papić, and D. A. Abanin, Thouless energy             of a strongly correlated spin chain, Phys. Rev. Lett. 108,
+   and multifractality across the many-body localization tran-         105301 (2012).
+                                                                    76
+   sition, Phys. Rev. B 96, 104201 (2017).                             A. Feiguin, S. Trebst, A. W. W. Ludwig, M. Troyer, A. Ki-
+56
+   V. Khemani, C. R. Laumann, and A. Chandran, Signa-                  taev, Z. Wang, and M. H. Freedman, Interacting anyons
+   tures of integrability in the dynamics of Rydberg-blockaded         in topological quantum liquids: The golden chain, Phys.
+   chains, ArXiv e-prints (2018), arXiv:1807.02108.                    Rev. Lett. 98, 160409 (2007).
+57                                                                  77
+   R. Mondaini and M. Rigol, Eigenstate thermalization in              R. Samajdar, S. Choi, H. Pichler, M. D. Lukin, and
+   the two-dimensional transverse field ising model. ii. off-          S. Sachdev, Numerical study of the chiral Z 3 quantum
+   diagonal matrix elements of observables, Phys. Rev. E 96,           phase transition in one spatial dimension, ArXiv e-prints
+   012157 (2017).                                                      (2018), arXiv:1806.01867.
+58                                                                  78
+   D. A. Abanin, W. De Roeck, and F. m. c. Huveneers, Ex-              A. Chandran, M. D. Schulz, and F. J. Burnell, The
+   ponentially slow heating in periodically driven many-body           eigenstate thermalization hypothesis in constrained Hilbert
+   systems, Phys. Rev. Lett. 115, 256803 (2015).                       spaces: A case study in non-Abelian anyon chains, Phys.
+59
+   E. B. Bogomolny, U. Gerland, and C. Schmit, Models of               Rev. B 94, 235122 (2016).
+                                                                    79
+   intermediate spectral statistics, Phys. Rev. E 59, R1315–           I. Lesanovsky and H. Katsura, Interacting Fibonacci
+   R1318 (1999).                                                       anyons in a Rydberg gas, Phys. Rev. A 86, 041601 (2012).
+60                                                                  80
+   M. Serbyn and J. E. Moore, Spectral statistics across the           N. H. Lindner, E. Berg, G. Refael, and A. Stern, Frac-
+   many-body localization transition, Phys. Rev. B 93, 041424          tionalizing Majorana fermions: Non-Abelian statistics on
+   (2016).                                                             the edges of abelian quantum Hall states, Phys. Rev. X 2,
+61
+   P. Calabrese and J. Cardy, Entanglement entropy and                 041002 (2012).
+                                                                    81
+   quantum field theory, Journal of Statistical Mechanics:             A. W. Glaetzle, M. Dalmonte, R. Nath, I. Rousochatza-
+   Theory and Experiment 2004, P06002 (2004).                          kis, R. Moessner, and P. Zoller, Quantum Spin-Ice and
+62
+   D. Gioev and I. Klich, Entanglement entropy of fermions             Dimer Models with Rydberg Atoms, Phys. Rev. X 4, 041037
+   in any dimension and the Widom conjecture, Phys. Rev.               (2014).
+                                                                    82
+   Lett. 96, 100503 (2006).                                            R. Vasseur, A. C. Potter, and S. A. Parameswaran, Quan-
+63
+   P. Calabrese, M. Mintchev, and E. Vicari, Entanglement              tum criticality of hot random spin chains, Phys. Rev. Lett.
+   entropies in free-fermion gases for arbitrary dimension,            114, 217201 (2015).
+                                                                    83
+   EPL (Europhysics Letters) 97, 20009 (2012).                         Z. Lan and S. Powell, Eigenstate thermalization hypothesis
+64
+   S. Moudgalya, S. Rachel, B. A. Bernevig, and N. Regnault,           in quantum dimer models, Phys. Rev. B 96, 115140 (2017).
+                                                                    84
+   Exact Excited States of Non-Integrable Models, ArXiv e-             N. Read and E. Rezayi, Beyond paired quantum hall states:
+   prints (2017), arXiv:1708.05021.                                    Parafermions and incompressible states in the first excited
+                                                                                                                            25
+
+   landau level, Phys. Rev. B 59, 8084–8092 (1999).                order, Phys. Rev. B 49, 3190–3196 (1994).
+85                                                              88
+   M. Schecter and T. Iadecola, Many-Body Spectral Reflec-         P. Fendley and K. Schoutens, Exact results for strongly
+   tion Symmetry and Protected Infinite-Temperature Degen-         correlated fermions in 2 + 1 dimensions, Phys. Rev. Lett.
+   eracy, ArXiv e-prints (2018), arXiv:1801.03101.                 95, 046403 (2005).
+86                                                              89
+   B. Sutherland, Localization of electronic wave functions        A. R. Ashrafi, J. Azarija, K. Fathalikhani, S. Klavžar, and
+   due to local topology, Phys. Rev. B 34, 5208–5211 (1986).       M. Petkovšek, Vertex and Edge Orbits of Fibonacci and
+87
+   M. Inui, S. A. Trugman, and E. Abrahams, Unusual prop-          Lucas Cubes, Annals of Combinatorics 20, 209–229 (2016).
+                                                                90
+   erties of midband states in systems with off-diagonal dis-      N. J. A. Sloane, The On-Line Encyclopedia of Integer Se-
+                                                                   quences.
+

@@ -39,12 +39,19 @@ using ITensors
         @test real(local_expectation(state, Coord(0, 0), pauli_x())) ≈ expected_X atol = 1e-10
     end
 
-    @testset "non-product gate raises informative error at D=1" begin
-        # PXP gate at finite t: not a tensor product across the 7 sites
+    @testset "projected PXP gate updates D=1 three-site product exactly" begin
+        t = 0.17
         H = pxp_star_hamiltonian(projector_down(), pauli_x())
-        Upxp = dense_gate(H, 0.1; evolution = :real)
-        state = product_ipeps(OneSiteUnitCell(), :down; D = 1)
-        @test_throws ErrorException apply_star_gate_simple_update!(state, Upxp, Coord(0, 0))
+        Uproj = projected_gate(H, t; evolution = :real)
+        state = product_ipeps(ThreeSiteUnitCell(), :down; D = 1)
+
+        diag = apply_star_gate_simple_update!(state, Uproj, Coord(0, 0); maxdim = 1)
+
+        @test diag isa SimpleUpdateDiagnostics
+        @test diag.discarded_weight ≈ 0 atol = 1e-12
+        @test real(local_expectation(state, Coord(0, 0), pauli_z())) ≈ -cos(2t) atol = 1e-10
+        @test real(local_expectation(state, Coord(1, 0), pauli_z())) ≈ -1 atol = 1e-10
+        @test real(local_expectation(state, Coord(2, 0), pauli_z())) ≈ -1 atol = 1e-10
     end
 
     @testset "D=2 random state: identity gate is a no-op" begin
@@ -55,6 +62,33 @@ using ITensors
         T_after = site_tensor(state, Coord(0, 0))
         @test array(T_before) ≈ array(T_after)
         @test diag.discarded_weight == 0
+    end
+
+    @testset "simple update diagnostics report affected bonds and dimensions" begin
+        state = random_ipeps(OneSiteUnitCell(), 2; seed = 7)
+        I128 = Matrix{ComplexF64}(I, 128, 128)
+        diag = apply_star_gate_simple_update!(state, I128, Coord(0, 0); maxdim = 2)
+        @test Set(diag.affected_bonds) == Set((Coord(0, 0), d) for d in 1:6)
+        @test diag.output_bond_dims == fill(2, 6)
+        for d in 1:6
+            λ = bond_lambda(state, Coord(0, 0), d)
+            @test all(λ .>= 0)
+            @test norm(λ) ≈ sqrt(length(λ))
+        end
+    end
+
+    @testset "projected PXP simple update skeleton preserves fixed D on random D=2 state" begin
+        state = random_ipeps(OneSiteUnitCell(), 2; seed = 11)
+        H = pxp_star_hamiltonian(projector_down(), pauli_x())
+        Uproj = projected_gate(H, 0.02; evolution = :real)
+
+        diag = apply_star_gate_simple_update!(state, Uproj, Coord(0, 0); maxdim = 2, cutoff = 1e-12)
+
+        @test diag isa SimpleUpdateDiagnostics
+        @test diag.discarded_weight >= 0
+        @test all(dim(bond_index(state, Coord(0, 0), d)) <= 2 for d in 1:6)
+        @test all(length(bond_lambda(state, Coord(0, 0), d)) <= 2 for d in 1:6)
+        @test all(all(bond_lambda(state, Coord(0, 0), d) .>= 0) for d in 1:6)
     end
 
     @testset "PXP-on-allowed-product preserves blockade (dense level)" begin

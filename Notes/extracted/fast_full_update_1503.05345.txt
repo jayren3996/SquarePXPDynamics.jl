@@ -1,0 +1,967 @@
+                                                                 The iPEPS algorithm, improved: fast full update and gauge fixing
+
+                                                               Ho N. Phien,1 Johann A. Bengua,1 Hoang D. Tuan,1 Philippe Corboz,2 and Román Orús3
+                                                                         1
+                                                                             Centre for Health Technologies, Faculty of Engineering and Information Technology,
+                                                                                            University of Technology Sydney, Sydney 2007, Australia
+                                                                                         2
+                                                                                           Institute for Theoretical Physics, University of Amsterdam,
+                                                                                  Science Park 904 Postbus 94485, 1090 GL Amsterdam, The Netherlands
+                                                                               3
+                                                                                 Institute of Physics, Johannes Gutenberg University, 55099 Mainz, Germany
+                                                                   The infinite Projected Entangled Pair States (iPEPS) algorithm [J. Jordan et al, PRL 101, 250602
+                                                                (2008)] has become a useful tool in the calculation of ground state properties of 2d quantum lattice
+                                                                systems in the thermodynamic limit. Despite its many successful implementations, the method has
+                                                                some limitations in its present formulation which hinder its application to some highly-entangled
+
+
+
+
+arXiv:1503.05345v2 [cond-mat.str-el] 10 Aug 2015
+                                                                systems. The purpose of this paper is to unravel some of these issues, in turn enhancing the stability
+                                                                and efficiency of iPEPS methods. For this, we first introduce the fast full update scheme, where
+                                                                effective environment and iPEPS tensors are both simultaneously updated (or evolved) throughout
+                                                                time. As we shall show, this implies two crucial advantages: (i) dramatic computational savings,
+                                                                and (ii) improved overall stability. Besides, we extend the application of the local gauge fixing,
+                                                                successfully implemented for finite-size PEPS [M. Lubasch, J. Ignacio Cirac, M.-C. Bañuls, PRB
+                                                                90, 064425 (2014)], to the iPEPS algorithm. We see that the gauge fixing not only further improves
+                                                                the stability of the method, but also accelerates the convergence of the alternating least squares
+                                                                sweeping in the (either “full” or “fast full”) tensor update scheme. The improvement in terms of
+                                                                computational cost and stability of the resulting “improved” iPEPS algorithm is benchmarked by
+                                                                studying the ground state properties of the quantum Heisenberg and transverse-field Ising models
+                                                                on an infinite square lattice.
+
+                                                                PACS numbers: 03.67.-a, 03.65.Ud, 02.70.-c, 05.30.Fk
+
+
+                                                                    I.        INTRODUCTION                             to study time-evolution of 1d systems have also been
+                                                                                                                       put forward, such as time evolving block decimation
+                                                                                                                       (TEBD),7,8 time-dependent DMRG,21,22 and more re-
+                                                      In the last years, tensor networks have emerged as a             cently algorithms based on the time-dependent varia-
+                                                   powerful tool to understand quantum many-body sys-                  tional principle.25 One way of generalizing MPS methods
+                                                   tems.1 From the point of view of numerical simulations              to higher dimensional systems69 is using projected en-
+                                                   there have been a number of novel algorithms developed,             tangled pair states (PEPS),26–28 , sometimes also called
+                                                   whose inner workings are deeply rooted in the theory of             tensor product states (TPS).29–31 There has been a lot
+                                                   quantum entanglement. In all these algorithms quantum               of progress both in conceptual and algorithmic develop-
+                                                   many-body states are conveniently represented by ten-               ments for PEPS, see, e.g., Refs 32–48. From the numer-
+                                                   sor networks that efficiently capture the natural struc-            ical perspective, PEPS have been used to study ground
+                                                   ture of quantum correlations in the system (such as, e.g.,          state properties as well as dynamics of 2d lattice systems,
+                                                   the so-called entanglement area law.2–6 ). Many impor-              both of finite and infinite size. Moreover, motivated by
+                                                   tant classes of states can be accurately approximated by            the success of 1d methods in the thermodynamic limit
+                                                   a tensor network with a number of parameters that de-               such as iTEBD,49,50 the so-called infinite-PEPS (iPEPS)
+                                                   pends only polynomially on the size of the system. Such             algorithm33,34 was put forward to study infinite-size 2d
+                                                   properties, among others, have enabled tensor network               quantum lattice systems.
+                                                   methods to break the curse of dimensionality, namely,                  So far, the iPEPS algorithm has been quite successful
+                                                   the fact that the Hilbert space dimension of a quantum              in studying ground state properties of a growing number
+                                                   many-body system is exponentially large in the number               of 2d quantum lattice systems (see, e.g., Ref. 1 and ref-
+                                                   of particles. Thanks to this, it is now possible to effi-           erences therein). In general terms, results obtained by
+                                                   ciently simulate quantum many-body systems by target-               using iPEPS can be competitive when compared to the
+                                                   ing the relevant tiny corner of quantum states (e.g., those         ones derived from quantum Monte Carlo.34,51 And what
+                                                   satisfying an area-law) inside of the exponentially-large           is more important, the iPEPS algorithm is not hampered
+                                                   Hilbert space.7–9                                                   by the sign problem (unlike quantum Monte Carlo) when
+                                                      The so-called matrix product state (MPS)10,11 is a               studying fermionic and frustrated spin systems. Recent
+                                                   typical tensor network ansatz representing the state of             applications of iPEPS to such systems include calcula-
+                                                   1d gapped quantum lattice systems. It is also well                  tions for the t−J model of fermions on the square,37,52,53
+                                                   known that MPS is the class of variational wave func-               and honeycomb lattices,55 as well as the J1 −J2 frustrated
+                                                   tions at the root of the density matrix renormaliza-                Heisenberg model on the square lattice,56 the Shastry-
+                                                   tion group (DMRG) method,12,13 widely used in the                   Sutherland model,54 and the Kagome Heisenberg anti-
+                                                   study of 1d systems.14–20 Subsequently, MPS methods                 ferromagnet.57
+                                                                                                                         2
+
+   One of the main drawbacks of the iPEPS algorithm            for the gauge fixing of PEPS tensors is inspired by the
+is its high computational cost as a function of the            case of MPS, for which tensors can always be represented
+bond dimension D which controls the accuracy of the            in a canonical form during their update by means of lo-
+method. This is particularly true when trying to ob-           cal gauge fixing. In the canonical form many of the ten-
+tain good accuracies in physical regimes where entan-          sor manipulations of an MPS get simplified (or directly
+glement is large (e.g., close to a quantum critical point,     canceled out) implying a much better conditioning and
+or in the presence of many nearly-degenerate quan-             stability of related algorithms. However, unlike in the
+tum states), which requires a large D. The compu-              MPS case, there is no exact canonical form for PEPS in
+tational bottleneck of the method is the calculation of        the same sense. A recent attempt along this direction is
+the so-called effective environment, i.e., the effective       the so-called quasi-canonical form for iPEPS.42,43,47 This
+description of the tensor network surrounding a given          has been shown to lead to some computational advan-
+site. Technically, effective environments can be com-          tages, but unfortunately does not fully capture the effect
+puted using different approaches, such as TRG/SRG              of quantum correlations spreading throughout the 2d lat-
+and HOTRG/HOSRG,32,36,41,58 iTEBD,33 corner trans-             tice. A different approach was considered in Refs. 46,47,
+fer matrices (CTM),34,59–63 or more recently the ten-          where it was shown that by considering the effect of the
+sor network renormalization method.64 Independently of         entire 2d lattice, a local gauge choice of the tensors can
+the chosen approach for their calculation, accurate ef-        also produce a well-conditioned environment, which in
+fective environments are required for the so-called full       turn improves the stability of the subsequent calcula-
+update (FU), which is the accurate scheme proposed to          tions. Here we apply the same local gauge fixing as in
+find the iPEPS tensors throughout a (imaginary) time           Ref. 46 to the iPEPS algorithm and show that it not
+evolution. Because of the large computational cost only        only improves the stability, but also accelerates the con-
+relatively small bond dimensions can be afforded when          vergence of the alternating least squares sweeping in the
+using the FU scheme.                                           tensor update scheme.
+   Alternative update schemes have been developed try-            To show the validity of these approaches, we provide
+ing to overcome this problem, but only with partial suc-       benchmarking calculations for the “improved” iPEPS al-
+cess. A very popular approach is the so-called simple          gorithm with the two “improvements” mentioned above
+update (SU),35,40 which relies on a mean-field approxi-        (FFU + gauge fixing). In particular, we analyse the
+mation of the effective environment, thus being very ef-       computational cost and the stability of the algorithm,
+ficient. Such a scheme allows to reach large bond di-          for ground-state calculations of the Heisenberg and
+mensions in the iPEPS but, not surprisingly, it does not       transverse-field Ising models on an infinite square lat-
+produce accurate results when systems are very strongly-       tice. We shall see quantitatively that the “improve-
+correlated. Intermediate approaches interpolating be-          ments” both accelerate and stabilize the overall numeri-
+tween the FU and the SU schemes have also been put             cal calculations.
+forward as an alternative.44,45                                   The paper is structured as follows. Some background
+   So, here is the dilemma: accurate update schemes like       material on PEPS, iPEPS, and the iPEPS algorithm is
+the FU are too costly, whereas efficient update schemes        presented in Sec. II. In Sec. III we introduce the im-
+such as the SU are not accurate enough. The question           provements (FFU and gauge-fixing). Benchmarking cal-
+then is: can one somehow “accelerate” the FU, making           culations are presented in Sec. IV. Finally, conclusions
+it more efficient while keeping its accuracy?                  are presented in Sec. V.
+   In this paper we give a positive answer to this question.
+We do this by constructing an update scheme, which we
+                                                                                II.    BACKGROUND
+call “fast full update” (FFU), that significantly reduces
+the computational cost of iPEPS algorithms while still
+being accurate. More specifically, in this new strategy at                      A.    PEPS and iPEPS
+every time step the tensors of the effective environment
+are updated by a single iteration step (in a sense to be                              1.   Generalities
+made specific later) and simultaneously with those of the
+iPEPS. Importantly, we find that applying this strategy           For completeness, we briefly review the notation and
+to iPEPS algorithms not only reduces the computational         fundamental properties of projected entangled pair states
+cost by a large factor (as expected), but also contributes     (PEPS).26–28 To this end, let us consider a 2d quantum
+to stabilize the algorithm. The reason for this is that the    lattice system consisting of N sites, each of which is de-
+successively updated environment helps to maintain the         scribed by a local Hilbert space Cd . The full Hilbert space
+compatibility between the related tensors throughout the       of the system is thus H = (Cd )⊗N . As the dimension of
+time evolution, as we shall explain later.                     the full Hilbert space grows exponentially with the size
+   In addition, we show that incorporating the local gauge     of the system, the problem quickly becomes intractable
+fixing scheme proposed in Ref. 46 (and successfully ap-        already for moderately-low values of N . In order to avoid
+plied to finite PEPS) can make the iPEPS algorithm even        this curse of dimensionality, an option is to use a PEPS to
+faster and more stable. As described in Ref. 46, the idea      represent a pure state of the system. Generally speaking,
+                                                                                                                                             3
+
+a PEPS is a state defined by a 2d lattice of interconnected
+tensors, i.e.,
+
+               d
+               X
+    |Ψi =                 F (A[~
+                               r1 ]          [~
+                                              rN ]
+                              sr~ , . . . , Asr~ )|sr             ~N i,
+                                                    ~1 , . . . , sr
+                                  1             N
+             {sr~i }N
+                    i=1
+
+                                                                          (1)
+
+where |sr~i i is the local basis of the site located at ~ri =
+(xi , yi ). Depending on the geometry of the lattice pat-
+                     [~
+                      r ]
+tern, the tensor Asr~ii at each lattice site ~ri contains nr~i
+bond indexes taking up to D values (nr~i is typically the
+number of nearest neighbours of the lattice site ~ri ) and
+a physical index taking up to d values. The operation
+                                 [~
+                                  r ]
+F contracts all the tensors Asr~ii along the bond indices.
+Conventionally, D is usually referred to as the bond di-                        Figure 1: (Color online) (a) Graphical representation of a
+                                                                                PEPS on a 5 × 5 square lattice. Each ball is a tensor, and
+mension, which plays the role of a parameter quantifying
+                                                                                lines correspond to tensor indices. Lines from one tensor to
+both the size of the tensors in the PEPS, and also the                          another correspond to common summed indices (or contracted
+amount of entanglement in the wave function.70 Thus,                            indices). The free index, or open leg, in each tensor is called
+the larger D, the better the PEPS can represent the state                       physical index, and corresponds to the local degrees of freedom
+of the system (since there are more variational parame-                         of the local Hilbert space at every site. (b) An infinite PEPS
+ters). As an example, in Fig. 1(a) we illustrate a graphi-                      with a two-tensor unit cell. The two tensors A and B are
+cal representation of the PEPS for a 5 × 5 square lattice.                      repeated on the infinite 2d lattice.
+In this case the amount of complex parameters describing
+the PEPS quantum state is O(N dD4 ), thus polynomial
+in N, D and d, in contrast with the exponential depen-                                            3.   Numerical application
+dence on N for an arbitrary state in the Hilbert space.
+For the sake of simplicity, from now on we shall always                            PEPS can be used to study both ground state proper-
+assume that we have a 2d square lattice.71                                      ties as well as dynamics of 2d quantum lattice systems.
+                                                                                For ground states, one can either (i) variationally opti-
+                                                                                mize the PEPS tensors so as to minimise the expectation
+                            2.    Properties                                    value of the 2d corresponding Hamiltonian (as done in
+                                                                                DMRG in 1d), or (ii) evolve the system in imaginary time
+                                                                                until a fixed point (ground state) is reached (as done in
+   PEPS have some important properties that make it an
+                                                                                TEBD in 1d). The second method can also be applied to
+appropriate representation for 2d quantum lattice sys-
+                                                                                study real time evolution of the system. This approach
+tems. First, and similarly to MPS, PEPS satisfy the
+                                                                                is also easy to extend to the thermodynamic limit, called
+entanglement area law.2–6 More specifically, the scaling
+                                                                                the iPEPS algorithm,33,34 which we go over again briefly
+of entanglement entropy of an L × L block of a PEPS
+                                                                                in the next section.
+is O(L log D). Accordingly, PEPS can describe very well
+the entanglement structure of many interesting 2d quan-
+tum systems, including low-energy eigenstates of many
+                                                                                               B.      The iPEPS algorithm
+2d Hamiltonians with local interactions. Second, PEPS
+can in principle represent systems with both finite and
+infinite correlation length.65 This is to be contrasted with                                            1.   Generalities
+the case of MPS, where only a finite correlation length
+is possible. Third, and also unlike for MPS, given the                             For a given Hamiltonian H, the ground state of the
+loops present on 2d lattices there is no obvious canonical                      system can be obtained by evolving an initial state |Ψ0 i
+form for a PEPS (although some proposals have been re-                          in imaginary time β as described by
+cently put forward along this direction42,43,47 ). Last, but
+not least, PEPS can be used to represent systems in the                                                            e−Hβ |Ψ0 i
+thermodynamic limit by using a small number of tensors,                                        |ΨGS i = lim                     .          (2)
+                                                                                                             β→∞ ||e−Hβ |Ψ0 i||
+under the assumption of shift invariance. More precisely,
+a unit cell of tensors is repeated all over the 2d lattice to                   Moreover, the real-time evolution is described via the
+construct an arbitrarily-large shift-invariant PEPS. For                        solution of the Schrödinger equation, which for a time-
+an infinite system, this is the so-called infinite-PEPS, or                     independent Hamiltonian H reads
+iPEPS (see Fig. 1(b) for a graphical illustration of an
+iPEPS with a two-site unit cell).                                                                   |Ψ(t)i = e−iHt |Ψ0 i.                  (3)
+                                                                                                                                 4
+
+From now on, let us consider the evolution of an iPEPS             rest of the links (which is approximately correct, since
+                                                                                           0
+in imaginary time (the extension to real-time evolution            δ  1 and thus g [~r,~r ] ∼ I). Let us consider the case of
+is technically straightforward).                                   an r−link, for concreteness. After applying the gate, we
+   We assume that the Hamiltonian contains only trans-             obtain a new iPEPS |ΨA0 B 0 i which is characterized by
+lationally invariant nearest-neighbour interactions, i.e.,         tensors A and B everywhere except for the two tensors
+                          X          0
+                                                                   connected by the link where the gate acted. More pre-
+                    H=        h[~r,~r ] ,               (4)        cisely, |ΨA0 B 0 i and |ΨAB i differ from each other only by
+                               r ,r~0 i
+                              h~                                   two tensors. Because of the effect of the gate, the bond
+                                                                   dimension of the affected index changes to D0 ≤ d2 D,
+where the sum is performed over all the nearest neigh-             and thus increases, corresponding to a change of the en-
+bours h~r, ~r0 i. For a Hamiltonian that is invariant under        tanglement in the tensor network. Because of this, the
+translations, we can use an iPEPS also with translation            iPEPS bond dimension quickly increases exponentially
+symmetry to represent the wave function |Ψi of the sys-            fast after few gate applications, making the simulation
+tem. This could be achieved by repeating the same tensor           intractable. To overcome this problem, the infinite PEPS
+on each lattice site all over the lattice. However, our up-        |ΨA0 B 0 i is approximated by a new PEPS |ΨÃB̃ i, by re-
+date scheme (described below) requires neighboring ten-            placing tensors A0 and B 0 by Ã and B̃, where these two
+sors to be different, which is why we typically use a two-         last tensors have again bond dimension D for the affected
+site translationally invariant iPEPS shown in Fig. 1(b),           index. This is done in a way such that the state |ΨÃB̃ i
+depending only on two tensors A and B. If translational            is close to the exact state |ΨA0 B 0 i, and thus introduces a
+symmetries are spontaneously broken in the thermody-               small error only. Such a procedure is called tensor update
+namic limit, then a larger unit cell of tensors (compatible        of the iPEPS.
+with the structure of the ground state) can be used in-               A possibility to implement the tensor update is to look
+stead.52                                                           for new tensors Ã and B̃ that minimise the squared dis-
+   In order to compute the ground state of the system by           tance between the exact and the approximating state,
+an evolution in imaginary time, one first decomposes the           i.e.
+time evolution operator into a product of so-called two-
+body gates. To this end, the Hamiltonian H is rewritten                    min |||ΨA0 B 0 i − |ΨÃB̃ i||2 = min d(Ã, B̃),      (8)
+as                                                                         Ã,B̃                             Ã,B̃
+
+
+               H = Hl + Hr + Hu + Hd ,                      (5)    with
+                                        0
+where each term Hi = h~r,~r0 i∈i h[~r,~r ] , i ∈ (l, r, u, d) is          d(Ã, B̃) = hΨA0 B 0 |ΨA0 B 0 i + hΨÃB̃ |ΨÃB̃ i −
+                           P
+
+the sum of mutually-commuting Hamiltonian terms for                                   −hΨÃB̃ |ΨA0 B 0 i − hΨÃB̃ |ΨA0 B 0 i.   (9)
+links labelled as (left, right, up, down). Notice, though,
+that the commutator [Hi , Hj ] is in general different from        To solve the problem in Eq. (8), two main tasks are
+zero whenever i 6= j. Applying the first-order Suzuki-             needed. These are (i) the effective environment calcu-
+Trotter decomposition,66 we can write the time evolution           lation, and (ii) the tensor update. Since these pieces of
+operator as                                                        the method will be fundamental for the improvements
+                                                                   to be later explained, we review them in detail in the
+          e−Hβ = (e−Hδ )m                                          following.
+               ≈ (e−Hl δ e−Hr δ e−Hu δ e−Hd δ )m            (6)
+
+where δ is an infinitesimal time step and m ≡ β/δ ∈ N                              2.   Effective environment calculation
+is the number of “time steps” that needs to evolve the
+system, so as to reach total evolution time β. Since each
+                                                                      To properly evaluate d(Ã, B̃) one needs to take into
+term Hi is a sum of mutually-commuting terms, we can
+                                                                   account the effect of the whole tensor network surround-
+further write each term e−Hi δ in Eq. (6) as a product of
+                                                                   ing the affected link, i.e., the environment. Such a ten-
+two-body gates, i.e.,
+                                                                   sor network of infinitely-many tensors is conveniently ap-
+                              Y            0                       proximated by an effective environment, consisting of
+                 e−Hi δ =          g [~r,~r ] ,       (7)          a small number of tensors only. The effective environ-
+                                     r ,r~0 i∈i
+                                    h~                             ment can be computed using various approaches, such as
+          0        [~  r0 ]
+                    r ,~
+                                                                   TRG/SRG, HOTRG/HOSRG,32,36,41,58 tensor network
+with g [~r,~r ] ≡ e−h δ
+                        .                                          renormalization (TNR),64 iTEBD,33 and corner transfer
+  For a given time step of the evolution, let us consider          matrix (CTM) methods. This last approach will be our
+the action of the term e−Hi δ on an infinite PEPS |ΨAB i           choice in this paper. We shall not explain CTM methods
+with two tensors A and B, and bond dimension D. To                 in full detail here, and we refer the reader to the extensive
+this aim we focus on one link on the lattice and,    0
+                                                          only     existing literature on the topic such as Refs. [34,59–63]
+initially, disregard the effect of the gates g [~r,~r ] on the     for technicalities. However, since these methods will also
+                                                                                                                                                 5
+
+
+                                                  u            d
+                                           l       r   r           l
+                                           d            u              u
+                                                       l                   r
+
+                                                           d           d              Figure 3: (Color online) Tensor network diagrams showing
+                                                       r                   l          how to compute T, R and S in Eq. (12).
+
+                                                           u
+                                                                                                     3.   iPEPS Tensor Full Update
+
+                                                                                         Eq. (9) implies that the squared distance d(Ã, B̃) is
+                                                                                      a quadratic function of tensors Ã and B̃. Thus, once
+                                                                                      the effective environment is obtained, one can apply an
+                                                                                      alternating least squares method to optimize tensors Ã
+                                                                                      and B̃. This is the so-called full update (FU), and it
+                                                                                      follows the steps below:
+
+                                                                                        (i) Fix tensor B̃ to some initial tensor72 or to the ten-
+                                                                                            sor obtained from previous iteration. In order to
+                                                                                            find Ã, rewrite Eq. (9) as a quadratic scalar ex-
+                                                                                            pression for the tensor,
+
+                                                                                               d(Ã, Ã† ) = Ã† RÃ − Ã† S − S † Ã + T.    (12)
+
+Figure 2: (Color online) (a) Left: 2d lattice of tensors formed                             In this equation, Ã is understood as a reshaped vec-
+from a and b; right: contractions to obtain tensors a and b.                                tor with D4 d components and matrices R, S, T can
+(b) Environment of a given link on the lattice (here an r-                                  be obtained from the appropriate tensor contrac-
+link). (c) Effective environment of a given link on the lattice                             tions including the effective environment around
+(here an r-link). (d) 6-tensor representation of the effective
+                                                                                            the r-link, see Fig. 3.
+environment around the link.
+                                                                                       (ii) We find the minimum of d(Ã, Ã† ) in Eq. (12), with
+                                                                                            respect to Ã† , which is given by Ã = R−1 S.
+be important at a later stage of this paper, we review
+briefly some notations and conventions.                                                (iii) Next, we fix the tensor Ã and find B̃ using the same
+  We first construct an infinite square lattice L(a, b) by                                   procedure as steps (i) and (ii) above.
+contracting the physical indexes of |ΨAB i and hΨAB |, see
+Fig. 2(a) where                                                                          The above steps are iterated until the cost function
+                                                                                      d(Ã, B̃) converges to a sufficiently-small value. A possi-
+                               X                                                      bility to check convergence is, e.g., to check the value of
+                 al̄r̄ūd¯ =       Aslrud (Asl0 r0 u0 d0 )∗                    (10)   this cost function between two successive iterations and
+                               s                                                      compare it to some small tolerance. Last but not least:
+                                                                                      once the optimal tensors are found, these are replaced
+                               X
+                 bl̄r̄ūd¯ =        s
+                                   Blrud (Bls0 r0 u0 d0 )∗ ,                   (11)
+                               s
+                                                                                      over the entire0 2d lattice approximating the effect of all
+                                                                                      the gates g [~r,~r ] acting over the infinitely-many links of
+                                                                                      the same type. Such a procedure defines the updated
+ where ¯l, r̄, ū, d¯ are combined indices, e.g. ¯l = (l, l0 ).                       infinite PEPS |ΨÃB̃ i in terms of the two new tensors.
+   The exact environment E(~r1 , ~r2 ) of two sites at                                Finally, the same procedure is repeated for the l-, u- and
+~r1 and ~r2 is shown in Fig. 2(b). In CTM meth-                                       d-links to complete one time step. This is iterated un-
+ ods, this is approximated by an effective tensor net-                                til the desired real running time is achieved, or until the
+ work G(~r1 , ~r2 ), the effective environment, which com-                            iPEPS converges to a fixed-point approximation of the
+ prises a set of four χ × χ corner transfer matrices                                  ground state for imaginary-time evolutions.
+ {C1 , C2 , C3 , C4 }, eight half transfer row/column tensors                            As such, the computational cost of the procedure above
+ {T a1 , T a2 , T a3 , T a4 , T b1 , T b2 , T b3 , T b4 } and two tensors             is quite high due to the calculation of the inverse of the
+ a and b, see Fig. 2(c). A further simple contraction                                 matrix R in step (ii). Specifically, this cost is O(D8 ) if
+ of the tensor network produces an effective environ-                                 recurrent methods are applied for computing the inverse
+ ment for the considered link in terms of only six tensors                            (e.g., biconjugate gradient). Otherwise, the cost would
+ {E1 , E2 , E3 , E4 , E5 , E6 }, see Fig. 2(d).                                       be O(D12 ) for an exact inverse calculation.
+                                                                                                                                         6
+
+
+
+
+                 r                                r
+                                                                             Figure 5: (Color online) Tensor network diagrams showing
+                                                                             how to compute T, R and S in Eq. (14).
+
+Figure 4: (Color online) (a) Subtensors for iPEPS tensor A
+and B. Decompose A = XaR and B = bL Y by means of
+decompositions such as QR or SVD. (b) The action of the                      computed exactly. Due to this huge advantage in com-
+two-body gate g on the iPEPS tensors A and B connected by                    putational cost, as compared to the direct update of the
+an r-link is equivalent to its action on the subtensors aR and               iPEPS tensors A and B, the present scheme is able to
+bL only, leaving X and Y unaffected.                                         deal with iPEPS of larger bond dimension D, with the
+                                                                             corresponding advantages.
+                                                                                The rest of the update follows as explained in the pre-
+                4.   Reduced Tensor Full Update
+                                                                             vious subsection. This is, the reduced tensors are op-
+                                                                             timized until the cost function is sufficiently small, and
+    As an efficient and convenient alternative to this                       then, these are replaced over the entire 2d lattice. As
+method, one can apply the “revised” FU scheme dis-                           explained before, this last step approximates the effect
+cussed in Ref. 37 where, instead of updating two ten-                        of all the gates acting on all the links of the lattice of the
+sors Ã and B̃, one updates some lower-rank subtensors                       same type. As before, the procedure defines an updated
+related to them (sometimes they are also called reduced                      infinite PEPS |ΨÃB̃ i in terms of two new tensors. After
+tensors 46 ). These subtensors are denoted as ãR and b̃L ,                  this, one repeats the same procedure for the l-, u- and
+respectively. The main idea of this optimization scheme                      d-links to complete one time step of the evolution. This
+is based on the observation that applying the two-body                       will be iterated until the iPEPS converges to a fixed point
+gate g on two sites A and B connected by a specific link                     approximating the ground state (for imaginary time), or
+changes the properties of that link only, while the oth-                     until the desired real-time evolution is completed.
+ers remain unchanged. For instance, for an r-link this
+results into modifying the bond dimension for this link
+from D to D0 > D, while the size of the other indices is
+unaffected.                                                                    III.   IMPROVING THE IPEPS ALGORITHM
+   Thus, by means of the QR or singular value decompo-
+sition (SVD), we decompose tensors A and B such that
+                                                                                One of the main limitations of the FU iPEPS algo-
+A = XaR and B = bL Y , where aR and bL are connected
+                                                                             rithm in its present formulation is that the effective en-
+by the bond index on the r-link, and also contain the
+                                                                             vironment has to be recomputed from scratch at ev-
+physical indices (see Fig. 4(a)). When applying the two-
+                                                                             ery time step. Obtaining a converged effective environ-
+body gate g, we now contract it with aR and bL in order
+                                                                             ment requires NCTM iterations of the CTM algorithm
+to update them directly. Once aR and bL are updated
+                                                                             with NCTM depending on the amount of entanglement
+to, say, ãR and b̃L , we can easily get updated iPEPS ten-
+                                                                             in the system (for not-too-entangled systems, typically
+sors Ã and B̃ by using Ã = XãR and B̃ = b̃L Y . The
+                                                                             NCTM ∼ 10 − 20, but it can be considerably larger in
+update scheme for ãR and b̃L can be performed similarly
+                                                                             strongly entangled systems). Since these CTM iterations
+as we explained for Ã and B̃, following steps (i-iii) above.
+                                                                             are the computational bottleneck of the method, it is de-
+More precisely, in these steps we replace Ã and B̃ by ãR                   sirable to keep NCTM as low as possible. However, if one
+and b̃L , which are alternatively optimized according to a                   uses a NCTM which is too small, then the errors intro-
+similar figure of merit defined as                                           duced in the effective environment can lead to instability
+    d(ãR , b̃L ) = hΨa0R b0L |Ψa0R b0L i + hΨãR b̃L |ΨãR b̃R i −          problems of the method.
+                                                                                Here we propose two improvements to the algorithm,
+                     −hΨãR b̃L |Ψa0R b0L i − hΨãR b̃L |Ψa0R b0L i.(13)
+                                                                             which enhance the stability of the method and make it
+Eq. (12) for ãR is now rewritten as,                                        more efficient. First, we explain how to implement what
+                                                                             we call a fast full update (FFU), where the accuracy of the
+         d(ãR , ã†R ) = ã†R RãR − ã†R S − S † ãR + T,           (14)   FU is preserved while substantially reducing its computa-
+                                                                             tional cost and improving its stability. Second, we discuss
+and the cost function for variable b̃L is defined in a sim-                  the application of a local gauge fixing, as in Ref. 46, which
+ilar way. Note that the tensors {R, S, T } in Eq. 14 are                     naturally improves stability and also accelerates the con-
+different from the ones in Eq. 12, see Fig. 5.                               vergence of the overall method. This is explained in what
+   The computational cost of this update scheme is                           follows, and benchmarking numerical calculations shall
+O(d3 D6 ), where the inverse of the matrix R can now be                      be provided in the forthcoming sections.
+                                                                                                                                7
+
+              A.    Fast Full Update (FFU)
+
+  In this update scheme we reduce the computational
+cost by using the following idea: instead of recomput-
+ing the environment tensors from scratch we can update
+the environment tensors simultaneously with those of the
+iPEPS at each step, just by a single CTM iteration step.
+This reduces the computational cost by a large factor
+(see results below). The crucial technical point of this
+FFU scheme is to make sure that the environment ten-
+sors remain compatible with the updated iPEPS tensors
+throughout the (imaginary) time evolution.
+  The details of the FFU scheme for iPEPS tensors A
+and B plus the effective environment tensors are shown in
+Fig. 6. In the following we explain how to proceed at each
+time step, when the two-body gates g are successively
+applied on the r-, l-, u- and d-links:
+
+ (a) r-link update: Suppose that the effective environ-
+     ment around four links of the iPEPS is charac-
+     terized by tensors {Ci , T ai , T bi }4i=1 , see Fig. 6(a-
+     i). Applying the gate g to the r-link will mod-
+     ify the properties of this link, so we need to up-
+     date the tensors A and B using the update scheme
+     from the previous section. Specifically, the effec-
+     tive environment of an r-link is obtained by first
+     absorbing a row of tensors {T a4 , b, a, T b2 } to the
+     bottom edge and then contracting the tensors ap-
+     propriately, such that the effective environment is
+     represented by six tensors {Ei }6i=1 as in Fig. 6(a-ii).
+     We then apply the tensor update scheme explained
+     previously in order to find some updated tensors
+     A1 and B1 .
+     In order to prepare for the next update of the
+     l−link, we now update the environment tensors.
+     To this end, we insert two columns of tensors
+     {T a1 , b1 , a1 , T b3 } and {T b1 , a1 , b1 , T a3 } in the mid-
+     dle of the tensor network, see Fig. 6(a-iii,iv). Note
+     that the two tensors a and b connected by link r̄ are
+     now replaced by the updated ones a1 and b1 . But
+     importantly, there are still two sites where we use
+     the old tensors a and b, since the corresponding r-
+     link is connected to the old environment, and thus
+     was not “formally” updated.
+     Next, the columns of tensors {T a1 , b1 , a, T b3 } and
+     {T b1 , a1 , b, T a3 } are absorbed to the right and left
+                                                                         Figure 6: (Color online) Tensor network diagrams for the
+     edges respectively, see Fig. 6(a-iv). After this ab-                Fast Full Update. Details are explained in the main text.
+     sorption, one finds appropriate isometries to renor-
+     malize the environment tensors as usual, in such a
+     way that their bond dimensions do not grow.34 The                        A2 and B2 . The new environment tensors for up-
+     new environment tensors of the l-link are denoted                        dating the u-link are denoted as in the Fig. 6(c-i).
+     as in Fig. 6(b-i).
+                                                                           (c) u-link update: From the tensor network in Fig. 6(c-
+ (b) l-link update: For the action of a gate on the l-link,                    i), we obtain the environment tensors for the u-
+     we proceed in the same way as with the r-link,                            link as shown in Fig. 6(c-ii). An update of the
+     which is shown graphically in Fig. 6(b). The iPEPS                        tensors will now produce two new tensors A3 and
+     is now updated and represented by two new tensors                         B3 . We then compute the effective environment for
+                                                                                                                                      8
+
+      the update of the d-link as shown in Fig. 6(c-iv)
+ (d) d-link update: Now we follow the same procedure
+     as for the u-link in order to update the iPEPS ten-
+     sors as well as the effective environment. This is
+     shown in Fig. 6(d). Finally, we obtain the new
+     iPEPS tensors A4 and B4 and the new effective en-
+     vironment of the four links is represented by tensors
+     {Ci0000 , T a00i , T b00i }4i=1 , see Fig. 6(d-v).
+   The above update scheme is illustrated for one time
+step only. One then needs to iterate this scheme in order
+to evolve the system up to the desired time. As in the
+update approaches explained in the previous section, for                  Figure 7: (Color online) (a) Contraction producing the norm
+                                                                          tensor. The leading computational cost of this contraction is
+the FFU is also a good idea to choose properly the initial
+                                                                          O(d4 D4 χ2 ) + O(d2 D6 χ2 )+O(d2 D3 χ3 )46 . (b) Diagrammatic
+state in ground-state calculations (e.g. converged iPEPS                  representation of the cost function defined in Eq. (15).
+obtained from the SU scheme, or from the FU scheme
+with a smaller bond dimension). Evidently, for the FFU
+this choice also helps in the stability and fast convergence
+of the algorithm.
+   The FFU that we just presented has two key advan-
+tages: first, one keeps an environment at every step that
+is perfectly compatible with the tensors in the iPEPS in
+all bond indices. This is the reason why, e.g., in Fig. 6(a-
+iv) we still have two tensors a and b at two sites. Such
+a property naturally improves the stability. Second, the
+environment is not reconverged for every link at every
+step.73 As a result, this reduces the required computa-
+tional time considerably.
+
+
+                     B.    Gauge fixing
+
+   In contrast to MPS, a PEPS does not have a canon-
+ical form. Therefore, it is difficult to fix the gauge of
+the PEPS tensors in some appropriate way during the
+time evolution. Despite this, local gauge fixing schemes                  Figure 8: (Color online) (a) Positive approximant for the
+have proven useful in improving the stability of the al-                  norm tensor ÑLR . (b) Apply the QR decomposition for the
+gorithm.42,43,46,47 In this paper, we use the local gauge                 left and the right bond indices of tensor Z, so that Z =
+fixing proposed in Ref. 46 (applied there to finite PEPS),                QL R = LQR . (c) Insert the identities I = L−1 L = R−1 R
+                                                                          into the left and right bond indexes of the tensor Z to obtain
+in the context of the iPEPS algorithm. We shall see that
+                                                                          Z̃ = L−1 ZR−1 and the new subtensors ãR = LaR , b̃L = bL R.
+this not only helps to improve the stability of the method,               (d) A new norm tensor is obtained as ÑLR = Z̃ Z̃ † . In or-
+but also to accelerate its convergence.                                   der to keep the compatibility once the subtensors have been
+   To this end, we consider the tensor update applied to                  updated, we need to multiply the tensors X and Y by ma-
+the reduced tensors. We rewrite Eq. (13) as follows:                      trices L−1 , R−1 , so that X̃ = XL−1 and Ỹ = R−1 Y , respec-
+                                                                          tively. This is done before recovering the tensors Ã = X̃ãR
+    d(ãR , b̃L ) = a0† 0†     0 0      † †
+                     R bL NLR aR bL + ãR b̃L NLR ãR b̃R −               and B̃ = b̃L Ỹ .
+                   −ã†R b̃†L NLR a0R b0L − ã†R b̃L NLR a0R b0L , (15)
+where NLR is the “norm” tensor obtained by comput-                        is the identity matrix for all links at the same time. The
+ing the overlap of hΨãR b̃L |ΨãR b̃R i while leaving out the            reason is that an iPEPS does not have a canonical form
+tensors ãR , b̃L and their complex conjugates. Specifically,             in the same sense as MPS. Second, this tensor needs to
+this can be done by contracting the tensor network shown                  be computed using approximations, which implies that,
+in Fig. 7 (a). Also, the cost function is represented di-                 generally, it is neither strictly Hermitian nor positively
+agrammatically in Fig. 7 (b). In order to update the                      defined. Although one could always apply some approxi-
+subtensors one needs, thus, to compute the norm ten-                      mation methods that preserve positivity explicitly (such
+sor NLR .                                                                 as the single layer method,39 ), the tensors obtained from
+  Tensor NLR has the following properties: first, it is im-               such approaches do not produce as accurate results as
+possible to choose a gauge in such a way that this tensor                 other methods that do not enforce positivity (such as
+                                                                                                                                             9
+
+        −5                                   −5
+                                                                                2d square lattice. The first model is the ferromagnetic
+       10                                   10
+                                 (a)                                 (c)        quantum Ising model with transverse magnetic field,
+                                                                                                   X              0      X
+ǭd     −10                                  −10                                          H=−         σz[~r] σz[~r ] − h   σx[~r] , (16)
+       10                                   10
+                                                                                                       h~  r0 i
+                                                                                                        r ,~                 ~
+                                                                                                                             r
+
+                                                                                        [~
+                                                                                         r]
+        −15
+       10
+                                             −15
+                                            10                                  where σi is the i = (x, z) Pauli matrix for site ~r, h is the
+                                                                                transverse magnetic field, and h~r, ~r0 i represent nearest-
+        −5
+       10
+                                             −5
+                                            10                                  neighbor sites. The second example is the spin-1/2 anti-
+                                 (b)                                 (d)
+                                                                                ferromagnetic Heisenberg model,
+                                                                                                                   ~ [~r0 ] ,
+                                                                                                       X
+ǭab
+        −10
+       10
+                                             −10
+                                            10                                                    H=        ~ [~r] S
+                                                                                                            S                            (17)
+                                                                                                                  h~  r0 i
+                                                                                                                   r ,~
+        −15                                  −15
+       10                                   10                                                   [~
+                                                                                                  r]      [~
+                                                                                                           r]
+                                                                                        ~ [~r] = (σx , σy , σz )/2.  [~
+                                                                                                                      r]
+                                                                                where S
+              0   20       40          60          0   20       40         60      In our simulations, we have represented the ground
+                       u                                    u
+                                                                                state of the system by a two-site translationally invari-
+                                                                                ant iPEPS made up of two tensors, A and B. In or-
+Figure 9: (Color online) Mean value of the relative change
+¯d = |du+1 − du |/|dinit | of the cost function d and the local
+                                                                                der to approximate the ground state of the system, we
+                  u+1
+fidelity ¯ab = |fab     u
+                      − fab     init
+                            |/|fab   | in the iPEPS algorithm with              have applied imaginary-time evolution together with a
+gauge (filled symbols) or without gauge (open symbols), for                     second-order Suzuki-Trotter decomposition using δ down
+the Ising model with transverse field (a,b) and the Heisenberg                  to 10−3 − 10−4 . To update the tensors, we used the
+model (c,d) respectively. For the Ising model the magnetic                      alternating-least-square (ALS) sweep for the subtensors,
+field is h = 3.01 and (D, χ) = (3, 30), whereas for the Heisen-                 as explained in Sec. II B 4, combined with the FFU. At
+berg model (D, χ) = (5, 50). The time step is δ = 0.005. The                    every update, we have also fixed the gauge of the tensors
+mean value is taken over all steps in imaginary time.                           according to the gauge-fixing described above. Let us
+                                                                                stress here that the leading order of the computational
+                                                                                cost is the same for both FU and FFU + gauge-fixing
+CTM methods).74 It is well-known that the (normally                             schemes, but the prefactor and the subleading correction
+small) negative part of the norm tensor often causes some                       are different. These turn out to produce a big difference
+ill-posed conditions in updating the iPEPS tensors. To                          in practical running times, as we shall see.
+circumvent this problem, one can make it Hermitian and                             In order to assess the advantage of the local gauge fix-
+positive-defined using the following steps:46 first, one ap-                    ing for the norm matrix ÑLR used in the ALS sweep,
+                                                      †
+proximates the norm tensor as ÑLR = (NLR + NLR         )/2,                    we first compare the mean condition number of this ma-
+which is Hermitian. Next, we approximate ÑLR by its                            trix between using and not using the gauge. As a rule
+positive part. To achieve this, one applies the eigen-                          of thumb, the larger the condition number of ÑLR , the
+value decomposition ÑLR = W ΣW † , and replaces the                            less accuracy we get in solving the system of linear equa-
+(small) negative eigenvalues in Σ by zero. This is the                          tions at every step of the ALS. The result is shown in
+so-called positive approximant. The approximate eigen-                          Table. I for different models and bond dimensions. Over-
+values are now denoted Σ+ . Moreover, ÑLR = ZZ † ,                             all we see that the condition number of the norm matrix
+                 1/2
+where Z = W Σ+ , see Fig. 8(a).                                                 in the case of gauge fixing is improved by several orders
+   The gauge-fixing that we apply here is explained in                          of magnitude when compared to the case without gauge
+Fig. 8. After fixing the local gauge in the norm tensor,                        fixing. For completeness, we also shown in the table the
+we replace ÑLR and compatible subtensors into Eq. (15),                        condition numbers of matrices L and R. The gauge fix-
+and then start the variational update of subtensors for                         ing, thus, improves the stability of the iPEPS algorithm.
+the iPEPS. As shown in Ref. 46, this choice of gauge im-                        This result is very similar to what has been obtained for
+proves a lot the conditioning of the norm tensor, and thus                      finite PEPS in a similar context.46
+greatly increases the stability of the update. In partic-                          Besides, we observe that the gauge fixing in the norm
+ular, when this gauge-fixing is combined with the FFU,                          matrix also accelerates the convergence in the ALS
+the resulting iPEPS algorithm is remarkably fast, stable                        sweeping. More concretely, in Fig. 9 we show the conver-
+and accurate.                                                                   gence of the relative change of the cost function defined
+                                                                                in Eq. (15), as well as the local fidelity of the subtensors
+                                                                                between two iterations u and u + 1 defined as
+                           IV.     RESULTS                                           u+1          (au+1 u+1 u u
+                                                                                                    R bL |aR bL )
+                                                                                    fab  =q                               ,               (18)
+                                                                                           (au+1 u+1 u+1 u+1    u u u u
+                                                                                             R bL |aR bL )(aR bL |aR bL )
+  We have benchmarked the improved iPEPS algorithm,
+including both the FFU and the gauge-fixing, by study-                          where, e.g., |auR buL ), is to be understood as tensors auR and
+ing ground state properties of two models on an infinite                        buL with their indices reshaped as a vector. We observe
+                                                                                                                                                   10
+
+                    (D, χ)                      No Gauge                    Gauge                            R                    L
+                    Heisenberg model
+                    (2,20)           (9.33 ± 1.50) × 102 1.46 ± 0.01               5.49 ± 0.23         5.29 ± 0.39
+                                                      6                      2
+                    (3,30)           (1.6 ± 0.17) × 10     (0.15 ± 0.00) × 10      (0.41 ± 0.01) × 10 (0.45 ± 0.01) × 102
+                                                                                                     2
+
+                                                        4                    1
+                    (4,40)           (8.36 ± 0.30) × 10 (3.02 ± 0.02) × 10         (1.78 ± 0.00) × 101 (1.80 ± 0.02) × 101
+                                                        6                    3
+                    (5,50)           (3.46 ± 0.16) × 10 (1.04 ± 0.08) × 10         (5.04 ± 0.06) × 101 (5.03 ± 0.06) × 101
+                                                        7                     4
+                    (6,70)           (1.01 ± 0.30) × 10 (2.21 ± 0.03) × 10         (5.12 ± 0.15) × 101 (5.05 ± 0.22) × 101
+                    Ising model      h = 3.01
+                    (2,20)           (3.44 ± 1.85) × 104 5.97 ± 0.09               (1.29 ± 0.13) × 101 (1.29 ± 0.14) × 101
+                                                        6                    3
+                    (3,30)           (4.28 ± 0.59) × 10 (1.95 ± 0.24) × 10         (5.00 ± 0.34) × 101 (5.01 ± 0.32) × 101
+                    (4,30)           (1.28 ± 1.52) × 10 (5.81 ± 11.88) × 10 (5.39 ± 0.13) × 102 (5.47 ± 0.14) × 102
+                                                        19                      17
+
+
+
+Table I: Mean condition number of the norm matrix ÑLR as well as of matrices L and R with their standard deviation.
+The numbers are for the case of positive approximant, fixing and without fixing the gauge, for the subtensor FFU. We show
+different bond dimensions (D, χ) for an iPEPS algorithm with time step δ = 0.02. The mean is computed over ten time steps,
+for Heisenberg and Ising models. The transverse field for the Ising model is h = 3.01, close to criticality.
+
+
+      1                                                                                             0
+                                                                                                   10
+                                                                        −gauge−
+     0.9                                                                (D,χ) = (2,20)
+                                                                        (D,χ) = (3,30)
+     0.8
+                                                                        −no gauge−
+                                                                                                    −2
+     0.7                                                                (D,χ) = (2,20)             10
+                                                                        (D,χ) = (3,30)
+     0.6
+
+mz                                                                                       Szz (x)
+     0.5
+            0.3                                                                                     −4
+                                                                                                   10
+     0.4                                                                                                         −gauge−
+            0.2                                                                                                  (D,χ) = (2,20)
+     0.3
+                                                                                                                 (D,χ) = (3,30)
+            0.1
+     0.2                                                                                            −6
+                                                                                                                 −no gauge−
+                                                                                                   10            (D,χ) = (2,20)
+     0.1     0
+             3.04            3.045           3.05                                                                (D,χ) = (3,30)
+      0                                                                                                  0                                 1
+           2.1      2.2   2.3    2.4   2.5      2.6   2.7   2.8   2.9       3     3.1                   10                                10
+                                               h                                                                                      x
+
+Figure 10: (Color online) Local magnetization mz as a func-                              Figure 11: (Color online) Two-point correlator Szz (x) of the
+tion of the transverse field h in the quantum Ising model, with                          quantum Ising model close to the critical point h = 3.044,
+gauge (filled circles) and without gauge (star symbols). The                             computed with gauge (filled circles) and without gauge (star
+inset is a zoom around criticality.                                                      symbols).
+
+
+
+that, when the gauge-fixing is applied, both cost function                               of bond dimensions (D, χ) = (3, 30).
+and local fidelity tend to converge faster than the case                                    We have also applied the “improved” iPEPS algorithm
+without gauge fixing, see Fig. 9. We also noted that                                     to study the ground state of the Heisenberg model for dif-
+speed-up in convergences becomes more significant as the                                 ferent bond dimensions (D, χ). For small bond dimen-
+bond dimension D of the iPEPS increases (not shown).                                     sions D, we do not see much difference for the results
+   We also compute the order parameter mz ≡ hσz i for                                    with and without gauge fixing. But for large bond dimen-
+the quantum Ising model, and compare it for the cases                                    sions we observe that the ground state energy obtained
+with and without gauge fixing, see Fig. 10. The results                                  using gauge fixing is better, see Fig. 12(a). To quantify
+for both cases are quantitatively very similar deep in the                               the overall error, we compare to the best result obtained
+gapped phases. However, when close to the quantum                                        from quantum Monte Carlo68 , 0 = −0.669437(5). In our
+critical point, the results obtained with the iPEPS +                                    case, with gauge-fixing we obtain g = −0.669309(2) and
+gauge-fixing are better, and again we see that this ef-                                  without gauge ng = −0.669243(1), for (D, χ) = (7, 70).
+fect becomes more relevant for larger bond dimensions                                    Besides, we also compute the staggered magnetization m
+(e.g., we almost see no difference for D = 2, whereas                                    as a function of the bond dimension, shown in Fig. 12(b).
+for D = 3 we already see a clear difference). Be-                                        Again, for large bond dimensions the calculations with
+sides, in Fig. 11 we have plotted the correlation func-                                  the gauge-fixing become better than without the gauge.
+tion Szz (x) = hσzl σzl+x i − hσzl ihσzl+x i at the critical point                       Our best values were obtained for (D, χ) = (7, 70), and
+h = 3.044. We see that the simulation with gauge-fixing                                  are mg = 0.33490 with gauge mng = 0.33662 without
+captures the correlation of the system better for the case                               gauge. This is to be compared with the Monte Carlo
+                                                                                                                                                                                      11
+
+                                                                              0.42                                            more strongly entangled systems (e.g. in fermionic sys-
+                                                        not
+                                                        no gauge                                               not
+                                                                                                               no gauge
+                                                        gauge
+                                                        gauge                                                  gauge
+                                                                                                               gauge          tems). In combination with the gauge-fixing the FFU
+                                                                                  0.4
+                                                                                                               QMC
+                                                                                                               QMC            approach is even better: we have seen that the overall
+            −2
+                                                                (a)                                                 (b)       improved algorithm is remarkably stable, as well as sub-
+           10
+                                                                                                                              stantially faster than the old version.
+                                                                              0.38
+                                                                                                                                 One more comment is in order: one could naively ex-
+                                                                                                                              pect that after several updates with the FFU scheme the
+  ǭ                                                                      m   0.36
+                                                                                                                              environment will have drifted away, so that it may need
+            −3                                                                                                                to be reinitialized by fully converging it. However, we
+           10
+                                                                              0.34                                            find that the new update scheme is self correcting for the
+                                                                                                                              considered values of δ and for the studied models (indeed,
+                                                                              0.32                                            if δ is small enough, the changes in the tensors are also
+                                                                                            m0 = 0.30703                      expected to be small). One may expect, however, that
+            −4
+                                                                                                                              for larger δ the method is no longer self-correcting. This
+           10                                                                     0.3
+                         2                      4       6             8                     2        4          6         8   is a possibility that needs to be taken into account when
+                                                    D                                                    D                    implementing the algorithm in practice. But in any case,
+                                                                                                                              δ decreases throughout the evolution of the algorithm,
+Figure 12: (Color online) (a) Relative error of the energy per                                                                so the self-correction happens naturally and in practice
+link ¯ = (0 − )/0 for the Heisenberg model, as a function of
+                                                                                                                              we never need to restart. For the models analyzed in
+the iPEPS bond dimension D. Here 0 = −0.669437(5) is the
+quantum Monte Carlo result.68 (b) Staggered magnetization                                                                     our paper we never encounter such situation, but we can
+m of the Heisenberg model as a function of the bond dimen-                                                                    imagine that for more complex systems one may need
+sion D, compared to the Monte Carlo result m0 = 0.30703.68                                                                    to restart the environment from time to time in order
+                                                                                                                              to improve the results. This may be also an important
+           10
+                6                                                                                                             difference between imaginary- and real-time evolutions.
+                                       30                                                                                     For imaginary evolutions, the algorithm is naturally self-
+
+
+
+                     speed−up factor
+                5                                                                                                             correcting, since in the limit δ → 0 the actual time steps
+           10                          20
+                                                                                                                              behave, in practice, as convergence steps for the environ-
+                4                      10                                                                                     ment. However, this property may be lost for real-time
+           10                                                                                                                 evolutions if δ is not small enough, so that several itera-
+                                       0                                                                                      tions may be needed at every step. But in any case, for
+Time [s]
+                3
+                                                2           4             6
+           10                                               D                                                                 real-time evolutions it is also important to recycle envi-
+                                                                                                                              ronment tensors at every iteration in order to save time,
+           10
+                2                                                                                                             as well as to take care of a correct matching of all bond
+                                                                                                                              indices as done explicitly in the FFU.
+                1
+           10
+                                                                                                             FU
+                0
+                                                                                                             FFU+gauge                         V.    CONCLUSIONS
+           10
+                 0                          1           2             3                 4        5             6          7
+                                                                              D
+                                                                                                                                In this paper we have presented how to improve the
+Figure 13: (Color online) Total running time (in seconds) for
+                                                                                                                              stability and efficiency of the iPEPS algorithm. We have
+five time steps in imaginary-time evolution with the Heisen-                                                                  discussed two improvements, namely the fast full update
+berg Hamiltonian, with the FU and FFU (+ gauge-fixing)                                                                        (FFU) and the gauge-fixing in the ALS sweep. In the
+updates. The speed-up factor of the new update scheme with                                                                    FFU scheme the tensors in the effective environment are
+respect to the old one is shown in the inset.                                                                                 updated at every step, while keeping them compatible
+                                                                                                                              with the updated iPEPS tensors. This implies a speed-
+                                                                                                                              up by a large factor (up to ∼ 30 in the present examples,
+result, m0 = 0.30703.68                                                                                                       and even larger in more strongly entangled systems) com-
+   Finally, even if not mentioned explicitly at every calcu-                                                                  pared to the previous FU approach, where the environ-
+lation, we remind that our results are obtained by using                                                                      ment tensors have been recomputed from scratch at each
+the FFU which is remarkably faster than the costly FU                                                                         time step. The gauge-fixing improves the conditioning in
+update, because the environment is not recomputed from                                                                        the ALS sweep at every update step, in the same way as
+scratch at every step. In Fig. 13 we compare the actual                                                                       was already shown for finite PEPS calculations,46 leading
+running times for the FU and the FFU (+ gauge-fixing)                                                                         to a better stability and faster convergence.
+schemes. The speed-up factor increases with increasing                                                                          We have benchmarked the improved iPEPS algorithm
+D, since more CTM steps are required to reach conver-                                                                         with calculations for the quantum Ising and Heisenberg
+gence of the environment tensors if the state is more en-                                                                     models on an infinite 2d square lattice, where we have
+tangled. In the present example we obtained a speed-up                                                                        seen that similar or slightly better accuracies can be ob-
+factor of up to ∼ 30. This factor will be even larger in                                                                      tained, substantially faster, and with more stable evo-
+                                                                                                                               12
+
+lutions, when compared to previous iPEPS calculations.                                 Acknowledgments
+This is particularly true for large bond dimensions and
+in highly-entangled systems, such as in the vicinity of
+quantum critical points.
+   Technically, we have demonstrated the improved
+iPEPS algorithm for systems on an infinite square lattice             This research was supported in part by ARC Discov-
+and a 2-site unit cell, but the extension to other 2d lat-         ery Projects funding scheme, Project No. DP130104617.
+tices and bigger unit cells is straightforward. The method         R.O. acknowledges funding from the JGU and the DFG.
+can also be extended to Hamiltonians with longer-range             P.C. acknowledges support by the Delta-ITP consortium
+interactions. We expect that these improvements will be            (a program of the Netherlands Organisation for Scientific
+a significant step forward towards powerful tensor net-            Research (NWO) that is funded by the Dutch Ministry
+work calculations for challenging 2d systems.                      of Education, Culture and Science (OCW)).
+
+
+
+1
+   R. Orús, Annals of Physics 349 117-158 (2014); R. Orús,          033605 (2007)
+                                                                   28
+   Eur. Whys. J. B 87, 280 (2014); J. Eisert, Modeling and            F. Verstraete, M.M. Wolf, D. Pérez-Garcı́a, and J.I. Cirac,
+   Sim. 3, 520 (2013); N. Schuch, QIP, Lecture Notes of the           Phys. Rev. Lett. 96, 220601 (2006)
+                                                                   29
+   44th IFF Spring School 2013; J. I Cirac, F. Verstraete, J.         T. Nishino, K. Okunishi, Y. Hieida, N. Maeshima, and Y.
+   Phys. A: Math. There. 42, 504004 (2009); F. Verstraete,            Akutsu, Nucl. Phys. B 575, 504 (2000)
+                                                                   30
+   J. I. Cirac, V. Murg, Adv. Phys. 57, 143 (2008).                   T. Nishino, K. Okunishi, Y. Hieida, N. Maeshima, Y.
+ 2
+   G. Vidal, J. I. Latorre, E. Rico, A. Kitaev, Phys. Rev. Lett.      Akutsu, and A. Gendiar, Prog. Theor. Phys. 105, 409
+   90 227902 (2003)                                                   (2001)
+ 3                                                                 31
+   P. Calabrese, J. Cardy, JSTAT 0406:P06002 (2004).                  A. Gendiar, N. Maeshima, and T. Nishino, Pro. Theor.
+ 4
+   M. Srednicki, Phys. Rev. Lett. 71 666 (1993).                      Phys. 110, 691 (2003)
+ 5                                                                 32
+   M. Plenio, J. Eisert, J. Dreißig, M. Cramer, Phys. Rev.            M. Levin and C. P. Nave, Phys. Rev. Lett. 99, 120601
+   Lett. 94, 060503 (2005)                                            (2007)
+ 6                                                                 33
+   A. Riera, J. I. Latorre, Phys. Rev. A 74 052326 (2006)             J. Jordan, R. Orús, G. Vidal, F. Verstraete and J.I. Cirac,
+ 7
+   G. Vidal, Phys. Rev. Lett. 91, 147902 (2003)                       Phys. Rev. Lett. 101, 250602 (2008)
+ 8                                                                 34
+   G. Vidal, Phys. Rev. Lett. 93, 040502 (2004)                       R. Orús and G. Vidal, Phys. Rev. B 80, 094403 (2009)
+ 9                                                                 35
+   D. Poulin, A. Qarry, R. Somma, F. Verstraete, Phys. Rev.           H. C. Jiang, Z. Y. Weng, and T. Xiang, Phys. Rev. Lett.
+   Lett. 106, 170501 (2011)                                           101, 090603 (2008)
+10                                                                 36
+   M. Fannes, B. Nachtergaele, and R. F. Werner,Commun.               Z. Y. Xie, H. C. Jiang, Q. N. Chen, Z. Y. Weng, and T.
+   Math. Phys. 144, 443 (1992)                                        Xiang, Phys. Rev. Lett. 103, 160601 (2009)
+11                                                                 37
+   S. Ostlund and S. Rommer, Phys. Rev. Lett. 75, 3537                P. Corboz, R. Orús, B. Bauer, and G. Vidal, Phys. Rev. B
+   (1995)                                                             81, 165104 (2010)
+12                                                                 38
+   S. R. White, Phys. Rev. Lett. 69, 2863 (1992)                      L. Wang, I. Pižorn, and F. Verstraete, Phys. Rev. B 83,
+13
+   S. R. White, Phys. Rev. B 48, 10345 (1993)                         134421 (2011)
+14                                                                 39
+   H. Takasaki, T. Hikihara, and T. Nishino, J. Phys. Soc.            I. Pižorn, L. Wang, and F. Verstraete, Phys. Rev. A 83,
+   Jpn. 68, 1537 (1999)                                               052321 (2011)
+15                                                                 40
+   U. Schollwöck, Rev. Mod. Phys. 77, 259 (2005)                     W. Li, J. von Delft, and T. Xiang, Phys. Rev. B 86, 195137
+16
+   D. Pérez-Garcı́a, F. Verstraete, M.M. Wolf, J.I. Cirac,           (2012)
+                                                                   41
+   Quant. Inf. Comput. 7, 401 (2007)                                  Z. Y. Xie, J. Chen, M. P. Qin, J. W. Zhu, L. P. Yang, and
+17
+   I. P. McCulloch, J. Stat. Mech.: Theory Exp. (2007)                T. Xiang, Phys. Rev. B 86, 045139 (2012)
+                                                                   42
+   P10014                                                             H. Kalis, D. Klagges, R. Orús, K.P. Schmidt, Phys. Rev.
+18
+   I. P. McCulloch, arXiv:0804.2509v1 [cond-mat.str-e1]               A 86, 022317 (2012)
+19                                                                 43
+   G. M. Crosswhite, A. C. Doherty and G. Vidal, Phys. Rev.           R. Orús, H. Kalis, M. Bornemann, K. P. Schmidt, Phys.
+   B 78, 035116 (2008)                                                Rev. A 87, 062312 (2013)
+20                                                                 44
+   U. Schollwöck, Annals of Physics 326, 96 (2011).                  M. Lubasch, J. Ignacio Cirac, and M.-C. Bañuls, New J.
+21
+   S. R. White and A. E. Feiguin, Phys. Rev. Lett. 93, 076401         Phys. 16, 033014 (2014)
+                                                                   45
+   (2004)                                                             L. Wang and F. Verstraete, arXiv:1110.4362 (2011).
+22                                                                 46
+   A. J. Daley, C. Kollath, U. Schollwöck, and G. Vidal, J.          M. Lubasch, J. Ignacio Cirac, and M.-C. Bañuls, Phys.
+   Stat. Mech.: Theory Exp.2004, P04005 (2004)                        Rev. B 90, 064425 (2014)
+23                                                                 47
+   L. Tagliacozzo, G. Evenbly, G. Vidal, Phys. Rev. B 80,             Ho N. Phien, Ian P. McCulloch, Guifré Vidal,
+   235127 (2009).                                                     arXiv:1411.0391 [quant-ph]
+24                                                                 48
+   G. Evenbly, G. Vidal, Phys. Rev. Lett. 102, 180406 (2009).         B. Bauer, P. Corboz, R. Orús, and M. Troyer, Phys. Rev.
+25
+   J. Haegeman, J. I. Cirac, T. J. Osborne, I. Pizorn, H. Ver-        B 83, 125106 (2011).
+                                                                   49
+   schelde, and F. Verstraete, Phys. Rev. Lett. 107, 070601           G. Vidal, Phys. Rev. Lett. 98, 070201 (2007)
+                                                                   50
+   (2011)                                                             R. Orús and G. Vidal, Phys. Rev. B 78, 155117 (2008)
+26                                                                 51
+   F. Verstraete and J. I. Cirac, cond-mat/0407066                    B. Bauer, G. Vidal and M. Troyer, J. Stat. Mech. P09006
+27
+   V. Murg, F. Verstraete and J. I. Cirac, Phys. Rev. A75,            (2009)
+                                                                                                                                13
+
+52                                                                68
+   P. Corboz, S. R. White, G. Vidal and M. Troyer, Phys.             A. W. Sandvik, Phys. Rev. B 56, 11678 (1997)
+                                                                  69
+   Rev. B 84, 041108 (2011)                                          Other generalizations are possible, using, e.g., tree tensor
+53
+   P. Corboz, T. M. Rice, and M. Troyer, Phys. Rev. Lett.            networks (TTN)23 and the multi-scale entanglement renor-
+   113, 046402 (2014)                                                malization ansatz (MERA)24 .
+54                                                                70
+   P. Corboz and F. Mila, Phys. Rev. B 87, 115144 (2013). Y.         D = 1 is a product state, whereas larger D > 1 correspond
+   H. Matsuda, et al., Phys. Rev. Lett. 111, 137204 (2013). P.       to entangled states. The larger D is, the larger the amount
+   Corboz and F. Mila, Phys. Rev. Lett. 112, 147203 (2014).          of entanglement in the wave function is, as quantified by
+55
+   Z.-C. Gu, H.-C. Jiang, D. N. Sheng, H. Yao, L. Balents,           the prefactor to the entanglement area-law.1
+                                                                  71
+   and X.-G. Wen, Phys. Rev. B88, 155112 (2013)                      Other 2d lattices can also be easily considered.
+56                                                                72
+   L. Wang, Z.-C. Gu, F. Verstraete, X.-G. Wen arXiv                 A good initialization of Ã and B̃ can be obtained by apply-
+   preprint arXiv:1112.3331 [cond-mat.str-el]                        ing the following procedure. First, contract the two tensors
+57
+   M. Ziegler, R. Orús, work in progress.                           A and B along the link of interest together with the two-
+58
+   H. H. Zhao, Z. Y. Xie, Q. N. Chen, Z. C. Wei, J. W. Cai,          body gate g. Second, apply a singular value decomposition
+   and T. Xiang, Phys. Rev. B 81, 174411 (2010)                      of the obtained tensor separating the links associated to
+59
+   R. Orús Phys. Rev. B 85, 205117 (2012)                           each lattice site. Finally, truncate the common link up to
+60
+   R. J. Baxter, J. Math. Phys. 9, 650 (1968)                        D values, leads to a good candidate for Ã and B̃.
+61                                                                73
+   T. Nishino, K. Okunishi, J. Phys. Soc. Jpn. 65 pp. 891-894        Formally speaking, this means that the FFU is not the
+   (1996)                                                            “correct” update, in the sense that the environment tensors
+62
+   T. Nishino, K. Okunishi, J. Phys. Soc. Jpn. 67 3066 (1998)        are not fully converged. In fact, it does not even correspond
+63
+   P. Corboz, J. Jordan, and G. Vidal, Phys. Rev. B 82,              to the full first order correction in perturbation theory for
+   245119 (2010)                                                     the environment. Still, the point of this paper is to see that
+64
+   G. Evenbly, G. Vidal, arXiv:1412.0732 [cond-mat.str-el]           the FFU is already sufficient for practical purposes.
+65                                                                74
+   F. Verstraete, M. M. Wolf, D. Pérez-Garcı́a, J. I. Cirac,        In fact, end even more fundamental, it has also been shown
+   Phys. Rev. Lett. 96, 220601 (2006)                                that some positive Matrix Product Operators with finite
+66
+   M. Suzuki, Phys. Lett. A 146, 319 (1990); J. Math. Phys.          bond dimension do not have a representation in terms of a
+   (N.Y.) 32, 400 (1991). For higher order expansions, see also      Matrix Product Density Operator with finite bond dimen-
+   A., T. Sornborger and E. D. Stewart, quant-ph/9809009.            sion, see Ref. 67.
+67
+   G. de las Cuevas, N. Schuch, D. Pérez-Garcı́a, J. I. Cirac,
+   New J. Phys. 15, 123021 (2013).
+
