@@ -30,9 +30,17 @@ basis_index(bits) = 1 + sum(bits[i] << (7 - i) for i in 1:7)
     center_down_neighbor_up[basis_index([1, 0, 1, 1, 1, 1, 1])] = 1
     @test P * center_down_neighbor_up ≈ center_down_neighbor_up
 
-    center_down_multiple_neighbor_ups = zeros(ComplexF64, 128)
-    center_down_multiple_neighbor_ups[basis_index([1, 0, 0, 1, 1, 1, 1])] = 1
-    @test P * center_down_multiple_neighbor_ups ≈ center_down_multiple_neighbor_ups
+    adjacent_neighbor_ups = zeros(ComplexF64, 128)
+    adjacent_neighbor_ups[basis_index([1, 0, 0, 1, 1, 1, 1])] = 1
+    @test norm(P * adjacent_neighbor_ups) == 0
+
+    separated_neighbor_ups = zeros(ComplexF64, 128)
+    separated_neighbor_ups[basis_index([1, 0, 1, 0, 1, 1, 1])] = 1
+    @test P * separated_neighbor_ups ≈ separated_neighbor_ups
+
+    wraparound_neighbor_ups = zeros(ComplexF64, 128)
+    wraparound_neighbor_ups[basis_index([1, 0, 1, 1, 1, 1, 0])] = 1
+    @test norm(P * wraparound_neighbor_ups) == 0
 
     @test_throws ArgumentError pxp_star_hamiltonian(ones(ComplexF64, 3, 3), pauli_x())
     @test_throws ArgumentError pxp_star_hamiltonian(projector_down(), ones(ComplexF64, 3, 3))

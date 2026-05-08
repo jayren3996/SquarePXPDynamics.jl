@@ -9,6 +9,10 @@ export diagonal_star_hamiltonian, ising_bond_hamiltonian
 const STAR_NSITES = 7
 const CENTER_SITE = 1
 const NEIGHBOR_SITES = 2:7
+const BLOCKADE_BONDS = (
+    (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7),
+    (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 2),
+)
 
 site_bit(state::Integer, site::Integer) = (state >> (STAR_NSITES - site)) & 1
 
@@ -27,8 +31,8 @@ function blockade_projector()
     diag = ones(ComplexF64, 2^STAR_NSITES)
     for state in 0:(2^STAR_NSITES - 1)
         forbidden = false
-        for n in NEIGHBOR_SITES
-            if site_bit(state, CENTER_SITE) == 0 && site_bit(state, n) == 0
+        for (i, j) in BLOCKADE_BONDS
+            if site_bit(state, i) == 0 && site_bit(state, j) == 0
                 forbidden = true
             end
         end

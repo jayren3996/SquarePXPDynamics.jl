@@ -15,7 +15,7 @@ using .Models: pxp_star_hamiltonian, blockade_projector, cluster_star_hamiltonia
                diagonal_star_hamiltonian, ising_bond_hamiltonian
 using .Gates: dense_gate, projected_gate
 using .Schedules: first_order_colors, second_order_colors
-using .SolvableModels: stabilizer_expectation_exact
+using .SolvableModels: cluster_center_z_expectation_exact
 
 export Coord, TRIANGULAR_DIRECTIONS, triangular_distance, neighbor, star_sites
 export star_color, disjoint_stars
@@ -25,6 +25,6 @@ export pxp_star_hamiltonian, blockade_projector, cluster_star_hamiltonian
 export diagonal_star_hamiltonian, ising_bond_hamiltonian
 export dense_gate, projected_gate
 export first_order_colors, second_order_colors
-export stabilizer_expectation_exact
+export cluster_center_z_expectation_exact
 
 end

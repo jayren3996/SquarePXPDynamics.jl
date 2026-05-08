@@ -3,9 +3,9 @@ using LinearAlgebra
 @testset "solvable models" begin
     H = cluster_star_hamiltonian()
     for t in (0.0, 0.1, 0.7)
-        @test stabilizer_expectation_exact(t; initial = :z_plus) ≈ cos(2t)
+        @test cluster_center_z_expectation_exact(t; initial = :z_plus) ≈ cos(2t)
     end
-    @test_throws ArgumentError stabilizer_expectation_exact(0.1; initial = :minus)
+    @test_throws ArgumentError cluster_center_z_expectation_exact(0.1; initial = :minus)
 
     U1 = dense_gate(H, 0.11; evolution = :real)
     U2 = dense_gate(H, 0.23; evolution = :real)
