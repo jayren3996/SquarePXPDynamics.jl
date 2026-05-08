@@ -10,8 +10,13 @@ const STAR_NSITES = 7
 const CENTER_SITE = 1
 const NEIGHBOR_SITES = 2:7
 
+site_bit(state::Integer, site::Integer) = (state >> (STAR_NSITES - site)) & 1
+
 function pxp_star_hamiltonian(projector::AbstractMatrix = projector_down(),
                               flip::AbstractMatrix = pauli_x())
+    size(projector) == (2, 2) || throw(ArgumentError("projector must be 2x2"))
+    size(flip) == (2, 2) || throw(ArgumentError("flip must be 2x2"))
+
     ops = Matrix{ComplexF64}[]
     push!(ops, Matrix{ComplexF64}(flip))
     append!(ops, [Matrix{ComplexF64}(projector) for _ in NEIGHBOR_SITES])
@@ -21,10 +26,9 @@ end
 function blockade_projector()
     diag = ones(ComplexF64, 2^STAR_NSITES)
     for state in 0:(2^STAR_NSITES - 1)
-        bits = digits(state, base = 2, pad = STAR_NSITES)
         forbidden = false
         for n in NEIGHBOR_SITES
-            if bits[CENTER_SITE] == 0 && bits[n] == 0
+            if site_bit(state, CENTER_SITE) == 0 && site_bit(state, n) == 0
                 forbidden = true
             end
         end
