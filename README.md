@@ -1,6 +1,8 @@
 # TriangularPEPSDynamics.jl
 
-High-performance Julia foundations for PEPS-based dynamics on translationally invariant triangular lattices.
+Internal Julia tooling for PEPS-based dynamics on translationally invariant triangular lattices, built for the 2D triangular-lattice PXP ScarFinder project.
+
+This is not intended to become an independent general-purpose PEPS package. Keep it as a subpackage-style module inside this repository, using the root `Project.toml` and root Julia environment.
 
 The first implemented layer provides:
 
@@ -10,7 +12,7 @@ The first implemented layer provides:
 - dense PXP, projected PXP, and cluster/stabilizer star gates;
 - analytically solvable true-2D benchmark helpers, including a narrow stabilizer benchmark helper.
 
-The next implementation layer will add native triangular iPEPS state containers, Simple Update truncation, observables, and ScarFinder evolve-project drivers.
+The next implementation layers should stay focused on ScarFinder needs: reliable constrained PXP evolution, fixed-bond-dimension projection, blockade diagnostics, and candidate-ranking workflows.
 
 ## Test
 
