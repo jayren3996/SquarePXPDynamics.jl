@@ -8,6 +8,8 @@ include("Schedules.jl")
 include("SolvableModels.jl")
 include("States.jl")
 include("Observables.jl")
+include("SimpleUpdate.jl")
+include("Evolution.jl")
 
 using .Geometry: Coord, TRIANGULAR_DIRECTIONS, triangular_distance, neighbor, star_sites,
                  star_color, disjoint_stars
@@ -23,6 +25,8 @@ using .States: AbstractUnitCell, OneSiteUnitCell, ThreeSiteUnitCell, TriangularI
                site_tensor, phys_index, bond_index, bond_indices, bond_lambda,
                opposite_direction
 using .Observables: local_expectation, tensor_norm, dense_blockade_violations
+using .SimpleUpdate: SimpleUpdateDiagnostics, apply_star_gate_simple_update!
+using .Evolution: evolve_step!, color_canonical_center
 
 export Coord, TRIANGULAR_DIRECTIONS, triangular_distance, neighbor, star_sites
 export star_color, disjoint_stars
@@ -38,5 +42,7 @@ export unit_cell_representatives, wrap_coord, product_ipeps, random_ipeps
 export site_tensor, phys_index, bond_index, bond_indices, bond_lambda
 export opposite_direction
 export local_expectation, tensor_norm, dense_blockade_violations
+export SimpleUpdateDiagnostics, apply_star_gate_simple_update!
+export evolve_step!, color_canonical_center
 
 end

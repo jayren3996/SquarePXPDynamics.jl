@@ -10,4 +10,6 @@ using TriangularPEPSDynamics
     include("test_solvable_models.jl")
     include("test_states.jl")
     include("test_observables.jl")
+    include("test_simple_update.jl")
+    include("test_evolution.jl")
 end
