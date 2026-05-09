@@ -1,4 +1,4 @@
-name = "TriangularPEPSDynamics"
+name = "KagomePXPDynamics"
 uuid = "6f0e7c3a-7e61-4f61-8b55-0c69f1dd7c75"
 authors = ["Ren <ren@example.com>"]
 version = "0.1.0"
