@@ -988,7 +988,7 @@ using ITensors
         end
         state = product_pess(uc, :down; D = 1)
         diag = apply_star_gate_simple_update_pess!(state, G, c0)
-        @test diag isa SimpleUpdateDiagnostics
+        @test diag isa KagomeSimpleUpdateDiagnostics
         @test local_expectation_kagome(state, c0, pauli_z()) ≈ -cos(2 * theta) atol = 1e-10
     end
 
@@ -1011,15 +1011,28 @@ module KagomeSimpleUpdate
 
 using LinearAlgebra
 using ITensors
-using ..KagomeGeometry: KagomeCoord, kagome_star_sites, wrap_kagome_coord
+using ..KagomeGeometry: KagomeCoord, kagome_star_sites, wrap_kagome_coord, up_triangle_of
 using ..KagomePESS: KagomePESS, site_tensor_pess, phys_index_pess
 
-# Reuse the diagnostics struct from triangular SimpleUpdate.
-using ..SimpleUpdate: SimpleUpdateDiagnostics
-
-export apply_star_gate_simple_update_pess!
+export KagomeSimpleUpdateDiagnostics, apply_star_gate_simple_update_pess!
 
 const _STAR_NSITES_KAGOME = 5
+
+# Kagome bond key: (site coord, :up | :down) identifies a site-simplex bond.
+const KagomeBondKey = Tuple{KagomeCoord, Symbol}
+
+"""
+    KagomeSimpleUpdateDiagnostics
+
+Diagnostics returned by `apply_star_gate_simple_update_pess!`. Mirrors the
+triangular `SimpleUpdateDiagnostics` struct conceptually but with bond keys
+typed against the kagome PESS structure.
+"""
+struct KagomeSimpleUpdateDiagnostics
+    discarded_weight::Float64
+    affected_bonds::Vector{KagomeBondKey}
+    output_bond_dims::Vector{Int}
+end
 
 function apply_star_gate_simple_update_pess!(state::KagomePESS,
                                              gate::AbstractMatrix,
@@ -1036,7 +1049,7 @@ function apply_star_gate_simple_update_pess!(state::KagomePESS,
     if norm(G - Iref) <= 1e-12 * max(norm(Iref), 1.0)
         affected = _affected_kagome_bonds(state, center)
         dims = [dim(state.site_simplex_inds[(c, w)]) for (c, w) in affected]
-        return SimpleUpdateDiagnostics(0.0, _affected_to_triangular_keys(affected), dims)
+        return KagomeSimpleUpdateDiagnostics(0.0, affected, dims)
     end
 
     # Path 2: site-product factorization.
@@ -1067,7 +1080,7 @@ function apply_star_gate_simple_update_pess!(state::KagomePESS,
         end
         affected = _affected_kagome_bonds(state, center)
         dims = [dim(state.site_simplex_inds[(c, w)]) for (c, w) in affected]
-        return SimpleUpdateDiagnostics(0.0, _affected_to_triangular_keys(affected), dims)
+        return KagomeSimpleUpdateDiagnostics(0.0, affected, dims)
     end
 
     # Path 3: general dense 5-site gate. Implemented in Tasks 8-9.
@@ -1078,7 +1091,7 @@ end
 
 function _affected_kagome_bonds(state::KagomePESS, center::KagomeCoord)
     star = kagome_star_sites(center)
-    bonds = Tuple{KagomeCoord, Symbol}[]
+    bonds = KagomeBondKey[]
     for (i, sc) in enumerate(star)
         rep = wrap_kagome_coord(state.unitcell, sc)
         # Center: both up and down simplex bonds are within the cluster.
@@ -1088,28 +1101,12 @@ function _affected_kagome_bonds(state::KagomePESS, center::KagomeCoord)
             push!(bonds, (rep, :down))
         else
             # Determine whether this NN shares the up-triangle or the down-triangle with the center.
-            # Sites in the same up-triangle as `center`: have up_triangle_of(nn) == up_triangle_of(center).
-            # Implementation will pick the right one.
-            nn_up = KagomePXPDynamics.KagomeGeometry.up_triangle_of(sc)
-            center_up = KagomePXPDynamics.KagomeGeometry.up_triangle_of(center)
+            nn_up = up_triangle_of(sc)
+            center_up = up_triangle_of(center)
             push!(bonds, (rep, nn_up == center_up ? :up : :down))
         end
     end
     return bonds
-end
-
-# The triangular SimpleUpdateDiagnostics expects affected_bonds as Vector{Tuple{Coord,Int}}.
-# For kagome we use a different bond key shape; convert to a placeholder int representation
-# for now, or extend SimpleUpdateDiagnostics. Easiest: extend the struct OR define a kagome
-# variant. Decision: keep the existing diagnostics struct, encode kagome bonds via a stable
-# string-int hash. Cleaner long-term: introduce a generic Diagnostics struct.
-# For first cut, define a kagome-local Diagnostics:
-function _affected_to_triangular_keys(bonds)
-    # Placeholder: shoehorn (KagomeCoord, Symbol) into (Coord, Int) by indexing.
-    # The actual SimpleUpdateDiagnostics fields stay typed against triangular Coord;
-    # for kagome we use a separate KagomeSimpleUpdateDiagnostics defined below.
-    return [(KagomePXPDynamics.Geometry.Coord(b[1].n1, b[1].n2), b[2] === :up ? 1 : 2)
-            for b in bonds]
 end
 
 # Generalized site-product factorization for n sites (currently n=5 for kagome, n=7 for triangular).
@@ -1146,7 +1143,7 @@ end
 end  # module
 ```
 
-**Important note for the executing agent:** The diagnostics-key mismatch above is a placeholder. The clean fix is to introduce a `KagomeSimpleUpdateDiagnostics` struct in `KagomeSimpleUpdate.jl` mirroring `SimpleUpdateDiagnostics` but with `Vector{KagomeBondKey}` for `affected_bonds`. Replace `SimpleUpdateDiagnostics` returns above with the kagome variant, and update tests accordingly. This is a 5-line change but critical to keeping the bond bookkeeping correct.
+**Note on diagnostics:** `KagomeSimpleUpdateDiagnostics` is defined in this same file; it is the kagome counterpart of the (deleted) triangular `SimpleUpdateDiagnostics` struct, with `affected_bonds` typed as `Vector{KagomeBondKey}` to match the kagome PESS bond identification. Use this struct everywhere; do not import anything from a `SimpleUpdate` module (no such module exists in the kagome codebase).
 
 - [ ] **Step 3: Run targeted tests**
 
@@ -1187,7 +1184,7 @@ Append to `test/test_kagome_simple_update.jl`:
 
     diag = apply_star_gate_simple_update_pess!(state, Uproj, c0; maxdim = 1)
 
-    @test diag isa SimpleUpdateDiagnostics  # or KagomeSimpleUpdateDiagnostics if introduced
+    @test diag isa KagomeSimpleUpdateDiagnostics
     @test diag.discarded_weight ≈ 0 atol = 1e-12
     @test real(local_expectation_kagome(state, c0, pauli_z())) ≈ -cos(2t) atol = 1e-10
     # NN sites still in :down (PXP from all-down only flips center).
@@ -1230,7 +1227,7 @@ Add to `src/KagomeSimpleUpdate.jl`, before the throwing branch in `apply_star_ga
 
         affected = _affected_kagome_bonds(state, center)
         dims = [dim(state.site_simplex_inds[(c, w)]) for (c, w) in affected]
-        return SimpleUpdateDiagnostics(0.0, _affected_to_triangular_keys(affected), dims)
+        return KagomeSimpleUpdateDiagnostics(0.0, affected, dims)
     end
 ```
 
@@ -1926,7 +1923,7 @@ After all tasks land:
 
 2. **No placeholders.** The plan contains two `error("... pending")` sentinels in Tasks 9.4 and 9.5 because the HOSVD decomposition and writeback algorithms are non-trivial enough to require implementation iteration. The executing agent must replace these with working code before declaring those tasks done.
 
-3. **Type consistency.** Function signatures from the spec are used in the plan; the executing agent should verify them at implementation time. The `SimpleUpdateDiagnostics` vs `KagomeSimpleUpdateDiagnostics` decision (introduce a kagome variant or generalize the struct) is flagged in Task 7 Step 2.
+3. **Type consistency.** Function signatures from the spec are used in the plan; the executing agent should verify them at implementation time. `KagomeSimpleUpdateDiagnostics` is introduced in Task 7 Step 2 and used consistently across Tasks 7-9 and 11.
 
 4. **Known uncertainties for the executing agent:**
    - The exact ITensors `svd` keyword names (`lefttags`, `righttags`, return shape) — verify with `?svd` if a call fails on signature.
