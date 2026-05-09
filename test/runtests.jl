@@ -1,6 +1,8 @@
 using Test
 using TriangularPEPSDynamics
 
+include("util_finite_ed.jl")
+
 @testset "TriangularPEPSDynamics" begin
     include("test_geometry.jl")
     include("test_spinops.jl")
