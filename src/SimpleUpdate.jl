@@ -3,7 +3,7 @@ module SimpleUpdate
 using LinearAlgebra
 using ITensors
 using ..Geometry: Coord, star_sites
-using ..States: TriangularIPEPS, wrap_coord
+using ..States: TriangularIPEPS, bond_index, bond_lambda, wrap_coord
 
 export SimpleUpdateDiagnostics, apply_star_gate_simple_update!
 
@@ -181,6 +181,39 @@ function apply_star_gate_simple_update!(state::TriangularIPEPS,
 
     dims = [dim(state.bond_inds[b]) for b in affected]
     return SimpleUpdateDiagnostics(0.0, affected, dims)
+end
+
+"""
+    _absorb_lambda_into_star_tensors(state, center) -> Tuple{Vector{ITensor}, Vector{Vector{Index}}, Vector{Coord}}
+
+For each of the 7 star sites at `center`, return:
+- a copy of the site tensor with `sqrt(lambda)` multiplied onto every bond leg;
+- the 6 bond `Index` objects of that site (in direction order 1..6);
+- the rep `Coord` for that star position.
+
+Pure: does not mutate `state.tensors` or `state.lambdas`. The returned
+tensors carry the *same* index objects as the originals, so they can be
+contracted with each other directly.
+"""
+function _absorb_lambda_into_star_tensors(state::TriangularIPEPS, center::Coord)
+    star = star_sites(center)
+    absorbed = ITensor[]
+    bond_inds_per_site = Vector{Vector{Index}}()
+    reps = Coord[]
+    for sc in star
+        rep = wrap_coord(state.unitcell, sc)
+        T = state.tensors[rep]
+        binds = [bond_index(state, sc, d) for d in 1:6]
+        for d in 1:6
+            λ = bond_lambda(state, sc, d)
+            sqrt_λ = ITensor(sqrt.(λ), binds[d])
+            T = T * sqrt_λ
+        end
+        push!(absorbed, T)
+        push!(bond_inds_per_site, binds)
+        push!(reps, rep)
+    end
+    return absorbed, bond_inds_per_site, reps
 end
 
 function _apply_general_star_gate_simple_update!(state::TriangularIPEPS,

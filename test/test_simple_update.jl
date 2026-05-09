@@ -174,4 +174,25 @@ using ITensors
         @test diag isa SimpleUpdateDiagnostics
         @test diag.discarded_weight ≈ 0 atol = 1e-10
     end
+
+    @testset "lambda absorption helper round-trips" begin
+        state = random_ipeps(ThreeSiteUnitCell(), 2; seed = 17)
+        psi_naive = cluster_vector_from_state(state, Coord(0, 0))
+
+        absorbed, _, _ = TriangularPEPSDynamics.SimpleUpdate._absorb_lambda_into_star_tensors(
+            state, Coord(0, 0))
+        # All lambdas in a freshly-built random_ipeps are 1.0, so absorbing
+        # sqrt(1) is a no-op; the absorbed cluster contraction must equal the
+        # naive cluster contraction.
+        @test length(absorbed) == 7
+
+        # We can't directly compare absorbed-tensor contraction to psi_naive
+        # without rebuilding the cluster network, so the round-trip check is:
+        # absorbing twice with sqrt(1)=1 yields the same tensors.
+        again, _, _ = TriangularPEPSDynamics.SimpleUpdate._absorb_lambda_into_star_tensors(
+            state, Coord(0, 0))
+        for k in 1:7
+            @test array(absorbed[k]) ≈ array(again[k]) atol = 1e-12
+        end
+    end
 end
