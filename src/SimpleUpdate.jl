@@ -206,14 +206,59 @@ function _absorb_lambda_into_star_tensors(state::TriangularIPEPS, center::Coord)
         binds = [bond_index(state, sc, d) for d in 1:6]
         for d in 1:6
             λ = bond_lambda(state, sc, d)
-            sqrt_λ = ITensor(sqrt.(λ), binds[d])
-            T = T * sqrt_λ
+            b = binds[d]
+            sqrt_λ = ITensor(ComplexF64, prime(b), b)
+            for n in 1:dim(b)
+                sqrt_λ[prime(b) => n, b => n] = sqrt(λ[n])
+            end
+            T = noprime(T * sqrt_λ)
         end
         push!(absorbed, T)
         push!(bond_inds_per_site, binds)
         push!(reps, rep)
     end
     return absorbed, bond_inds_per_site, reps
+end
+
+"""
+    _build_cluster_with_gate(absorbed, phys_inds, G) -> Tuple{ITensor, Vector{Index}}
+
+Given 7 absorbed star site tensors and the dense `128 x 128` gate `G`, build:
+- a single ITensor with 7 fresh out-physical legs and the residual virtual
+  external legs of the cluster (those not contracted between star sites);
+- a vector of the 7 fresh out-physical `Index` objects in star position order
+  (center first, then directions 1..6).
+
+The gate is applied by raising `G` to an ITensor with 7 in-phys + 7 out-phys
+indices, contracting the in-phys with the cluster's physical indices, and
+leaving the out-phys as the new physicals.
+"""
+function _build_cluster_with_gate(absorbed::Vector{ITensor},
+                                  # ITensors constructs concrete Vector{Index{Int64}} values.
+                                  phys_inds::Vector{<:Index},
+                                  G::Matrix{ComplexF64})
+    length(absorbed) == 7 || throw(ArgumentError("expected 7 absorbed tensors"))
+    length(phys_inds) == 7 || throw(ArgumentError("expected 7 physical indices"))
+    size(G) == (128, 128) || throw(ArgumentError("gate must be 128x128"))
+
+    # Build per-position in/out physical indices; unit-cell reps can repeat.
+    in_phys = [Index(2, "in_phys_pos_$(i)") for i in 1:7]
+    out_phys = [Index(2, "out_phys_pos_$(i)") for i in 1:7]
+    absorbed = [replaceind(absorbed[i], phys_inds[i], in_phys[i]) for i in 1:7]
+
+    # Reshape G into a 14-leg ITensor: 7 out, then 7 in.
+    G_tensor_data = reshape(G, ntuple(_ -> 2, 14)...)
+    G_tensor = ITensor(G_tensor_data, out_phys..., in_phys...)
+
+    # Contract: cluster network * G_tensor. ITensors will pick a contraction
+    # order; for D=2 this stays well below the 2^7 * 2^18 worst-case block.
+    cluster = absorbed[1]
+    for k in 2:7
+        cluster = cluster * absorbed[k]
+    end
+    cluster = cluster * G_tensor
+
+    return cluster, out_phys
 end
 
 function _apply_general_star_gate_simple_update!(state::TriangularIPEPS,

@@ -195,4 +195,29 @@ using ITensors
             @test array(absorbed[k]) ≈ array(again[k]) atol = 1e-12
         end
     end
+
+    @testset "cluster contraction with identity gate matches naive cluster" begin
+        state = random_ipeps(ThreeSiteUnitCell(), 2; seed = 19)
+
+        absorbed, _, _ = TriangularPEPSDynamics.SimpleUpdate._absorb_lambda_into_star_tensors(
+            state, Coord(0, 0))
+        star = star_sites(Coord(0, 0))
+        phys_inds = [state.phys_inds[wrap_coord(state.unitcell, sc)] for sc in star]
+        I128 = Matrix{ComplexF64}(I, 128, 128)
+        cluster, out_phys = TriangularPEPSDynamics.SimpleUpdate._build_cluster_with_gate(
+            absorbed, phys_inds, I128)
+
+        # cluster has 7 out-phys legs + external virtual legs. Trace the externals
+        # with all-ones (matching cluster_vector_from_state), then read the 128-vec.
+        external_inds = [idx for idx in inds(cluster) if !(idx in out_phys)]
+        for idx in external_inds
+            cluster = cluster * ITensor(ones(ComplexF64, dim(idx)), idx)
+        end
+        psi_via_cluster = ComplexF64.(reshape(array(cluster, out_phys...), 128))
+
+        psi_naive = cluster_vector_from_state(state, Coord(0, 0))
+        # Direct vector equality avoids subtracting two large floating-point
+        # reductions from identical vectors in the overlap-only check.
+        @test psi_via_cluster ≈ psi_naive atol = 1e-10
+    end
 end
