@@ -2,11 +2,17 @@
 
 ## Purpose
 
-Build a Julia tensor-network tooling layer for fixed-bond-dimension projected PXP evolution on the **2D Kagome lattice**, using the **PESS (Projected Entangled Simplex State)** ansatz, designed to support a ScarFinder loop searching for low-entanglement scar trajectories. This is the kagome counterpart of the now-parked triangular work; it pivots away from triangular because the 7-site star + standard iPEPS combination has a structural sublattice-aliasing problem in cluster-and-split Simple Update and infeasible cluster scaling above D ≈ 4.
+Build a Julia tensor-network tooling layer for fixed-bond-dimension projected PXP evolution on the **2D Kagome lattice**, using the **PESS (Projected Entangled Simplex State)** ansatz with a **Simple Update** kernel, **as a prototype for the eventual NTU-based dynamics implementation**. This is the kagome counterpart of the now-parked triangular work; it pivots away from triangular because the 7-site star + standard iPEPS combination has a structural sublattice-aliasing problem in cluster-and-split Simple Update and infeasible cluster scaling above D ≈ 4.
 
-The bar for "done" is the same as the triangular target: **internally validated against finite-cluster ED for short times plus invariants** — not a research-grade benchmark reproduction. There is no published kagome PXP dynamics work to cross-check against, so internal validation is the only oracle.
+**Honest framing of SU vs NTU.** The PESS *ansatz* is a representation choice and is dynamics-agnostic. The PESS *Simple Update kernel* (apply gate → HOSVD-truncate to fixed D) is the published canonical kagome ground-state algorithm; its track record for real-time dynamics is sparse. NTU (Dziarmaga 2021) is the production-grade dynamics algorithm but substantially more complex to implement. This spec implements PESS+SU as a prototype because:
 
-The design context, literature scan, and decision rationale live in `Notes/2026-05-09-kagome-pxp-pivot-plan.md`. This spec assumes those decisions are locked.
+1. ScarFinder's evolve-project loop projects to a low-D manifold every step; this is the regime where SU truncation is most defensible (the projection is what makes SU acceptable for dynamics here, not its general accuracy on out-of-equilibrium states).
+2. The geometry, state container, models, gates, scheduler, observables, and ScarFinder-loop infrastructure are **algorithm-agnostic** and will be reused unchanged when NTU lands.
+3. Validation Layer-1 (kernel ED) and Layer-3 (analytic stabilizer benchmark) test the SU kernel in regimes where it should be exact or near-exact; passing these is meaningful even if dynamics fidelity at scale is not yet established.
+
+The bar for "done" on the SU prototype is **passing Layers 1 and 3, plus running the ScarFinder loop end-to-end at D ≥ 2 with real bond growth and truncation observed**. Layer-2 (finite-torus integration) is **demoted from acceptance gate to dynamics-fidelity indicator**: we run it and record the result; passing within tolerance means SU dynamics is acceptable for first scientific work; failure by orders of magnitude means we halt scientific claims and queue the NTU PR. There is no published kagome PXP dynamics work to cross-check against, so finite-cluster ED is the only oracle.
+
+The design context, literature scan, and decision rationale live in `Notes/2026-05-09-kagome-pxp-pivot-plan.md`. The NTU follow-up PR scope is sketched in `Notes/2026-05-09-kagome-pess-ntu-followup.md`. This spec assumes the four locked decisions (PESS ansatz, 9-site UC, vanilla λ environment, D=4/8/12 targets) hold; the SU-vs-NTU framing here is a clarification of what the SU prototype proves and doesn't prove.
 
 ## Locked Design Decisions
 
@@ -207,7 +213,9 @@ Tests:
 - **Imaginary-time projected PXP gate, D=2 random input**: tensors stay finite, hermiticity-preserving (real input → real output within tolerance).
 - **Site-product 5-site gate via the general path**: agrees with a direct site-by-site application within `1e-10`.
 
-### Layer 2: Finite-torus integration test (per CI run)
+### Layer 2: Finite-torus integration test (indicator, not gate)
+
+**Status: indicator-only.** Demoted from acceptance gate per the SU-prototype framing in Purpose. We run it every CI cycle, record the result, and use the result to interpret whether SU dynamics is acceptable for scientific use. Pass within tolerance → continue with first scarfinder runs; fail by orders of magnitude → halt scientific claims and queue the NTU PR before publishing any results.
 
 In `test/test_kagome_evolution.jl`. Uses helpers `build_kagome_3x3_torus_pxp_hamiltonian()` and `kagome_torus_local_z_per_sublattice(vec)` in `test/util_kagome_finite_ed.jl`.
 
@@ -326,21 +334,30 @@ In `Notes/`:
 
 ## Acceptance Criteria
 
+Hard gates (must pass for the PR to land):
+
 - All existing triangular tests still pass (no regression in the triangular code path).
 - Kagome geometry tests pass: 9-site UC has 5 distinct reps per star; 3-coloring partitions are vertex-disjoint.
 - Layer 1 kernel ED tests pass at D = 2 and D = 4.
-- Layer 2 torus integration test passes within `1e-3` absolute on per-sublattice `<Z>`.
 - Layer 3 stabilizer benchmark passes within `1e-6` at D = 4.
 - `scar_search_kagome` on `NineSiteKagomeUC` with `maxdim = 4` produces a ranked candidate list with finite scores, finite diagnostics, nonzero discarded weight on at least one layer (proving real truncation activates), and bond dims that grow during evolution (proving real bond growth).
-- README has a new "Kagome status" section documenting that kagome PESS PXP dynamics works at D = 4-8 for `NineSiteKagomeUC`.
+- README has a new "Kagome status" section honestly documenting that kagome PESS PXP dynamics is implemented as an SU prototype, with NTU as the planned next step, and Layer-2 dynamics fidelity recorded but not used for scientific claims.
 - No silent fallbacks, no placeholder updates, no test that only checks `isfinite`.
+
+Indicator (recorded, not gating):
+
+- Layer 2 torus integration test result. Target: per-sublattice `<Z>` within `1e-3` absolute. Outcome interpretation:
+  - Pass within tolerance → SU dynamics is acceptable for first scientific scarfinder runs; the NTU follow-up PR can be queued at lower priority.
+  - Fail by a factor of 2-10× tolerance → SU dynamics is borderline; explicitly disclaim scientific accuracy in any paper draft and prioritize the NTU PR.
+  - Fail by orders of magnitude → SU dynamics is unfit for this problem; halt scientific use of the SU implementation and dispatch the NTU PR immediately.
 
 ## Out-Of-Scope Follow-Ups
 
-- BP-gauge maintenance (Tindall-Fishman 2023). Vanilla λ environment first.
+- **NTU on kagome PESS** — the planned immediate follow-on PR. Sketch in `Notes/2026-05-09-kagome-pess-ntu-followup.md`. Replaces the Simple Update kernel with a neighborhood-tensor-update kernel; reuses all infrastructure built in this PR. Priority depends on Layer-2 indicator outcome.
+- BP-gauge maintenance (Tindall-Fishman 2023). Vanilla λ environment first; orthogonal layer that can stack with either SU or NTU.
 - Loop-corrected / cluster-BP corrections for triangle 3-cycles.
 - 3-site or other aliased UCs, with sibling-merge semantics.
-- NTU / Full Update / CTMRG.
+- Full Update / CTMRG.
 - PEPS expectation values via boundary MPS or environment contraction.
 - Imaginary-time energy correction in ScarFinder.
 - D > 8 performance work.

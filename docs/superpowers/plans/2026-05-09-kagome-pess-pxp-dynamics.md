@@ -1684,7 +1684,11 @@ git commit -m "feat: kagome projected PXP evolution driver"
 
 ---
 
-## Task 12: Layer-2 Torus Integration Test
+## Task 12: Layer-2 Torus Integration Test (Indicator, Not Gate)
+
+**Status note for the executing agent:** This task is **demoted to dynamics-fidelity indicator** per the spec's revised acceptance criteria. The test is added and run, the result is recorded, but **a failing Layer-2 test does NOT block this PR**. The result interprets whether the SU prototype is acceptable for first scientific scarfinder use or whether NTU should be prioritized. See spec section "Acceptance Criteria → Indicator" for the outcome interpretation matrix.
+
+The test code is identical to what a gate-test would be; only the orchestrator's reaction to a failure differs. Execute Steps 1-3 normally; in Step 4 record the outcome rather than treat it as a hard failure.
 
 **Files:**
 - Modify: `test/util_kagome_finite_ed.jl`
@@ -1746,13 +1750,25 @@ end
 end
 ```
 
-- [ ] **Step 3: Run, debug to green, commit**
+- [ ] **Step 3: Run and record the result**
 
-If the tolerance is missed by orders of magnitude, halt and investigate (kernel bug, basis convention mismatch in the torus builder, or schedule mismatch).
+```bash
+julia --project=/Users/ren/Codex/PEPs -e 'using Pkg; Pkg.test(test_args=["kagome projected PXP iPEPS matches"])' 2>&1 | tail -25
+```
+
+Three possible outcomes (per spec's "Acceptance Criteria → Indicator"):
+
+- **PASS within `1e-3`**: SU dynamics is acceptable for first scientific scarfinder runs. Continue with Task 13. Note in the commit message: "Layer-2 indicator: PASS at 1e-3 absolute on per-sublattice <Z> (D=4, dt=0.01, 3 steps)."
+
+- **FAIL by 2-10× tolerance**: Borderline. Continue with Task 13 but note the result. Commit message: "Layer-2 indicator: BORDERLINE (max deviation Xe-3, target 1e-3). NTU follow-up should be prioritized before scientific use."
+
+- **FAIL by orders of magnitude**: SU dynamics is unfit. Investigate first to rule out a kernel bug or basis convention mismatch in the torus builder (these would be hard failures, not the SU-vs-NTU question). If the kernel passes Layers 1 and 3 but fails Layer-2 by orders of magnitude, the SU mean-field environment really is inadequate for this dynamics — this is the case where we halt scientific claims and dispatch the NTU PR. Commit message: "Layer-2 indicator: FAIL (max deviation X, target 1e-3). SU prototype is unfit for kagome PXP dynamics at this scale; NTU follow-up is required before any scientific use. See Notes/2026-05-09-kagome-pess-ntu-followup.md."
+
+In **all three cases**, commit. The PR is not blocked by this task's outcome.
 
 ```bash
 git add test/util_kagome_finite_ed.jl test/test_kagome_evolution.jl
-git commit -m "test: kagome torus integration test for projected PXP at D=4"
+git commit -m "test: kagome torus integration indicator (Layer-2)"
 ```
 
 ---
@@ -1847,23 +1863,34 @@ end
 
 - [ ] **Step 3: README update**
 
-Add a "Kagome Status" section to `README.md` documenting the supported workflow:
+Add a "Kagome Status" section to `README.md` honestly documenting what the SU prototype proves and doesn't prove. Substitute `<LAYER_2_RESULT>` with the actual outcome from Task 12:
 
 ```markdown
 ## Kagome Status
 
-Kagome PESS PXP evolution is supported on `NineSiteKagomeUC` at `D = 4-8`. The pipeline
-includes 5-site projected PXP gates, sequential cluster contraction with HOSVD decomposition
-back to PESS form, lambda truncation per simplex bond, and a 3-color Trotter schedule.
-ScarFinder runs at `D >= 2` produce ranked candidate lists with real bond growth and
+Kagome PESS PXP evolution is implemented on `NineSiteKagomeUC` at `D = 4-8` as a **Simple
+Update prototype**. The pipeline includes 5-site projected PXP gates, cluster contraction
+with HOSVD decomposition back to PESS form, lambda truncation per simplex bond, a 3-color
+Trotter schedule, and a ScarFinder driver that runs at `D >= 2` with real bond growth and
 truncation diagnostics.
 
-OneSiteKagomeUC and other small-UC variants are not supported (sublattice aliasing).
-NTU, BP-gauge maintenance, and PEPS expectation values via boundary MPS or CTMRG remain
-future work. See `Notes/2026-05-09-kagome-pxp-pivot-plan.md` for the full design rationale.
+**Dynamics fidelity status**: Layer-1 kernel ED tests (5-site cluster) and Layer-3 analytic
+stabilizer benchmark pass within tolerance, demonstrating the kernel is correct in regimes
+where SU is exact or near-exact. Layer-2 finite-torus integration (the main dynamics-fidelity
+indicator at scale) result: <LAYER_2_RESULT — replace with one of: PASS at 1e-3, BORDERLINE
+at Xe-3, FAIL at X>. Treat scientific scarfinder results from this implementation accordingly.
 
-Triangular code is parked; see `src/Triangular*.jl` and `src/SimpleUpdate.jl` for the
-historical artifact.
+**NTU follow-up**: The Simple Update kernel is a prototype. NTU (neighborhood tensor update)
+is the production-grade dynamics algorithm and is the planned next PR. All infrastructure
+in this PR — geometry, state container, models, gates, scheduler, observables, ScarFinder
+loop — is reusable; only the kernel changes. See `Notes/2026-05-09-kagome-pess-ntu-followup.md`.
+
+**Not supported**: OneSiteKagomeUC and other small-UC variants (sublattice aliasing).
+BP-gauge maintenance, PEPS expectation values via boundary MPS or CTMRG, imaginary-time
+energy correction in ScarFinder are future work.
+
+**Triangular code is parked** as a historical artifact; see `src/Triangular*.jl` and
+`src/SimpleUpdate.jl`. Don't extend it; build on the kagome path going forward.
 ```
 
 - [ ] **Step 4: Final full-suite run**
