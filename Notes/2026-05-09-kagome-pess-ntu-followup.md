@@ -113,7 +113,7 @@ Modify:
 
 - `src/KagomeEvolution.jl` — add `:ntu` dispatch.
 - `src/KagomeScarFinder.jl` — relax `update` validator to accept `:ntu`.
-- `src/TriangularPEPSDynamics.jl` — re-export NTU symbols.
+- `src/KagomePXPDynamics.jl` — re-export NTU symbols.
 - `test/test_kagome_evolution.jl` — promote Layer-2 to gate-test, parametrize over `update` mode.
 - `README.md` — update Kagome Status to reflect NTU as the production path.
 

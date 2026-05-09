@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Build a Julia tensor-network tooling layer for fixed-bond-dimension projected PXP evolution on the **2D Kagome lattice**, using the **PESS (Projected Entangled Simplex State)** ansatz with a **Simple Update** kernel, **as a prototype for the eventual NTU-based dynamics implementation**. This is the kagome counterpart of the now-parked triangular work; it pivots away from triangular because the 7-site star + standard iPEPS combination has a structural sublattice-aliasing problem in cluster-and-split Simple Update and infeasible cluster scaling above D ≈ 4.
+Build a Julia tensor-network tooling layer for fixed-bond-dimension projected PXP evolution on the **2D Kagome lattice**, using the **PESS (Projected Entangled Simplex State)** ansatz with a **Simple Update** kernel, **as a prototype for the eventual NTU-based dynamics implementation**. This is the kagome counterpart of the previous triangular attempt (removed; see git history); it pivots away from triangular because the 7-site star + standard iPEPS combination has a structural sublattice-aliasing problem in cluster-and-split Simple Update and infeasible cluster scaling above D ≈ 4.
 
 **Honest framing of SU vs NTU.** The PESS *ansatz* is a representation choice and is dynamics-agnostic. The PESS *Simple Update kernel* (apply gate → HOSVD-truncate to fixed D) is the published canonical kagome ground-state algorithm; its track record for real-time dynamics is sparse. NTU (Dziarmaga 2021) is the production-grade dynamics algorithm but substantially more complex to implement. This spec implements PESS+SU as a prototype because:
 
@@ -47,11 +47,11 @@ Out of scope (explicit):
 - Imaginary-time energy correction inside ScarFinder (depends on the previous item).
 - Fermionic, symmetric, or GPU tensor backends.
 - Larger unit cells beyond the 9-site enlargement.
-- Reviving the triangular code path. Triangular spec, plan, and partial implementation stay in the repo as historical artifacts.
+- The triangular code baseline was removed from the source tree in commit eef0ead. Triangular spec, plan, and partial implementation remain as historical artifacts only.
 
 ## Architecture
 
-The kagome work lives alongside (not replacing) the triangular code in the same root Julia project. New modules under `src/`:
+The kagome work now drives active implementation in the root Julia project. New modules under `src/`:
 
 - `KagomeGeometry.jl` — Bravais lattice, sublattice partition, 9-site UC, neighbor relations, color schedule.
 - `KagomePESS.jl` — PESS state container, site/simplex tensor builders, λ bookkeeping, product/random initializers.
@@ -67,7 +67,7 @@ Existing code that stays untouched:
 
 - `SpinOps.jl`, `Schedules.jl` (the abstract first/second-order weights are reused, but kagome has its own concrete color list), `SolvableModels.jl` (extended with kagome variants).
 
-The shared `TriangularPEPSDynamics.jl` module re-exports kagome symbols alongside triangular ones. Or (alternative) a new top-level module `KagomePXPDynamics.jl` exists as a sibling. **Lean: same module, namespaced public symbols.** The package name is currently `TriangularPEPSDynamics`; that name is acknowledged as inaccurate post-pivot but renaming is out of scope for this PR (would touch every test file and the Project.toml).
+The shared `KagomePXPDynamics.jl` module re-exports kagome symbols and generic utilities. **Lean:** keep a single public module in the same file.
 
 ## Geometry
 
@@ -301,7 +301,7 @@ In `src/`:
 
 Modify:
 
-- `src/TriangularPEPSDynamics.jl` — `include` and re-export the new modules. Rename or repurpose the package later (out of scope).
+- `src/KagomePXPDynamics.jl` — `include` and re-export the new modules. Keep the package-level namespacing intact.
 - `src/SolvableModels.jl` — add `kagome_cluster_center_z_expectation_exact(t)`.
 
 In `test/`:
@@ -362,4 +362,4 @@ Indicator (recorded, not gating):
 - Imaginary-time energy correction in ScarFinder.
 - D > 8 performance work.
 - Triangular code path revival.
-- Package rename from `TriangularPEPSDynamics` to something kagome-aware.
+- Package rename from `KagomePXPDynamics` to something kagome-aware.

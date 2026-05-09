@@ -2,7 +2,7 @@
 
 ## Project Direction
 
-This repository is for 2D triangular-lattice PXP ScarFinder work. The PEPS/iPEPS code in this repo is internal tooling for that goal, not a standalone tensor-network package to be generalized independently.
+This repository is for 2D kagome-lattice PXP ScarFinder work. The PEPS/iPEPS code in this repo is internal tooling for that goal, not a standalone tensor-network package to be generalized independently.
 
 Treat the PEPS layer as a subpackage-style module inside this project:
 
@@ -17,7 +17,7 @@ julia --project=. -e 'using Pkg; Pkg.test()'
 
 ## Scientific Target
 
-The eventual application is ScarFinder for the 2D triangular-lattice PXP model. PEPS features should be built only when they support that workflow:
+The eventual application is ScarFinder for the 2D kagome-lattice PXP model. PEPS features should be built only when they support that workflow:
 
 - constrained PXP gates using `P_blockade * U`;
 - real- and imaginary-time evolution needed by ScarFinder;
@@ -25,7 +25,7 @@ The eventual application is ScarFinder for the 2D triangular-lattice PXP model. 
 - blockade-violation diagnostics;
 - low-entanglement candidate ranking and later ScarFinder orchestration.
 
-Avoid broad PEPS library work that is not needed for triangular PXP ScarFinder.
+Avoid broad PEPS library work that is not needed for kagome PXP ScarFinder.
 
 ## Current Implementation Boundary
 

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the kagome PESS PXP dynamics pipeline from scratch (geometry → state container → models → gates → schedules → simple update → observables → evolution → scarfinder), with three-layer validation, in the existing `TriangularPEPSDynamics` Julia project, leaving the parked triangular code untouched.
+**Goal:** Build the kagome PESS PXP dynamics pipeline from scratch (geometry → state container → models → gates → schedules → simple update → observables → evolution → scarfinder), with three-layer validation, in the existing `KagomePXPDynamics` Julia project, after removing the triangular predecessor baseline.
 
 **Architecture:** New `Kagome*.jl` modules under `src/`, mirroring the triangular module layout but specialized for the PESS ansatz on kagome with a 9-site enlarged unit cell. The Simple Update kernel applies the 5-site projected PXP gate via cluster contraction through the PESS network and HOSVD-based decomposition back to PESS form. No silent fallbacks — paths not yet supported throw clear `ArgumentError`. Tests follow strict TDD: failing test, run-to-confirm-failure, minimal implementation, run-to-confirm-pass, commit.
 
@@ -17,7 +17,7 @@
 **Files:**
 - Create: `src/KagomeGeometry.jl`
 - Create: `test/test_kagome_geometry.jl`
-- Modify: `src/TriangularPEPSDynamics.jl`
+- Modify: `src/KagomePXPDynamics.jl`
 - Modify: `test/runtests.jl`
 
 - [ ] **Step 1: Write failing geometry tests**
@@ -206,7 +206,7 @@ end  # module
 
 - [ ] **Step 4: Wire into the package**
 
-Modify `src/TriangularPEPSDynamics.jl` to add:
+Modify `src/KagomePXPDynamics.jl` to add:
 
 ```julia
 include("KagomeGeometry.jl")
@@ -244,7 +244,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/KagomeGeometry.jl src/TriangularPEPSDynamics.jl test/test_kagome_geometry.jl test/runtests.jl
+git add src/KagomeGeometry.jl src/KagomePXPDynamics.jl test/test_kagome_geometry.jl test/runtests.jl
 git commit -m "feat: add kagome geometry with 9-site unit cell and 3-coloring"
 ```
 
@@ -255,7 +255,7 @@ git commit -m "feat: add kagome geometry with 9-site unit cell and 3-coloring"
 **Files:**
 - Create: `src/KagomeModels.jl`
 - Create: `test/test_kagome_models.jl`
-- Modify: `src/TriangularPEPSDynamics.jl`
+- Modify: `src/KagomePXPDynamics.jl`
 - Modify: `test/runtests.jl`
 
 - [ ] **Step 1: Write failing model tests**
@@ -404,7 +404,7 @@ end  # module
 
 - [ ] **Step 4: Wire into package**
 
-Modify `src/TriangularPEPSDynamics.jl`:
+Modify `src/KagomePXPDynamics.jl`:
 
 ```julia
 include("KagomeModels.jl")
@@ -427,7 +427,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/KagomeModels.jl src/TriangularPEPSDynamics.jl test/test_kagome_models.jl test/runtests.jl
+git add src/KagomeModels.jl src/KagomePXPDynamics.jl test/test_kagome_models.jl test/runtests.jl
 git commit -m "feat: add 5-site kagome PXP Hamiltonian and blockade projector"
 ```
 
@@ -438,7 +438,7 @@ git commit -m "feat: add 5-site kagome PXP Hamiltonian and blockade projector"
 **Files:**
 - Create: `src/KagomeGates.jl`
 - Create: `test/test_kagome_gates.jl`
-- Modify: `src/TriangularPEPSDynamics.jl`
+- Modify: `src/KagomePXPDynamics.jl`
 - Modify: `test/runtests.jl`
 
 - [ ] **Step 1: Write failing gate tests**
@@ -533,7 +533,7 @@ end  # module
 
 - [ ] **Step 4: Wire and test**
 
-Modify `src/TriangularPEPSDynamics.jl`:
+Modify `src/KagomePXPDynamics.jl`:
 
 ```julia
 include("KagomeGates.jl")
@@ -552,7 +552,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/KagomeGates.jl src/TriangularPEPSDynamics.jl test/test_kagome_gates.jl test/runtests.jl
+git add src/KagomeGates.jl src/KagomePXPDynamics.jl test/test_kagome_gates.jl test/runtests.jl
 git commit -m "feat: add dense and projected 5-site kagome gates"
 ```
 
@@ -563,7 +563,7 @@ git commit -m "feat: add dense and projected 5-site kagome gates"
 **Files:**
 - Create: `src/KagomeSchedules.jl`
 - Create: `test/test_kagome_schedules.jl`
-- Modify: `src/TriangularPEPSDynamics.jl`
+- Modify: `src/KagomePXPDynamics.jl`
 - Modify: `test/runtests.jl`
 
 - [ ] **Step 1: Failing tests**
@@ -627,10 +627,10 @@ end  # module
 
 - [ ] **Step 3: Wire, test, commit**
 
-Modify `TriangularPEPSDynamics.jl` to include and re-export. Add to `runtests.jl`. Run full suite.
+Modify `KagomePXPDynamics.jl` to include and re-export. Add to `runtests.jl`. Run full suite.
 
 ```bash
-git add src/KagomeSchedules.jl src/TriangularPEPSDynamics.jl test/test_kagome_schedules.jl test/runtests.jl
+git add src/KagomeSchedules.jl src/KagomePXPDynamics.jl test/test_kagome_schedules.jl test/runtests.jl
 git commit -m "feat: add kagome 3-color trotter schedule"
 ```
 
@@ -641,7 +641,7 @@ git commit -m "feat: add kagome 3-color trotter schedule"
 **Files:**
 - Create: `src/KagomePESS.jl`
 - Create: `test/test_kagome_pess.jl`
-- Modify: `src/TriangularPEPSDynamics.jl`
+- Modify: `src/KagomePXPDynamics.jl`
 - Modify: `test/runtests.jl`
 
 - [ ] **Step 1: Failing tests**
@@ -846,10 +846,10 @@ end  # module
 
 - [ ] **Step 3: Wire, test, commit**
 
-Wire into `TriangularPEPSDynamics.jl`. Add `include("test_kagome_pess.jl")` to `runtests.jl`. Run.
+Wire into `KagomePXPDynamics.jl`. Add `include("test_kagome_pess.jl")` to `runtests.jl`. Run.
 
 ```bash
-git add src/KagomePESS.jl src/TriangularPEPSDynamics.jl test/test_kagome_pess.jl test/runtests.jl
+git add src/KagomePESS.jl src/KagomePXPDynamics.jl test/test_kagome_pess.jl test/runtests.jl
 git commit -m "feat: add kagome PESS state container with site and simplex tensors"
 ```
 
@@ -860,7 +860,7 @@ git commit -m "feat: add kagome PESS state container with site and simplex tenso
 **Files:**
 - Create: `src/KagomeObservables.jl`
 - Create: `test/test_kagome_observables.jl`
-- Modify: `src/TriangularPEPSDynamics.jl`
+- Modify: `src/KagomePXPDynamics.jl`
 - Modify: `test/runtests.jl`
 
 - [ ] **Step 1: Failing tests**
@@ -940,7 +940,7 @@ end  # module
 - [ ] **Step 3: Wire, test, commit**
 
 ```bash
-git add src/KagomeObservables.jl src/TriangularPEPSDynamics.jl test/test_kagome_observables.jl test/runtests.jl
+git add src/KagomeObservables.jl src/KagomePXPDynamics.jl test/test_kagome_observables.jl test/runtests.jl
 git commit -m "feat: add kagome PESS observables and blockade diagnostics"
 ```
 
@@ -953,7 +953,7 @@ git commit -m "feat: add kagome PESS observables and blockade diagnostics"
 **Files:**
 - Create: `src/KagomeSimpleUpdate.jl`
 - Create: `test/test_kagome_simple_update.jl`
-- Modify: `src/TriangularPEPSDynamics.jl`
+- Modify: `src/KagomePXPDynamics.jl`
 - Modify: `test/runtests.jl`
 
 - [ ] **Step 1: Failing tests for identity and site-product**
@@ -1090,8 +1090,8 @@ function _affected_kagome_bonds(state::KagomePESS, center::KagomeCoord)
             # Determine whether this NN shares the up-triangle or the down-triangle with the center.
             # Sites in the same up-triangle as `center`: have up_triangle_of(nn) == up_triangle_of(center).
             # Implementation will pick the right one.
-            nn_up = TriangularPEPSDynamics.KagomeGeometry.up_triangle_of(sc)
-            center_up = TriangularPEPSDynamics.KagomeGeometry.up_triangle_of(center)
+            nn_up = KagomePXPDynamics.KagomeGeometry.up_triangle_of(sc)
+            center_up = KagomePXPDynamics.KagomeGeometry.up_triangle_of(center)
             push!(bonds, (rep, nn_up == center_up ? :up : :down))
         end
     end
@@ -1108,7 +1108,7 @@ function _affected_to_triangular_keys(bonds)
     # Placeholder: shoehorn (KagomeCoord, Symbol) into (Coord, Int) by indexing.
     # The actual SimpleUpdateDiagnostics fields stay typed against triangular Coord;
     # for kagome we use a separate KagomeSimpleUpdateDiagnostics defined below.
-    return [(TriangularPEPSDynamics.Geometry.Coord(b[1].n1, b[1].n2), b[2] === :up ? 1 : 2)
+    return [(KagomePXPDynamics.Geometry.Coord(b[1].n1, b[1].n2), b[2] === :up ? 1 : 2)
             for b in bonds]
 end
 
@@ -1159,7 +1159,7 @@ Expected: PASS for identity and site-product, FAIL (correctly throwing) for gene
 - [ ] **Step 4: Wire, run full suite, commit**
 
 ```bash
-git add src/KagomeSimpleUpdate.jl src/TriangularPEPSDynamics.jl test/test_kagome_simple_update.jl test/runtests.jl
+git add src/KagomeSimpleUpdate.jl src/KagomePXPDynamics.jl test/test_kagome_simple_update.jl test/runtests.jl
 git commit -m "feat: kagome PESS simple update for identity and site-product gates"
 ```
 
@@ -1365,7 +1365,7 @@ Create `test/util_kagome_finite_ed.jl`:
 ```julia
 using ITensors
 using LinearAlgebra
-using TriangularPEPSDynamics
+using KagomePXPDynamics
 
 """
     cluster_vector_from_pess(state, center) -> Vector{ComplexF64}
@@ -1666,7 +1666,7 @@ git commit -m "test: layer-1 coverage for kagome truncation and hermiticity"
 **Files:**
 - Create: `src/KagomeEvolution.jl`
 - Create: `test/test_kagome_evolution.jl`
-- Modify: `src/TriangularPEPSDynamics.jl`
+- Modify: `src/KagomePXPDynamics.jl`
 - Modify: `test/runtests.jl`
 
 - [ ] **Step 1: Implement following the triangular Evolution.jl pattern**
@@ -1678,7 +1678,7 @@ Adapt the triangular `Evolution.jl` to call `apply_star_gate_simple_update_pess!
 - [ ] **Step 3: Wire, run full suite, commit**
 
 ```bash
-git add src/KagomeEvolution.jl src/TriangularPEPSDynamics.jl test/test_kagome_evolution.jl test/runtests.jl
+git add src/KagomeEvolution.jl src/KagomePXPDynamics.jl test/test_kagome_evolution.jl test/runtests.jl
 git commit -m "feat: kagome projected PXP evolution driver"
 ```
 
@@ -1839,7 +1839,7 @@ git commit -m "test: kagome cluster stabilizer benchmark at D=4"
 **Files:**
 - Create: `src/KagomeScarFinder.jl`
 - Create: `test/test_kagome_scar_finder.jl`
-- Modify: `src/TriangularPEPSDynamics.jl`
+- Modify: `src/KagomePXPDynamics.jl`
 - Modify: `test/runtests.jl`
 - Modify: `README.md`
 
@@ -1889,8 +1889,7 @@ loop — is reusable; only the kernel changes. See `Notes/2026-05-09-kagome-pess
 BP-gauge maintenance, PEPS expectation values via boundary MPS or CTMRG, imaginary-time
 energy correction in ScarFinder are future work.
 
-**Triangular code is parked** as a historical artifact; see `src/Triangular*.jl` and
-`src/SimpleUpdate.jl`. Don't extend it; build on the kagome path going forward.
+Triangular code has been removed in commit eef0ead; see git history. Don't extend it; build on the kagome path going forward.
 ```
 
 - [ ] **Step 4: Final full-suite run**
@@ -1904,7 +1903,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/KagomeScarFinder.jl src/TriangularPEPSDynamics.jl test/test_kagome_scar_finder.jl test/runtests.jl README.md
+git add src/KagomeScarFinder.jl src/KagomePXPDynamics.jl test/test_kagome_scar_finder.jl test/runtests.jl README.md
 git commit -m "feat: kagome ScarFinder driver with D>=2 support and README update"
 ```
 

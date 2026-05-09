@@ -258,7 +258,7 @@ Explicit non-goals (kept as future work):
 - Energy expectation at D>1 via boundary MPS or CTMRG. PESS local energy estimators are approximate; precise expectation values can wait.
 - Imaginary-time energy correction in ScarFinder. Depends on (#3) being ready.
 - 4-site, larger UCs beyond the 9-site enlargement.
-- Triangular PXP. Triangular work is parked; if kagome scarfinder produces interesting results we may revisit triangular with a PESS-on-triangular ansatz later.
+- Triangular PXP. Triangular work has been removed (commit eef0ead). If kagome scar-finder produces interesting results, we may revisit triangular with a PESS-on-triangular ansatz later (out of scope for this baseline).
 
 ---
 
