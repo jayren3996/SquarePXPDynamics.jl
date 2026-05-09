@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Fill in the explicitly-throwing branch in `_apply_general_star_gate_simple_update!` so that fixed-bond-dimension D>1 projected PXP evolution actually runs on `ThreeSiteUnitCell` triangular iPEPS states. This is the single blocker that prevents the existing ScarFinder loop, blockade diagnostics, and step-driver scaffolding from being exercised at any bond dimension where entanglement structure exists.
+Replace the existing rank-1 mean-field placeholder in `_apply_general_star_gate_simple_update!` with a real Simple Update path: proper SVD-based bond truncation, lambda spectrum updates, and reported discarded weight. The current placeholder runs (so D>1 evolution does not throw), but it approximates every star gate by a per-rep rank-1 single-site map computed from each rep's dominant local profile; it never updates bond dimensions or lambda spectra and is not a Simple Update. This is the blocker that prevents the existing ScarFinder loop, blockade diagnostics, and step-driver scaffolding from being exercised on a state whose entanglement structure can actually grow.
 
 The bar for "done" is **internally validated against finite-cluster ED for short times plus invariants** — not a research-grade reproduction of published triangular-PEPS Simple Update benchmarks. Long-time accuracy and external benchmark reproduction are NTU's job.
 
@@ -29,7 +29,7 @@ Out of scope:
 
 ## Architecture
 
-The new code lives entirely inside the body of `_apply_general_star_gate_simple_update!` in `src/SimpleUpdate.jl` plus 3-4 file-private helpers. No new files in `src/`. No new module. The public API (`apply_star_gate_simple_update!`, `projected_pxp_step!`, `run_projected_pxp!`, `scar_search`) does not change shape.
+The new code replaces the body of `_apply_general_star_gate_simple_update!` in `src/SimpleUpdate.jl` and introduces 3-4 file-private helpers. The dead helpers used by the rank-1 placeholder (`_dominant_site_vector`, `_product_projection_targets`, `_representative_target`, `_regularized_physical_map`, `_apply_physical_map!`, `_normalize_site_tensor!`, `_relative_residual`) are deleted along the way. No new files in `src/`. No new module. The public API (`apply_star_gate_simple_update!`, `projected_pxp_step!`, `run_projected_pxp!`, `scar_search`) does not change shape. The standalone `truncate_state!` in `States.jl` is orthogonal and stays — it is used by `scar_search` to project from `dynamics_maxdim` down to `scar_maxdim` between iterations and is unrelated to the in-step gate-application truncation we are adding here.
 
 The dispatch order in `apply_star_gate_simple_update!` already does the right thing:
 
@@ -194,22 +194,23 @@ Run real-time evolution with `dt = 0.05`, `maxdim = 4`, second-order, 4 steps. M
 
 ## API Changes
 
-- `apply_star_gate_simple_update!`: no signature change. The fall-through general-gate branch now does work instead of throwing. The `maxdim === nothing` check inside `_apply_general_star_gate_simple_update!` stays — `maxdim` remains required for general updates.
-- `_apply_general_star_gate_simple_update!`: still rejects `OneSiteUnitCell` with an explicit `ArgumentError("general star updates for OneSiteUnitCell are not yet supported")`.
-- `ScarFinder.scar_search`: change the `config.maxdim == 1` guard to `config.unitcell isa ThreeSiteUnitCell || config.maxdim == 1`. Update the error message to point at the unit-cell restriction rather than D=1.
+- `apply_star_gate_simple_update!`: no signature change. The fall-through general-gate branch now does proper Simple Update instead of the rank-1 placeholder. The `maxdim === nothing` check inside `_apply_general_star_gate_simple_update!` stays — `maxdim` remains required for general updates.
+- `_apply_general_star_gate_simple_update!`: rejects `OneSiteUnitCell` with an explicit `ArgumentError("general star updates for OneSiteUnitCell are not yet supported")`. Removes the existing `current_dim <= maxdim` precondition because the new path can now grow bond dimensions up to `maxdim` and truncate back.
+- `ScarFinder.scar_search`: no change required. The current code already has no D=1 guard. `dynamics_maxdim`/`scar_maxdim` separation stays as-is. After this change the workflow will actually exercise bond growth and truncation per-step rather than running rank-1 placeholders.
 - `ScarFinder._seed_state`: no change. `random_ipeps(uc, D)` already supports D>1.
 - `TriangularPEPSDynamics.jl`: no new exports.
+- The dead helpers listed in the Architecture section are removed in the same PR; their callsites disappear when the rank-1 path body is replaced.
 
 ## Files To Modify
 
-- `src/SimpleUpdate.jl` — fill `_apply_general_star_gate_simple_update!` and add 3-4 file-private helpers (`_absorb_lambda_into_star_tensors`, `_build_cluster_network`, `_peel_split_spoke!`, `_extract_and_writeback!`).
-- `src/ScarFinder.jl` — relax the D=1 guard; update error message.
+- `src/SimpleUpdate.jl` — replace the body of `_apply_general_star_gate_simple_update!`, add 3-4 file-private helpers (`_absorb_lambda_into_star_tensors`, `_build_cluster_network`, `_peel_split_spoke!`, `_extract_and_writeback!`), delete the rank-1 placeholder helpers (`_dominant_site_vector`, `_product_projection_targets`, `_representative_target`, `_regularized_physical_map`, `_apply_physical_map!`, `_normalize_site_tensor!`, `_relative_residual`).
+- `src/ScarFinder.jl` — no change.
 - `src/TriangularPEPSDynamics.jl` — no change.
-- `test/test_simple_update.jl` — add Layer 1 tests under a new `@testset`.
+- `test/test_simple_update.jl` — add Layer 1 tests under a new `@testset`. Update or remove any existing tests that pin the rank-1 placeholder behavior (residual ≈ ?, no bond growth, etc.) — those tests have to be reframed as "old behavior, replaced".
 - `test/test_evolution.jl` — add Layer 2 and Layer 3 tests under new `@testset`s.
 - `test/util_finite_ed.jl` — new file. Finite-torus ED helpers; not exported from the package.
 - `test/runtests.jl` — `include("util_finite_ed.jl")` near the top so test files can use it.
-- `README.md` — update `## Simple Update Status` and `## ScarFinder Status` to reflect that ThreeSiteUnitCell at D>1 now works. Document the OneSiteUnitCell limitation explicitly.
+- `README.md` — update `## Simple Update Status` and `## ScarFinder Status` to reflect that ThreeSiteUnitCell at D>1 now does proper Simple Update with bond truncation. Document the OneSiteUnitCell limitation explicitly.
 
 ## Risk Register
 
@@ -223,11 +224,12 @@ Run real-time evolution with `dt = 0.05`, `maxdim = 4`, second-order, 4 steps. M
 
 This PR is acceptable when:
 
-- All existing tests still pass.
+- All existing tests still pass, after explicitly retiring or rewriting any test that was pinning the rank-1 placeholder's behavior (zero discarded weight, no bond growth, residual reporting).
+- The rank-1 placeholder helpers listed in the Architecture section are deleted, not just unused.
 - Layer 1 kernel ED tests pass at D=2 and D=4.
 - Layer 2 torus integration test passes within `1e-3` absolute on per-sublattice `<Z>` at `dt=0.01`, 3 steps, `maxdim=4`.
 - Layer 3 stabilizer benchmark passes within `1e-6` at `dt=0.05`, 4 steps, `maxdim=4`.
-- `scar_search` can be called with `maxdim = 2` on `ThreeSiteUnitCell` and returns a ranked candidate list with finite scores and finite diagnostics over at least 2 iterations.
+- `scar_search` on `ThreeSiteUnitCell` with `maxdim = 2` and a non-product seed produces ScarCandidate diagnostics whose `discarded_weight` is nonzero on at least one layer (proving the new path actually truncates) and whose bond dimensions evolve up to `maxdim` (proving the new path actually grows bonds).
 - README accurately reflects the new boundary: ThreeSiteUnitCell at D>1 supported; OneSiteUnitCell at D>1 with non-product gates explicitly errors.
 - No silent fallbacks, no placeholder updates, no test that only checks `isfinite`.
 
