@@ -220,4 +220,23 @@ using ITensors
         # reductions from identical vectors in the overlap-only check.
         @test psi_via_cluster ≈ psi_naive atol = 1e-10
     end
+
+    @testset "peel-split with no truncation reproduces cluster" begin
+        state = random_ipeps(ThreeSiteUnitCell(), 2; seed = 23)
+        absorbed, bond_inds, reps = TriangularPEPSDynamics.SimpleUpdate._absorb_lambda_into_star_tensors(
+            state, Coord(0, 0))
+        star = star_sites(Coord(0, 0))
+        phys_inds = [state.phys_inds[wrap_coord(state.unitcell, sc)] for sc in star]
+        I128 = Matrix{ComplexF64}(I, 128, 128)
+        cluster, out_phys = TriangularPEPSDynamics.SimpleUpdate._build_cluster_with_gate(
+            absorbed, phys_inds, I128)
+
+        new_tensors, new_lambdas, discarded = TriangularPEPSDynamics.SimpleUpdate._peel_split_cluster(
+            cluster, out_phys, bond_inds, reps; cutoff = 0.0, maxdim = 64)
+
+        @test discarded < 1e-8
+        @test length(new_tensors) == 7
+        @test length(new_lambdas) == 6
+        @test all(length(λ) >= 1 for λ in new_lambdas)
+    end
 end

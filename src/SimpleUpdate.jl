@@ -2,7 +2,7 @@ module SimpleUpdate
 
 using LinearAlgebra
 using ITensors
-using ..Geometry: Coord, star_sites
+using ..Geometry: Coord, neighbor, star_sites
 using ..States: TriangularIPEPS, bond_index, bond_lambda, wrap_coord
 
 export SimpleUpdateDiagnostics, apply_star_gate_simple_update!
@@ -259,6 +259,103 @@ function _build_cluster_with_gate(absorbed::Vector{ITensor},
     cluster = cluster * G_tensor
 
     return cluster, out_phys
+end
+
+"""
+    _peel_split_cluster(cluster, out_phys, absorbed_bond_inds, reps; cutoff, maxdim)
+        -> Tuple{Dict{Int,ITensor}, Vector{Vector{Float64}}, Float64}
+
+Sequentially peel spokes 1..6 off the cluster via SVD with truncation.
+Returns:
+- a Dict mapping star position (1..7) to the new (still lambda-absorbed)
+  site tensor for that position;
+- a Vector of 6 new center-spoke lambda spectra (direction order 1..6);
+- the total discarded weight summed across the 6 SVDs.
+
+Conventions:
+- The cluster has 7 out-physical legs (`out_phys`, indexed 1..7 with center
+  at position 1) and 18 external virtual legs (3 per spoke).
+- Spoke d's "side" of the cut is: out_phys[d+1] plus the 3 external bond
+  indices on spoke d (those of `absorbed_bond_inds[d+1]` that are NOT
+  shared with another star site).
+- After peeling all 6 spokes, the residual cluster is the new center site
+  tensor (with center physical leg and 6 internal bond legs to spokes).
+"""
+function _peel_split_cluster(cluster::ITensor,
+                             out_phys::Vector{<:Index},
+                             absorbed_bond_inds::Vector{<:Vector{<:Index}},
+                             reps::Vector{Coord};
+                             cutoff::Real,
+                             maxdim::Int)
+    length(out_phys) == 7 || throw(ArgumentError("expected 7 output physical indices"))
+    length(absorbed_bond_inds) == 7 || throw(ArgumentError("expected bond indices for 7 star sites"))
+    length(reps) == 7 || throw(ArgumentError("expected 7 star representative coordinates"))
+    cutoff >= 0 || throw(ArgumentError("cutoff must be nonnegative"))
+    maxdim >= 1 || throw(ArgumentError("maxdim must be >= 1"))
+
+    star = star_sites(reps[1])
+    # Only the relative star topology is needed to identify which spoke bonds
+    # are shared with other star positions.
+
+    # External bonds for each spoke: those not shared with any other star site.
+    star_bond_set = Set{Tuple{Coord,Int}}()
+    for (pos_i, sc_i) in enumerate(star), d in 1:6
+        nbr = neighbor(sc_i, d)
+        for (pos_j, sc_j) in enumerate(star)
+            if pos_j != pos_i && nbr == sc_j
+                push!(star_bond_set, (reps[pos_i], d))
+            end
+        end
+    end
+
+    spoke_external_inds = Vector{Vector{Index}}(undef, 7)
+    for pos in 1:7
+        spoke_external_inds[pos] = Index[]
+        for d in 1:6
+            if !((reps[pos], d) in star_bond_set)
+                push!(spoke_external_inds[pos], absorbed_bond_inds[pos][d])
+            end
+        end
+    end
+
+    new_tensors = Dict{Int,ITensor}()
+    new_lambdas = Vector{Vector{Float64}}(undef, 6)
+    total_discarded = 0.0
+
+    rest = cluster
+    for d in 1:6
+        spoke_pos = d + 1  # positions: 1=center, 2..7 = spoke directions 1..6
+        spoke_side = vcat([out_phys[spoke_pos]], spoke_external_inds[spoke_pos])
+
+        U, S, V, spec = svd(rest, spoke_side; cutoff = cutoff, maxdim = maxdim,
+                            lefttags = "spoke_$(d)", righttags = "rest_$(d)")
+        # U has spoke_side legs + a fresh center-spoke bond index.
+        # S is diagonal singular values on that fresh bond.
+        # V * S together carry the rest.
+
+        # New spoke tensor: U with the singular values on its outgoing bond
+        # NOT absorbed (we want lambda on the new center-spoke bond).
+        new_tensors[spoke_pos] = U
+
+        bond = commonind(U, S)
+        # ITensors stores S as a DiagTensor here; materialize the tiny diagonal
+        # matrix rather than indexing its storage-specific representation.
+        S_data = array(S, inds(S)...)
+        sigmas = [S_data[i, i] for i in 1:dim(bond)]
+        new_lambdas[d] = Float64.(real.(sigmas))
+
+        # Discarded weight tracked in spec.truncerr (relative).
+        total_discarded += Float64(spec.truncerr)
+
+        # Rest for next iteration: V contracted with S on its left.
+        rest = S * V
+    end
+
+    # After 6 peels, rest carries: out_phys[1] (center physical) + 6 new
+    # center-spoke bond indices. This is the new center site tensor.
+    new_tensors[1] = rest
+
+    return new_tensors, new_lambdas, total_discarded
 end
 
 function _apply_general_star_gate_simple_update!(state::TriangularIPEPS,
