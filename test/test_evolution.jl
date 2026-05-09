@@ -91,9 +91,41 @@ using ITensors
         @test all(length(d.layer_diagnostics) == 7 for d in history)
     end
 
-    @testset "projected PXP helpers reject unsupported D>1 non-product updates" begin
+    @testset "projected PXP helpers support D>1 simple updates" begin
         state = random_ipeps(OneSiteUnitCell(), 2; seed = 31)
-        @test_throws ArgumentError projected_pxp_step!(state, 0.01; order = :first, maxdim = 2)
+        diag = projected_pxp_step!(state, 0.01; order = :first, maxdim = 2)
+        @test length(diag.layer_diagnostics) == 7
+        @test diag.max_bond_dim <= 2
+        @test all(d <= 2 for layer in diag.layer_diagnostics for d in layer.output_bond_dims)
+        @test any(w > 0 for w in diag.discarded_weights)
+        @test all(isfinite, diag.discarded_weights)
+        @test isfinite(diag.blockade_violation)
+        @test 0 <= diag.blockade_violation <= 1
+        @test all(isfinite, values(diag.local_z))
+        @test all(isfinite, values(diag.local_x))
+    end
+
+    @testset "prebuilt-gate second-order update uses half-step gates" begin
+        α = 0.03
+        Xsum = sum(embed_one_site(pauli_x(), site, 7) for site in 1:7)
+        full_gate = dense_gate(Xsum, α; evolution = :real)
+
+        second_prebuilt = product_ipeps(OneSiteUnitCell(), :down; D = 1)
+        evolve_step!(second_prebuilt, full_gate; order = :second, update = :simple)
+        @test real(local_expectation(second_prebuilt, Coord(0, 0), pauli_z())) ≈
+            -cos(14 * α) atol = 1e-10
+
+        via_hamiltonian = product_ipeps(OneSiteUnitCell(), :down; D = 1)
+        evolve_step!(via_hamiltonian, Xsum, α; order = :second, update = :simple)
+        @test real(local_expectation(second_prebuilt, Coord(0, 0), pauli_z())) ≈
+            real(local_expectation(via_hamiltonian, Coord(0, 0), pauli_z())) atol = 1e-10
+    end
+
+    @testset "unsupported update modes fail explicitly" begin
+        one_site = random_ipeps(OneSiteUnitCell(), 2; seed = 43)
+        @test_throws ArgumentError projected_pxp_step!(
+            one_site, 0.01; order = :first, maxdim = 2, update = :nonexistent,
+        )
     end
 
     @testset "projected PXP helper invalid options" begin

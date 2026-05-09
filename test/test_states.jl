@@ -88,6 +88,33 @@ using ITensors
         @test !(array(T1) ≈ array(T3))
     end
 
+    @testset "hard truncation shrinks bond indices and preserves lambda aliases" begin
+        state = random_ipeps(OneSiteUnitCell(), 3; seed = 101)
+        c0 = Coord(0, 0)
+        old_alias = bond_lambda(state, c0, 1)
+        @test old_alias === bond_lambda(state, c0, 4)
+
+        diag = truncate_state!(state, 2)
+
+        @test diag isa StateTruncationDiagnostics
+        @test diag.target_maxdim == 2
+        @test diag.max_output_bond_dim == 2
+        @test all(dim(bond_index(state, c0, d)) == 2 for d in 1:6)
+        @test all(length(bond_lambda(state, c0, d)) == 2 for d in 1:6)
+        @test bond_lambda(state, c0, 1) === bond_lambda(state, c0, 4)
+        @test all(w >= 0 for w in values(diag.discarded_weight_by_bond))
+    end
+
+    @testset "seven-site unit cell wraps by star color" begin
+        uc7 = SevenSiteUnitCell()
+        @test length(unit_cell_representatives(uc7)) == 7
+        for color in 1:7
+            c = Coord(color - 1, 0)
+            @test wrap_coord(uc7, c) in unit_cell_representatives(uc7)
+            @test star_color(wrap_coord(uc7, c)) == star_color(c)
+        end
+    end
+
     @testset "3-site product state has all reps in :down" begin
         state = product_ipeps(ThreeSiteUnitCell(), :down; D = 1)
         for c in unit_cell_representatives(ThreeSiteUnitCell())

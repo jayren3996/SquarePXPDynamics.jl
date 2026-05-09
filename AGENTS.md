@@ -38,3 +38,7 @@ The current PEPS implementation is an early internal tool. Prefer small, testabl
 - use `ITensors.jl` through the root package dependency.
 
 When adding new functionality, update README/docs so future agents understand whether it is ScarFinder-facing or only a temporary benchmark helper.
+
+## Project Memory
+
+Before substantial work, future agents should read `memory/README.md` and its recommended starter files. Run the project-memory-curator workflow only when explicitly requested. After substantial work, update short-term handoff memory only when asked; record important scientific, architectural, implementation, or workflow decisions in `memory/mid_term/decision_log.md`.

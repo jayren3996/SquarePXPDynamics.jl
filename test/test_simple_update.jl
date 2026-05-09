@@ -116,16 +116,20 @@ using ITensors
         end
     end
 
-    @testset "general non-product star updates at D>1 fail explicitly" begin
+    @testset "general non-product star updates at D>1 use local product projection" begin
         state = random_ipeps(OneSiteUnitCell(), 2; seed = 11)
         T_before = copy(site_tensor(state, Coord(0, 0)))
         H = pxp_star_hamiltonian(projector_down(), pauli_x())
         Uproj = projected_gate(H, 0.02; evolution = :real)
 
-        @test_throws ArgumentError apply_star_gate_simple_update!(
+        diag = apply_star_gate_simple_update!(
             state, Uproj, Coord(0, 0); maxdim = 2, cutoff = 1e-12,
         )
-        @test array(T_before) ≈ array(site_tensor(state, Coord(0, 0)))
+        @test Set(diag.affected_bonds) == Set((Coord(0, 0), d) for d in 1:6)
+        @test diag.output_bond_dims == fill(2, 6)
+        @test isfinite(diag.discarded_weight)
+        @test 0 <= diag.discarded_weight <= 1
+        @test !(array(T_before) ≈ array(site_tensor(state, Coord(0, 0))))
     end
 
     @testset "PXP-on-allowed-product preserves blockade (dense level)" begin

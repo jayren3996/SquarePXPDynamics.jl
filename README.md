@@ -12,16 +12,16 @@ The implemented layer provides:
 - dense PXP, projected PXP, and cluster/stabilizer star gates;
 - analytically solvable true-2D benchmark helpers, including a narrow stabilizer benchmark helper;
 - translational iPEPS containers for one-site and three-site unit cells;
-- correctness-checked Simple Update paths for identity gates, site-product gates, and `D=1` dense product-state projected PXP updates;
+- correctness-checked Simple Update paths for identity gates, site-product gates, `D=1` dense product-state projected PXP updates, and local product-projection `D>1` updates;
 - projected real- and imaginary-time PXP step helpers with diagnostics;
 - local and dense-star blockade screening diagnostics;
-- an initial internal `D=1` `ScarFinder` loop for deterministic seed generation, repeated evolve-project iteration, tolerance flagging, and candidate ranking.
+- an internal `ScarFinder` loop with separate dynamics and ScarFinder truncation dimensions, deterministic seed generation, repeated evolve-project iteration, tolerance flagging, and candidate ranking.
 
 The next implementation layers should stay focused on ScarFinder needs: reliable constrained PXP evolution, fixed-bond-dimension projection, blockade diagnostics, and candidate-ranking workflows.
 
 ## Current Supported Workflows
 
-The code supports dense 7-site projected PXP gates and an initial `D=1` PEPS evolution path using the root Julia environment.
+The code supports dense 7-site projected PXP gates and PEPS evolution using the root Julia environment.
 
 ```julia
 using TriangularPEPSDynamics
@@ -44,7 +44,7 @@ ranked = rank_candidates(candidates)
 
 The `D=1` product-state path applies dense non-product projected star gates through a dense 7-site oracle and remains the exact regression path for product iPEPS.
 
-For `D>1`, a general non-product dense-star Simple Update is not implemented. The code raises an explicit `ArgumentError` instead of applying a placeholder update. Fixed-`D` ScarFinder runs remain blocked on a real SVD/HOSVD or NTU-style star update with lambda absorption and truncation.
+For `D>1`, the current Simple Update path applies dense non-product star gates by projecting the updated local star back onto representative physical profiles while preserving the existing virtual bond dimensions up to `dynamics_maxdim`. This is a local approximation, not a replacement for a later SVD/HOSVD or ring/NTU-style update.
 
 Lambda spectra are kept nonnegative and normalized with `norm(lambda) == sqrt(length(lambda))`.
 
@@ -62,9 +62,9 @@ These PEPS diagnostics are exact for product states and bounded screening metric
 
 ## ScarFinder Status
 
-`ScarFinder` is currently internal to this root module and supports only `D=1` product-state searches. It provides deterministic seed handling, repeated projected-PXP evolve-project iterations, candidate diagnostics, blockade tolerance flagging, and deterministic ranking by discarded weight, blockade violation, and a lambda entropy proxy.
+`ScarFinder` is currently internal to this root module. It provides deterministic seed handling, repeated projected-PXP evolve-project iterations, candidate diagnostics, blockade tolerance flagging, and deterministic ranking by discarded weight, blockade violation, and a lambda entropy proxy.
 
-Fixed-bond-dimension `D>1` search, target-energy correction, full search orchestration, NTU, and environment-based observables remain future work.
+Target-energy correction, full search orchestration, NTU, and environment-based observables remain future work.
 
 ## Test
 

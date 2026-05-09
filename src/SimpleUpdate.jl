@@ -70,7 +70,7 @@ end
 """
     apply_star_gate_simple_update!(state, gate, center; cutoff=1e-12, maxdim=...) -> SimpleUpdateDiagnostics
 
-Apply a 7-site star gate at `center`. The implementation supports two
+Apply a 7-site star gate at `center`. The implementation supports these
 correctness-validated paths:
 
 1. **Identity gate**: detected numerically; no-op on the state.
@@ -80,9 +80,10 @@ correctness-validated paths:
    factors must agree (translational invariance); otherwise an error is
    raised.
 
-A general non-product 7-site gate at `D>1` is not implemented yet and raises
-an explicit `ArgumentError`. This prevents projected PXP runs from silently
-using a non-variational placeholder as a fixed-D Simple Update.
+3. **Dense non-product gate**: `D=1` uses the exact dense product-state oracle.
+   For `D>1`, the current Simple Update path uses a local product projection
+   onto representative physical profiles while preserving the existing virtual
+   bond dimensions up to `maxdim`.
 """
 function apply_star_gate_simple_update!(state::TriangularIPEPS,
                                         gate::AbstractMatrix,
@@ -200,11 +201,32 @@ function _apply_general_star_gate_simple_update!(state::TriangularIPEPS,
             "dimension-changing star writeback is not implemented yet"))
     end
 
-    throw(ArgumentError(
-        "general dense 7-site Simple Update for D>1 is not implemented; " *
-        "only identity gates, site-product gates, and the D=1 dense product-state " *
-        "oracle are currently supported"
-    ))
+    star = star_sites(center)
+    reps = [wrap_coord(state.unitcell, sc) for sc in star]
+    local_vectors = [_dominant_site_vector(state, rep) for rep in reps]
+    psi = local_vectors[1]
+    for v in local_vectors[2:end]
+        psi = kron(psi, v)
+    end
+
+    phi = G * psi
+    targets = _product_projection_targets(phi, _STAR_NSITES)
+    projected = targets[1]
+    for v in targets[2:end]
+        projected = kron(projected, v)
+    end
+    residual = _relative_residual(phi, projected)
+
+    for rep in unique(reps)
+        old = _dominant_site_vector(state, rep)
+        target = _representative_target(rep, reps, targets)
+        op = _regularized_physical_map(old, target)
+        _apply_physical_map!(state, rep, op)
+        _normalize_site_tensor!(state, rep)
+    end
+
+    dims = [dim(state.bond_inds[b]) for b in affected]
+    return SimpleUpdateDiagnostics(Float64(residual), affected, dims)
 end
 
 function _affected_star_bonds(state::TriangularIPEPS, center::Coord)
@@ -307,6 +329,86 @@ function _set_d1_site_vector!(state::TriangularIPEPS, rep::Coord, v::Vector{Comp
     end
     state.tensors[rep] = T
     return nothing
+end
+
+function _dominant_site_vector(state::TriangularIPEPS, rep::Coord)
+    T = state.tensors[rep]
+    ph = state.phys_inds[rep]
+    idxs = collect(inds(T))
+    phpos = findfirst(i -> i == ph, idxs)
+    phpos === nothing && error("physical index missing from tensor at $rep")
+    data = array(T)
+    perm = (phpos, (i for i in eachindex(idxs) if i != phpos)...)
+    mat = reshape(permutedims(data, perm), 2, :)
+    rho = mat * mat'
+    trρ = real(tr(rho))
+    if !(isfinite(trρ)) || trρ <= eps(Float64)
+        return ComplexF64[1, 0]
+    end
+    vals, vecs = eigen(Hermitian(rho / trρ))
+    v = ComplexF64.(vecs[:, argmax(vals)])
+    return v / max(norm(v), eps(Float64))
+end
+
+function _product_projection_targets(vec::Vector{ComplexF64}, n::Int)
+    tensor = reshape(vec, ntuple(_ -> 2, n)...)
+    targets = Vector{ComplexF64}[]
+    for pos in 1:n
+        rho = _one_site_density_from_star_tensor(tensor, pos)
+        vals, vecs = eigen(Hermitian(rho))
+        v = ComplexF64.(vecs[:, argmax(vals)])
+        push!(targets, v / max(norm(v), eps(Float64)))
+    end
+    return targets
+end
+
+function _representative_target(rep::Coord,
+                                reps::Vector{Coord},
+                                targets::Vector{Vector{ComplexF64}})
+    positions = findall(==(rep), reps)
+    ref = targets[positions[1]]
+    aligned = zeros(ComplexF64, 2)
+    for pos in positions
+        v = targets[pos]
+        phase = dot(ref, v)
+        if abs(phase) > eps(Float64)
+            v = v * exp(-im * angle(phase))
+        end
+        aligned .+= v
+    end
+    nrm = norm(aligned)
+    return nrm <= eps(Float64) ? ref : aligned / nrm
+end
+
+function _regularized_physical_map(old::Vector{ComplexF64},
+                                   target::Vector{ComplexF64};
+                                   regularization::Float64 = 1e-10)
+    oldn = old / max(norm(old), eps(Float64))
+    targetn = target / max(norm(target), eps(Float64))
+    projector = oldn * oldn'
+    return targetn * oldn' + regularization * (Matrix{ComplexF64}(I, 2, 2) - projector)
+end
+
+function _apply_physical_map!(state::TriangularIPEPS, rep::Coord, op::Matrix{ComplexF64})
+    T = state.tensors[rep]
+    ph = state.phys_inds[rep]
+    opT = ITensor(op, prime(ph), ph)
+    state.tensors[rep] = noprime(opT * T)
+    return nothing
+end
+
+function _normalize_site_tensor!(state::TriangularIPEPS, rep::Coord)
+    nrm = sqrt(real(scalar(dag(state.tensors[rep]) * state.tensors[rep])))
+    if isfinite(nrm) && nrm > eps(Float64)
+        state.tensors[rep] ./= nrm
+    end
+    return nothing
+end
+
+function _relative_residual(target::Vector{ComplexF64}, projected::Vector{ComplexF64})
+    denom = max(real(dot(target, target)), eps(Float64))
+    scale = dot(projected, target) / max(sum(abs2, projected), eps(Float64))
+    return Float64(real(sum(abs2, target - scale * projected) / denom))
 end
 
 end

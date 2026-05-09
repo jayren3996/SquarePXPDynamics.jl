@@ -21,7 +21,8 @@ using .Models: pxp_star_hamiltonian, blockade_projector, cluster_star_hamiltonia
 using .Gates: dense_gate, projected_gate
 using .Schedules: first_order_colors, second_order_colors, schedule_layers
 using .SolvableModels: cluster_center_z_expectation_exact
-using .States: AbstractUnitCell, OneSiteUnitCell, ThreeSiteUnitCell, TriangularIPEPS,
+using .States: AbstractUnitCell, OneSiteUnitCell, ThreeSiteUnitCell, SevenSiteUnitCell,
+               TriangularIPEPS, StateTruncationDiagnostics, truncate_state!,
                unit_cell_representatives, wrap_coord, product_ipeps, random_ipeps,
                site_tensor, phys_index, bond_index, bond_indices, bond_lambda,
                opposite_direction
@@ -42,7 +43,8 @@ export diagonal_star_hamiltonian, ising_bond_hamiltonian
 export dense_gate, projected_gate
 export first_order_colors, second_order_colors, schedule_layers
 export cluster_center_z_expectation_exact
-export AbstractUnitCell, OneSiteUnitCell, ThreeSiteUnitCell, TriangularIPEPS
+export AbstractUnitCell, OneSiteUnitCell, ThreeSiteUnitCell, SevenSiteUnitCell, TriangularIPEPS
+export StateTruncationDiagnostics, truncate_state!
 export unit_cell_representatives, wrap_coord, product_ipeps, random_ipeps
 export site_tensor, phys_index, bond_index, bond_indices, bond_lambda
 export opposite_direction

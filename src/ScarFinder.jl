@@ -1,7 +1,7 @@
 module ScarFinder
 
-using ..States: AbstractUnitCell, TriangularIPEPS, OneSiteUnitCell, product_ipeps, random_ipeps,
-                unit_cell_representatives
+using ..States: AbstractUnitCell, TriangularIPEPS, OneSiteUnitCell, ThreeSiteUnitCell,
+                product_ipeps, random_ipeps, unit_cell_representatives, truncate_state!
 using ..Evolution: ProjectedPXPStepDiagnostics, run_projected_pxp!
 using ..Observables: mean_blockade_violation
 
@@ -12,10 +12,13 @@ struct ScarFinderConfig
     projection_interval::Int
     niterations::Int
     maxdim::Int
+    dynamics_maxdim::Int
+    scar_maxdim::Int
     cutoff::Float64
     unitcell::AbstractUnitCell
     seed_count::Int
     blockade_tolerance::Float64
+    update::Symbol
 
     function ScarFinderConfig(dt::Real,
                               projection_interval::Integer,
@@ -24,17 +27,22 @@ struct ScarFinderConfig
                               cutoff::Real,
                               unitcell::AbstractUnitCell,
                               seed_count::Integer,
-                              blockade_tolerance::Real)
+                              blockade_tolerance::Real,
+                              update::Symbol = :simple;
+                              scar_maxdim::Integer = maxdim)
         dt > 0 || throw(ArgumentError("dt must be positive"))
         projection_interval >= 1 || throw(ArgumentError("projection_interval must be >= 1"))
         niterations >= 0 || throw(ArgumentError("niterations must be nonnegative"))
         maxdim >= 1 || throw(ArgumentError("maxdim must be >= 1"))
+        scar_maxdim >= 1 || throw(ArgumentError("scar_maxdim must be >= 1"))
+        scar_maxdim <= maxdim || throw(ArgumentError("scar_maxdim must be <= dynamics_maxdim"))
         cutoff >= 0 || throw(ArgumentError("cutoff must be nonnegative"))
         seed_count >= 1 || throw(ArgumentError("seed_count must be >= 1"))
         blockade_tolerance >= 0 || throw(ArgumentError("blockade_tolerance must be nonnegative"))
+        update === :simple || throw(ArgumentError("update must be :simple"))
         return new(Float64(dt), Int(projection_interval), Int(niterations),
-                   Int(maxdim), Float64(cutoff), unitcell, Int(seed_count),
-                   Float64(blockade_tolerance))
+                   Int(maxdim), Int(maxdim), Int(scar_maxdim), Float64(cutoff),
+                   unitcell, Int(seed_count), Float64(blockade_tolerance), update)
     end
 end
 
@@ -51,10 +59,6 @@ struct ScarCandidate
 end
 
 function scar_search(config::ScarFinderConfig; seed::Integer = 0)
-    config.maxdim == 1 || throw(ArgumentError(
-        "scar_search currently supports only D=1 product-state searches; " *
-        "fixed-D PEPS ScarFinder requires a general D>1 Simple Update backend"
-    ))
     candidates = ScarCandidate[]
     for seed_index in 1:config.seed_count
         kind, state = _seed_state(config, seed_index, seed)
@@ -64,9 +68,12 @@ function scar_search(config::ScarFinderConfig; seed::Integer = 0)
             try
                 append!(diagnostics, run_projected_pxp!(
                     state, config.dt, config.projection_interval;
-                    order = :second, maxdim = config.maxdim, cutoff = config.cutoff,
-                    evolution = :real,
+                    order = :second, maxdim = config.dynamics_maxdim, cutoff = config.cutoff,
+                    evolution = :real, update = config.update,
                 ))
+                if config.scar_maxdim < config.dynamics_maxdim
+                    truncate_state!(state, config.scar_maxdim)
+                end
             catch err
                 err isa ArgumentError || rethrow()
                 failed_projection = true
@@ -92,11 +99,11 @@ end
 
 function _seed_state(config::ScarFinderConfig, seed_index::Int, seed::Integer)
     if seed_index == 1
-        return :product_down, product_ipeps(config.unitcell, :down; D = config.maxdim)
+        return :product_down, product_ipeps(config.unitcell, :down; D = config.dynamics_maxdim)
     elseif seed_index == 2
-        return :product_up, product_ipeps(config.unitcell, :up; D = config.maxdim)
+        return :product_up, product_ipeps(config.unitcell, :up; D = config.dynamics_maxdim)
     else
-        return :random, random_ipeps(config.unitcell, config.maxdim; seed = seed + seed_index)
+        return :random, random_ipeps(config.unitcell, config.dynamics_maxdim; seed = seed + seed_index)
     end
 end
 

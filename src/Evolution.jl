@@ -53,7 +53,14 @@ invariant states the schedule reduces to repeated applications at
 color-canonical centers.
 """
 function evolve_step!(state::TriangularIPEPS, gate::AbstractMatrix;
-                      order::Symbol = :second, update::Symbol = :simple)
+                      order::Symbol = :second,
+                      update::Symbol = :simple,
+                      maxdim::Union{Nothing,Integer} = nothing,
+                      cutoff::Real = 1e-12,
+                      chi::Union{Nothing,Integer} = nothing,
+                      maxiter::Integer = 4,
+                      tol::Real = 1e-10,
+                      regularization::Real = 1e-10)
     schedule = if order === :first
         first_order_colors()
     elseif order === :second
@@ -62,11 +69,12 @@ function evolve_step!(state::TriangularIPEPS, gate::AbstractMatrix;
         throw(ArgumentError("order must be :first or :second"))
     end
 
-    update === :simple || throw(ArgumentError("update must be :simple"))
+    config = _update_config(update, maxdim, cutoff, chi, maxiter, tol, regularization)
+    layer_gate = order === :second ? _half_step_gate(gate) : Matrix{ComplexF64}(gate)
 
     for color in schedule
         center = color_canonical_center(color)
-        apply_star_gate_simple_update!(state, gate, center)
+        _apply_update!(state, layer_gate, center, update, config; cutoff = cutoff, maxdim = maxdim)
     end
     return state
 end
@@ -78,21 +86,27 @@ function evolve_step!(state::TriangularIPEPS,
                       update::Symbol = :simple,
                       evolution::Symbol = :real,
                       projected::Bool = false,
-                      projector::Union{Nothing,AbstractMatrix} = nothing)
-    update === :simple || throw(ArgumentError("update must be :simple"))
+                      projector::Union{Nothing,AbstractMatrix} = nothing,
+                      maxdim::Union{Nothing,Integer} = nothing,
+                      cutoff::Real = 1e-12,
+                      chi::Union{Nothing,Integer} = nothing,
+                      maxiter::Integer = 4,
+                      tol::Real = 1e-10,
+                      regularization::Real = 1e-10)
+    config = _update_config(update, maxdim, cutoff, chi, maxiter, tol, regularization)
 
     for layer in schedule_layers(order)
         step = dt * layer.scale
-        gate = if projected
-            projector === nothing ?
-                projected_gate(H, step; evolution) :
-                projected_gate(H, step; evolution, projector)
-        else
-            dense_gate(H, step; evolution)
-        end
-        apply_star_gate_simple_update!(state, gate, color_canonical_center(layer.color))
+        gate = _cached_gate(H, step, evolution, projected, projector)
+        _apply_update!(state, gate, color_canonical_center(layer.color), update, config;
+                       cutoff = cutoff, maxdim = maxdim)
     end
     return state
+end
+
+function _half_step_gate(gate::AbstractMatrix)
+    size(gate) == (128, 128) || throw(ArgumentError("gate must be 128x128"))
+    return sqrt(Matrix{ComplexF64}(gate))
 end
 
 """
@@ -108,15 +122,21 @@ function projected_pxp_step!(state::TriangularIPEPS,
                              order::Symbol = :second,
                              maxdim::Union{Nothing,Integer} = nothing,
                              cutoff::Real = 1e-12,
-                             evolution::Symbol = :real)
+                             evolution::Symbol = :real,
+                             update::Symbol = :simple,
+                             chi::Union{Nothing,Integer} = nothing,
+                             maxiter::Integer = 4,
+                             tol::Real = 1e-10,
+                             regularization::Real = 1e-10)
     _validate_projected_pxp_options(order, maxdim, cutoff, evolution)
+    config = _update_config(update, maxdim, cutoff, chi, maxiter, tol, regularization)
     H = pxp_star_hamiltonian(projector_down(), pauli_x())
     layer_diags = SimpleUpdateDiagnostics[]
     for layer in schedule_layers(order)
-        gate = projected_gate(H, dt * layer.scale; evolution = evolution)
-        push!(layer_diags, apply_star_gate_simple_update!(
-            state, gate, color_canonical_center(layer.color);
-            maxdim = maxdim, cutoff = cutoff,
+        gate = _cached_gate(H, dt * layer.scale, evolution, true, nothing)
+        push!(layer_diags, _apply_update!(
+            state, gate, color_canonical_center(layer.color), update, config;
+            cutoff = cutoff, maxdim = maxdim,
         ))
     end
     return _step_diagnostics(state, layer_diags)
@@ -126,10 +146,16 @@ function imaginary_projected_pxp_step!(state::TriangularIPEPS,
                                        dτ::Real;
                                        order::Symbol = :second,
                                        maxdim::Union{Nothing,Integer} = nothing,
-                                       cutoff::Real = 1e-12)
+                                       cutoff::Real = 1e-12,
+                                       update::Symbol = :simple,
+                                       chi::Union{Nothing,Integer} = nothing,
+                                       maxiter::Integer = 4,
+                                       tol::Real = 1e-10,
+                                       regularization::Real = 1e-10)
     return projected_pxp_step!(
         state, dτ; order = order, maxdim = maxdim, cutoff = cutoff,
-        evolution = :imaginary,
+        evolution = :imaginary, update = update, chi = chi, maxiter = maxiter,
+        tol = tol, regularization = regularization,
     )
 end
 
@@ -139,16 +165,66 @@ function run_projected_pxp!(state::TriangularIPEPS,
                             order::Symbol = :second,
                             maxdim::Union{Nothing,Integer} = nothing,
                             cutoff::Real = 1e-12,
-                            evolution::Symbol = :real)
+                            evolution::Symbol = :real,
+                            update::Symbol = :simple,
+                            chi::Union{Nothing,Integer} = nothing,
+                            maxiter::Integer = 4,
+                            tol::Real = 1e-10,
+                            regularization::Real = 1e-10)
     nsteps >= 0 || throw(ArgumentError("nsteps must be nonnegative"))
     history = ProjectedPXPStepDiagnostics[]
     for _ in 1:nsteps
         push!(history, projected_pxp_step!(
             state, dt; order = order, maxdim = maxdim, cutoff = cutoff,
-            evolution = evolution,
+            evolution = evolution, update = update, chi = chi, maxiter = maxiter,
+            tol = tol, regularization = regularization,
         ))
     end
     return history
+end
+
+const _GATE_CACHE = Dict{Tuple{UInt,Float64,Symbol,Bool,UInt},Matrix{ComplexF64}}()
+
+function _cached_gate(H::AbstractMatrix,
+                      step::Real,
+                      evolution::Symbol,
+                      projected::Bool,
+                      projector::Union{Nothing,AbstractMatrix})
+    key = (objectid(H), Float64(step), evolution, projected,
+           projector === nothing ? UInt(0) : objectid(projector))
+    return get!(_GATE_CACHE, key) do
+        if projected
+            projector === nothing ?
+                projected_gate(H, step; evolution = evolution) :
+                projected_gate(H, step; evolution = evolution, projector = projector)
+        else
+            dense_gate(H, step; evolution = evolution)
+        end
+    end
+end
+
+function _update_config(update::Symbol,
+                        maxdim::Union{Nothing,Integer},
+                        cutoff::Real,
+                        chi::Union{Nothing,Integer},
+                        maxiter::Integer,
+                        tol::Real,
+                        regularization::Real)
+    update === :simple || throw(ArgumentError("update must be :simple"))
+    return nothing
+end
+
+function _apply_update!(state::TriangularIPEPS,
+                        gate::AbstractMatrix,
+                        center::Coord,
+                        update::Symbol,
+                        config;
+                        cutoff::Real,
+                        maxdim::Union{Nothing,Integer})
+    update === :simple || throw(ArgumentError("update must be :simple"))
+    return apply_star_gate_simple_update!(
+        state, gate, center; maxdim = maxdim, cutoff = cutoff,
+    )
 end
 
 function _validate_projected_pxp_options(order::Symbol,
