@@ -145,4 +145,33 @@ using ITensors
             @test dense_blockade_violations(evolved) < 1e-12
         end
     end
+
+    @testset "general star kernel: random unitary with maxdim large enough is exact" begin
+        using Random
+        rng = MersenneTwister(2026_05_09)
+
+        state = random_ipeps(ThreeSiteUnitCell(), 2; seed = 11)
+        psi_before = cluster_vector_from_state(state, Coord(0, 0))
+        @test isapprox(norm(psi_before), norm(psi_before); atol = 0)  # sanity
+
+        # Haar-random unitary on the 128-dim cluster Hilbert space.
+        A = randn(rng, ComplexF64, 128, 128)
+        Q, _ = qr(A)
+        G = Matrix{ComplexF64}(Q)
+        @test G' * G ≈ Matrix{ComplexF64}(I, 128, 128) atol = 1e-10
+
+        # Apply via the general path. maxdim large enough that bond growth from
+        # 2 -> up to 2 * 2 = 4 (per peel) is uncapped.
+        diag = apply_star_gate_simple_update!(state, G, Coord(0, 0); maxdim = 64, cutoff = 0.0)
+
+        psi_after = cluster_vector_from_state(state, Coord(0, 0))
+        expected = G * psi_before
+
+        # Compare up to a global phase / norm because the iPEPS may absorb a
+        # state-wide scalar that cancels in any expectation value.
+        overlap = abs(dot(psi_after, expected))
+        @test overlap ≈ norm(psi_after) * norm(expected) atol = 1e-8
+        @test diag isa SimpleUpdateDiagnostics
+        @test diag.discarded_weight ≈ 0 atol = 1e-10
+    end
 end
