@@ -14,10 +14,12 @@ include("SquarePXP.jl")
 include("SquarePEPS.jl")
 include("SquareUnitCells.jl")
 include("SquareIPEPS.jl")
+include("StarModels.jl")
 include("Observables.jl")
 include("PEPSKitMeasurements.jl")
 include("StarSimpleUpdate.jl")
 include("IPEPSEvolution.jl")
+include("Benchmarks.jl")
 include("ScarFinder.jl")
 
 using .SpinOps:
@@ -47,6 +49,19 @@ using .SquarePXP:
     square_pxp_gate,
     projected_square_pxp_gate,
     square_star_basis_allowed
+using .StarModels:
+    AbstractStarModel,
+    PXPStarModel,
+    TFIMStarModel,
+    AbstractModelProtocol,
+    StaticModel,
+    model_at,
+    star_site_order,
+    tfim_pauli_convention,
+    star_hamiltonian,
+    star_gate,
+    star_gate_itensor,
+    tfim_product_basis_energy
 using .SquarePEPS:
     SquarePEPSState, product_square_peps, site_tensor, physical_index, link_index
 using .SquareUnitCells:
@@ -69,6 +84,10 @@ using .Observables: nearest_neighbor_density_simple, blockade_violation_simple
 using .Observables: star_expectation_simple, pxp_energy_density_simple
 using .Observables: mean_bond_entropy, max_bond_entropy
 using .Observables: SimpleObservableSummary, measure_simple
+using .Observables: local_x_simple, local_y_simple, local_z_simple
+using .Observables: nearest_neighbor_zz_simple
+using .Observables: tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
+using .Observables: TFIMObservableSummary, measure_tfim_simple
 using .PEPSKitMeasurements: PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
 using .PEPSKitMeasurements: CTMObservableSummary, CTMValidationPoint
 using .PEPSKitMeasurements: to_pepskit_infinitepeps
@@ -78,6 +97,15 @@ using .PEPSKitMeasurements: star_expectation_ctm, pxp_energy_density_ctm, measur
 using .PEPSKitMeasurements: ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
 using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!
+using .Benchmarks:
+    BenchmarkSpec,
+    BenchmarkMetadata,
+    EvolutionDiagnostics,
+    BenchmarkSample,
+    BenchmarkResult,
+    run_benchmark,
+    write_benchmark_json,
+    write_benchmark_csv
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -94,6 +122,10 @@ export square_neighbor, square_star_sites, square_star_color, disjoint_square_st
 export unit_cell_representatives, wrap_square_coord
 export SQUARE_STAR_SITES, square_pxp_star_hamiltonian, square_star_blockade_projector
 export square_pxp_gate, projected_square_pxp_gate, square_star_basis_allowed
+export AbstractStarModel, PXPStarModel, TFIMStarModel
+export AbstractModelProtocol, StaticModel, model_at
+export star_site_order, tfim_pauli_convention
+export star_hamiltonian, star_gate, star_gate_itensor, tfim_product_basis_energy
 export SquarePEPSState, product_square_peps, site_tensor, physical_index, link_index
 export PeriodicSquareUnitCell
 export wrap, neighbor, update_centers, assert_five_color_compatible
@@ -110,6 +142,10 @@ export nearest_neighbor_density_simple, blockade_violation_simple
 export star_expectation_simple, pxp_energy_density_simple
 export mean_bond_entropy, max_bond_entropy
 export SimpleObservableSummary, measure_simple
+export local_x_simple, local_y_simple, local_z_simple
+export nearest_neighbor_zz_simple
+export tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
+export TFIMObservableSummary, measure_tfim_simple
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics, CTMObservableSummary
 export CTMValidationPoint
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
@@ -118,6 +154,8 @@ export blockade_violation_ctm, star_expectation_ctm, pxp_energy_density_ctm, mea
 export ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
 export StarUpdateInfo, project_star!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!
+export BenchmarkSpec, BenchmarkMetadata, EvolutionDiagnostics, BenchmarkSample, BenchmarkResult
+export run_benchmark, write_benchmark_json, write_benchmark_csv
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 

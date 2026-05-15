@@ -63,3 +63,14 @@ end
     @test density_simple(psi) ≈ 0 atol = 1e-14
     @test blockade_violation_simple(psi) ≈ 0 atol = 1e-14
 end
+
+@testset "benchmark product-state aliases" begin
+    cell = PeriodicSquareUnitCell(2, 2)
+    z_up = product_square_ipeps(cell; state = :z_up, maxdim = 1)
+    z_down = product_square_ipeps(cell; state = :z_down, maxdim = 1)
+    x_plus = product_square_ipeps(cell; state = :x_plus, maxdim = 1)
+
+    @test local_density_simple(z_up, SquareCoord(1, 1)) ≈ 1.0 atol = 1e-12
+    @test local_density_simple(z_down, SquareCoord(1, 1)) ≈ 0.0 atol = 1e-12
+    @test local_density_simple(x_plus, SquareCoord(1, 1)) ≈ 0.5 atol = 1e-12
+end

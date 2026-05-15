@@ -5,9 +5,11 @@
 ## Status
 
 The package now contains the S0-S6 prototype pipeline for square-lattice PXP
-dynamics: dense local model definitions, finite and periodic PEPS/iPEPS state
-containers, QR-reduced five-site star updates, deterministic Trotter evolution,
-simple/local observables, and S6-lite ScarFinder orchestration.
+dynamics plus a v1 infinite TFIM benchmark runner: dense local model
+definitions, finite and periodic PEPS/iPEPS state containers, QR-reduced
+five-site star updates, deterministic Trotter evolution, simple/local
+observables, reproducible TFIM benchmark records, and S6-lite ScarFinder
+orchestration.
 
 Simple/local observables are useful diagnostics for development and regression
 tests, but they are not final CTMRG-quality measurements. ScarFinder-lite
@@ -45,6 +47,7 @@ measurement surface is present.
 - QR-reduced five-site star update via `project_star!` (`src/StarSimpleUpdate.jl`).
 - Deterministic five-color Trotter evolution with log-normalization ledger diagnostics via `evolve!` (`src/IPEPSEvolution.jl`).
 - Simple/local density, blockade, energy-density, and entropy observables via `measure_simple` (`src/Observables.jl`).
+- Simple/local TFIM observables and reproducible JSON/CSV benchmark records via `run_benchmark` (`src/Benchmarks.jl`).
 - Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
 - S6-lite `scarfinder!` orchestration, candidate ranking, and CSV/JSON diagnostic logging using simple/local diagnostics by default (`src/ScarFinder.jl`).
 
@@ -70,6 +73,30 @@ summary = measure_simple(psi)
 
 `summary` contains simple/local diagnostics only. These are useful for smoke
 tests and regression checks, but they are not CTMRG-quality measurements.
+
+### TFIM Benchmark Smoke Run
+
+```julia
+using SquarePXPDynamics
+
+spec = BenchmarkSpec(
+    "tfim-j0",
+    StaticModel(TFIMStarModel(0.0, 1.0)),
+    PeriodicSquareUnitCell(10, 10),
+    :z_up,
+    0.02,
+    TrotterParams(0.01, 1, :real, 1, 1e-12),
+    1,
+)
+
+result = run_benchmark(spec; run_label = "local-smoke")
+write_benchmark_json(result, "tfim-j0.json")
+write_benchmark_csv([result], "tfim-j0.csv")
+```
+
+The v1 TFIM benchmark uses simple-update diagnostics. Treat these outputs as
+implementation regression records, not CTMRG-quality physics estimates.
+
 An experimental PEPSKit CTMRG measurement adapter is present as `measure_ctm`,
 with CTMRG density, blockade, and five-site PXP energy diagnostics. Check the
 raw CTMRG convergence information and finite-chi sensitivity before treating

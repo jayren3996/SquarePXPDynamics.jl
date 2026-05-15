@@ -1,5 +1,7 @@
 @testset "ScarFinder parameter validation" begin
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.01, trotter, 1, Inf, Inf, Inf, false)
+    @test params.trotter == TrotterParams(0.01, 1, :real, 1, 1e-12)
 
     @test_throws ArgumentError ScarFinderParams(-0.1, trotter, 1, Inf, Inf, Inf, false)
     @test_throws ArgumentError ScarFinderParams(Inf, trotter, 1, Inf, Inf, Inf, false)
@@ -11,6 +13,7 @@
     @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, NaN, Inf, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, Inf, NaN, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, Inf, Inf, NaN, false)
+    @test_throws ArgumentError ScarFinderParams(0.01, "bad", 1, Inf, Inf, Inf, false)
 end
 
 @testset "ScarFinder zero iterations do not mutate state" begin
@@ -114,6 +117,20 @@ end
 
     @test length(result.iterations) == 2
     @test result.accepted_iterations == 2
+end
+
+@testset "ScarFinder preserves legacy unprojected TrotterParams" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, false, 1, 1e-12)
+    psi = product_square_ipeps(cell; state = :up, maxdim = 1)
+    params = ScarFinderParams(0.01, trotter, 1, Inf, Inf, Inf, false)
+
+    result = scarfinder!(psi, params)
+
+    @test params.trotter == TrotterParams(0.01, 1, :real, 1, 1e-12)
+    @test length(result.iterations) == 1
+    @test result.iterations[1].evolution.params == params.trotter
+    @test isfinite(result.iterations[1].evolution.max_truncerr)
 end
 
 @testset "ScarFinder simple candidate scores rank without CTM" begin

@@ -37,22 +37,35 @@ function _assert_finite_simple_summary_evolution_test(summary)
 end
 
 @testset "Trotter parameter validation" begin
+    @test_throws ArgumentError TrotterParams(0.0, 1, :real, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(Inf, 1, :real, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(NaN, 1, :real, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 3, :real, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :bad, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, 0, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, 1, -1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, 1, Inf)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, 1, NaN)
+    @test_throws ArgumentError TrotterParams(
+        0.1,
+        1,
+        :real,
+        1,
+        1e-12,
+        (:right, :up, :left, :left),
+    )
     @test_throws ArgumentError TrotterParams(0.0, 1, :real, true, 1, 1e-12)
-    @test_throws ArgumentError TrotterParams(Inf, 1, :real, true, 1, 1e-12)
-    @test_throws ArgumentError TrotterParams(NaN, 1, :real, true, 1, 1e-12)
     @test_throws ArgumentError TrotterParams(0.1, 3, :real, true, 1, 1e-12)
     @test_throws ArgumentError TrotterParams(0.1, 1, :bad, true, 1, 1e-12)
     @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 0, 1e-12)
     @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 1, -1e-12)
-    @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 1, Inf)
-    @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 1, NaN)
 end
 
 @testset "Trotter schedules" begin
-    p1 = TrotterParams(0.1, 1, :real, true, 1, 1e-12)
+    p1 = TrotterParams(0.1, 1, :real, 1, 1e-12)
     @test trotter_sequence(p1) == [(1, 0.1), (2, 0.1), (3, 0.1), (4, 0.1), (5, 0.1)]
 
-    p2 = TrotterParams(0.1, 2, :real, true, 1, 1e-12)
+    p2 = TrotterParams(0.1, 2, :real, 1, 1e-12)
     @test trotter_sequence(p2) == [
         (1, 0.05),
         (2, 0.05),
@@ -72,7 +85,7 @@ end
     weights_before = deepcopy(psi.link_weights)
     density_before = density_simple(psi)
     blockade_before = blockade_violation_simple(psi)
-    params = TrotterParams(0.1, 2, :real, true, 1, 1e-12)
+    params = TrotterParams(0.1, 2, :real, 1, 1e-12)
 
     log = evolve!(psi, 0.0; params = params)
 
@@ -89,7 +102,7 @@ end
 @testset "evolution rejects non-integer step counts" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-    params = TrotterParams(0.1, 1, :real, true, 1, 1e-12)
+    params = TrotterParams(0.1, 1, :real, 1, 1e-12)
 
     @test_throws ArgumentError evolve!(psi, 0.25; params = params)
     @test_throws ArgumentError evolve!(psi, -0.1; params = params)
@@ -99,7 +112,7 @@ end
 
 @testset "evolution requires five-color-compatible unit cells" begin
     psi_bad = product_square_ipeps(PeriodicSquareUnitCell(4, 4); state = :down, maxdim = 1)
-    params = TrotterParams(0.1, 1, :real, true, 1, 1e-12)
+    params = TrotterParams(0.1, 1, :real, 1, 1e-12)
 
     @test_throws ArgumentError evolve!(psi_bad, 0.1; params = params)
 end
@@ -107,7 +120,7 @@ end
 @testset "one first-order step from all-down state" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-    params = TrotterParams(0.02, 1, :real, true, 1, 1e-12)
+    params = TrotterParams(0.02, 1, :real, 1, 1e-12)
 
     log = evolve!(psi, 0.02; params = params)
 
@@ -129,7 +142,7 @@ end
 @testset "one second-order step from all-down state" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-    params = TrotterParams(0.02, 2, :real, true, 1, 1e-12)
+    params = TrotterParams(0.02, 2, :real, 1, 1e-12)
 
     log = evolve!(psi, 0.02; params = params)
 
@@ -142,7 +155,7 @@ end
 @testset "repeated small steps remain finite" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-    params = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = TrotterParams(0.01, 1, :real, 1, 1e-12)
 
     log = evolve!(psi, 0.05; params = params)
 
@@ -157,7 +170,7 @@ end
 @testset "imaginary-time smoke test" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-    params = TrotterParams(0.01, 1, :imaginary, true, 1, 1e-12)
+    params = TrotterParams(0.01, 1, :imaginary, 1, 1e-12)
 
     log = evolve!(psi, 0.01; params = params)
 
@@ -169,7 +182,7 @@ end
 @testset "D=2 evolution smoke test" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 2)
-    params = TrotterParams(0.01, 1, :real, true, 2, 1e-12)
+    params = TrotterParams(0.01, 1, :real, 2, 1e-12)
 
     log = evolve!(psi, 0.01; params = params)
 
@@ -184,7 +197,7 @@ end
 @testset "nontrivial D=2 evolution tracks split normalization ledger" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = _seeded_nontrivial_d2_evolution_ipeps_test(cell)
-    params = TrotterParams(0.005, 1, :real, true, 2, 1e-12)
+    params = TrotterParams(0.005, 1, :real, 2, 1e-12)
 
     evolution_log = evolve!(psi, 0.005; params = params)
 
@@ -211,6 +224,66 @@ end
 
     log = evolve!(psi, 0.01; dt = 0.01, order = 1, evolution = :real, projected = true)
 
-    @test log.params == TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    @test log.params == TrotterParams(0.01, 1, :real, 1, 1e-12)
     @test log.nsteps == 1
+end
+
+@testset "evolve accepts explicit static model protocol" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    params = TrotterParams(0.01, 1, :real, 1, 1e-12)
+
+    legacy = product_square_ipeps(cell; state = :down, maxdim = 1)
+    explicit = product_square_ipeps(cell; state = :down, maxdim = 1)
+
+    legacy_log = evolve!(legacy, 0.01; dt = 0.01, order = 1, evolution = :real, projected = true)
+    explicit_log = evolve!(
+        explicit,
+        0.01;
+        params = params,
+        protocol = StaticModel(PXPStarModel(true)),
+    )
+
+    @test explicit_log.nsteps == legacy_log.nsteps
+    @test explicit_log.max_truncerr ≈ legacy_log.max_truncerr atol = 1e-12
+    @test log_norm(explicit) ≈ log_norm(legacy) atol = 1e-12
+end
+
+@testset "legacy TrotterParams constructor remains accepted" begin
+    old = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    current = TrotterParams(0.01, 1, :real, 1, 1e-12)
+    @test trotter_sequence(old) == trotter_sequence(current)
+    @test old.dt == current.dt
+    @test old.order == current.order
+    @test old.evolution == current.evolution
+    @test old.projected === true
+
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    log = evolve!(psi, 0.01; params = old)
+    @test log.params == current
+    @test log.nsteps == 1
+    @test isfinite(log.max_truncerr)
+
+    explicit = product_square_ipeps(cell; state = :down, maxdim = 1)
+    @test_throws ArgumentError evolve!(
+        explicit,
+        0.01;
+        params = old,
+        protocol = StaticModel(PXPStarModel(true)),
+    )
+
+    old_unprojected = TrotterParams(0.01, 1, :real, false, 1, 1e-12)
+    @test old_unprojected.projected === false
+    legacy_unprojected = product_square_ipeps(cell; state = :down, maxdim = 1)
+    explicit_unprojected = product_square_ipeps(cell; state = :down, maxdim = 1)
+    legacy_unprojected_log = evolve!(legacy_unprojected, 0.01; params = old_unprojected)
+    explicit_unprojected_log = evolve!(
+        explicit_unprojected,
+        0.01;
+        params = current,
+        protocol = StaticModel(PXPStarModel(false)),
+    )
+    @test legacy_unprojected_log.max_truncerr ≈ explicit_unprojected_log.max_truncerr atol =
+        1e-12
+    @test log_norm(legacy_unprojected) ≈ log_norm(explicit_unprojected) atol = 1e-12
 end

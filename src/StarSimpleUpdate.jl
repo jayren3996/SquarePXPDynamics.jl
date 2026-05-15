@@ -14,9 +14,8 @@ using ..SquareIPEPS:
     absorb_link_weight,
     deabsorb_link_weight,
     _mark_mutated!,
-    _add_log_norm!,
-    square_pxp_gate_itensor,
-    projected_square_pxp_gate_itensor
+    _add_log_norm!
+using ..StarModels: AbstractStarModel, PXPStarModel, star_gate_itensor
 
 export StarUpdateInfo, project_star!
 
@@ -363,6 +362,7 @@ end
         psi::SquareIPEPSState,
         center::SquareCoord,
         step::Real;
+        model::Union{AbstractStarModel,Nothing} = nothing,
         evolution::Symbol = :real,
         projected::Bool = true,
         maxdim::Integer = psi.maxdim,
@@ -383,6 +383,7 @@ function project_star!(
     psi::SquareIPEPSState,
     center::SquareCoord,
     step::Real;
+    model::Union{AbstractStarModel,Nothing} = nothing,
     evolution::Symbol = :real,
     projected::Bool = true,
     maxdim::Integer = psi.maxdim,
@@ -396,10 +397,8 @@ function project_star!(
     coords = _validate_distinct_star!(psi, center)
     phys = _star_physical_indices(psi, coords)
 
-    gate =
-        projected ?
-        projected_square_pxp_gate_itensor(phys, finite_step; evolution = evolution) :
-        square_pxp_gate_itensor(phys, finite_step; evolution = evolution)
+    actual_model = model === nothing ? PXPStarModel(projected) : model
+    gate = star_gate_itensor(actual_model, phys, finite_step; evolution = evolution)
 
     center_tensor, absorbed_leaves, _ = _absorb_star_weights(psi, coords)
     qfactors, rfactors, qinds = _qr_reduce_leaves(psi, coords, absorbed_leaves)
