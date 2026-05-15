@@ -1,4 +1,40 @@
+using ITensors
 using LinearAlgebra
+
+function _seeded_nontrivial_d2_evolution_ipeps_test(cell)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    for c in cell.reps
+        p = physical_index(psi, c)
+        left = link_index(psi, c, :left)
+        right = link_index(psi, c, :right)
+        up = link_index(psi, c, :up)
+        down = link_index(psi, c, :down)
+        T = ITensor(ComplexF64, p, left, right, up, down)
+        for pv = 1:dim(p), lv = 1:dim(left), rv = 1:dim(right), uv = 1:dim(up), dv = 1:dim(down)
+            re = 0.01 * (11c.x + 7c.y + 5pv + 3lv + 2rv + uv + dv)
+            T[p=>pv, left=>lv, right=>rv, up=>uv, down=>dv] = complex(re, 0.0)
+        end
+        psi.tensors[c] = T
+        set_link_weight!(psi, c, :right, [0.8, 0.6])
+        set_link_weight!(psi, c, :up, [0.6, 0.8])
+    end
+    return psi
+end
+
+function _assert_finite_simple_summary_evolution_test(summary)
+    @test all(
+        isfinite,
+        (
+            summary.density,
+            summary.density_even,
+            summary.density_odd,
+            summary.blockade_violation,
+            summary.pxp_energy_density,
+            summary.mean_bond_entropy,
+            summary.max_bond_entropy,
+        ),
+    )
+end
 
 @testset "Trotter parameter validation" begin
     @test_throws ArgumentError TrotterParams(0.0, 1, :real, true, 1, 1e-12)
@@ -143,6 +179,30 @@ end
     @test all(
         isapprox(norm(lambda), 1; atol = 1e-10) for lambda in values(psi.link_weights)
     )
+end
+
+@testset "nontrivial D=2 evolution tracks split normalization ledger" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = _seeded_nontrivial_d2_evolution_ipeps_test(cell)
+    params = TrotterParams(0.005, 1, :real, true, 2, 1e-12)
+
+    evolution_log = evolve!(psi, 0.005; params = params)
+
+    accumulated = sum(
+        sum(Base.log, values(info.norm_factors)) for
+        info in Iterators.flatten(evolution_log.layer_infos)
+    )
+    @test evolution_log.nsteps == 1
+    @test length(evolution_log.layer_infos) == 5
+    @test evolution_log.log_norm_delta ≈ accumulated atol = 1e-10 rtol = 1e-12
+    @test evolution_log.log_norm_after ≈ log_norm(psi) atol = 1e-12
+    @test all(T -> isfinite(norm(T)), values(psi.tensors))
+    @test all(lambda -> all(isfinite, lambda), values(psi.link_weights))
+    @test all(
+        lambda -> isapprox(norm(lambda), 1; atol = 1e-10),
+        values(psi.link_weights),
+    )
+    _assert_finite_simple_summary_evolution_test(measure_simple(psi))
 end
 
 @testset "evolution convenience constructor delegates to parameterized method" begin

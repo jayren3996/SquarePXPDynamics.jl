@@ -97,6 +97,22 @@ drift. The public mutators update the state version; direct edits to
 `psi.tensors`, `psi.link_weights`, or `psi.link_indices` are internal mutable
 implementation details and can bypass cache-staleness bookkeeping.
 
+For finite-`chi` validation sweeps, use:
+
+```julia
+points = validate_ctm_sweep(
+    psi;
+    params = [
+        PEPSKitCTMRGParams(4, 1e-6, 50, 0),
+        PEPSKitCTMRGParams(8, 1e-8, 100, 0),
+    ],
+)
+write_ctm_validation_csv(points, "ctm-validation.csv")
+```
+
+Each `CTMValidationPoint` records the CTM summary, the simple/local reference,
+observable deltas, and CTMRG diagnostics for one parameter setting.
+
 ## Development
 
 Instantiate the package environment:

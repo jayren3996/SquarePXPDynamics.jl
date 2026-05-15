@@ -49,7 +49,7 @@ function _real_expectation(value; atol = 1e-10)
     return Float64(real(z))
 end
 
-function _positive_norm(value; atol = 1e-14)
+function _positive_norm(value; atol = 1e-12)
     norm_value = _real_expectation(value; atol)
     norm_value > atol || throw(ArgumentError("local simple observable patch has zero norm"))
     return norm_value
