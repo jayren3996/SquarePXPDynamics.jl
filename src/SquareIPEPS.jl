@@ -47,16 +47,6 @@ function _validate_maxdim(maxdim::Integer)
     return Int(maxdim)
 end
 
-function _basis_value(state::Symbol)
-    if state === :up
-        return 1
-    elseif state === :down
-        return 2
-    else
-        throw(ArgumentError("state must be :up or :down"))
-    end
-end
-
 function _product_state_vector(state::Symbol)
     if state in (:up, :z_up)
         return ComplexF64[1, 0]
