@@ -14,6 +14,9 @@ using LinearAlgebra
     @test square_star_basis_allowed((0, 1, 1, 1, 1))
     @test square_star_basis_allowed((1, 0, 0, 0, 0))
     @test_throws ArgumentError square_star_basis_allowed((0, 1))
+    @test_throws ArgumentError square_star_basis_allowed((0, 2, 1, 1, 1))
+    @test_throws ArgumentError square_star_basis_allowed((0, -1, 1, 1, 1))
+    @test_throws ArgumentError square_star_basis_allowed((0, 1, 1, 1, true))
 
     U1 = square_pxp_gate(0.11; evolution = :real)
     U2 = square_pxp_gate(0.23; evolution = :real)

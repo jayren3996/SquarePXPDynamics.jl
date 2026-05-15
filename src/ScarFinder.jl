@@ -3,7 +3,7 @@ module ScarFinder
 using ..SquareIPEPS: SquareIPEPSState
 using ..IPEPSEvolution: TrotterParams, EvolutionLog, evolve!
 using ..Observables: SimpleObservableSummary, measure_simple
-using ..PEPSKitMeasurements: CTMObservableSummary
+using ..PEPSKitMeasurements: CTMObservableSummary, CTMRGDiagnostics
 
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
@@ -89,6 +89,13 @@ struct ScarFinderCandidateScore
     max_bond_entropy::Union{Nothing,Float64}
     max_truncerr::Float64
     score::Float64
+    ctm_chi::Union{Nothing,Int}
+    ctm_tol::Union{Nothing,Float64}
+    ctm_maxiter::Union{Nothing,Int}
+    ctm_iterations::Union{Nothing,Int}
+    ctm_residual::Union{Nothing,Float64}
+    ctm_converged::Union{Nothing,Bool}
+    ctm_accepted::Union{Nothing,Bool}
 end
 
 """
@@ -214,6 +221,29 @@ function _candidate_score(
         obs.max_bond_entropy,
         log.max_truncerr,
         _score_value(obs, log, obs.mean_bond_entropy, obs.max_bond_entropy),
+        nothing,
+        nothing,
+        nothing,
+        nothing,
+        nothing,
+        nothing,
+        nothing,
+    )
+end
+
+function _ctm_score_fields(::Nothing)
+    return (nothing, nothing, nothing, nothing, nothing, nothing, nothing)
+end
+
+function _ctm_score_fields(diagnostics::CTMRGDiagnostics)
+    return (
+        diagnostics.chi,
+        diagnostics.tol,
+        diagnostics.maxiter,
+        diagnostics.iterations,
+        diagnostics.residual,
+        diagnostics.converged,
+        diagnostics.accepted,
     )
 end
 
@@ -225,6 +255,7 @@ function _candidate_score(
     log::EvolutionLog,
     obs::CTMObservableSummary,
 )
+    ctm_fields = _ctm_score_fields(obs.diagnostics)
     return ScarFinderCandidateScore(
         iteration,
         diagnostics,
@@ -239,6 +270,7 @@ function _candidate_score(
         nothing,
         log.max_truncerr,
         _score_value(obs, log, nothing, nothing),
+        ctm_fields...,
     )
 end
 
@@ -302,24 +334,36 @@ function _iteration_score(iteration::ScarFinderIteration, diagnostics::Symbol)
 end
 
 """
-    rank_scarfinder_candidates(result; diagnostics = :simple, accepted_only = false, by = :score)
+    rank_scarfinder_candidates(
+        result;
+        diagnostics = :simple,
+        accepted_only = false,
+        require_ctm_accepted = false,
+        by = :score,
+    )
 
 Return candidate scores sorted by a field of [`ScarFinderCandidateScore`](@ref).
 Simple ranking is available for every iteration. CTM ranking includes only
-iterations where an optional CTM callback supplied diagnostics.
+iterations where an optional CTM callback supplied diagnostics. Set
+`require_ctm_accepted = true` with `diagnostics = :ctm` to exclude CTM records
+whose diagnostics are missing or flagged as unaccepted.
 """
 function rank_scarfinder_candidates(
     result::ScarFinderResult;
     diagnostics::Symbol = :simple,
     accepted_only::Bool = false,
+    require_ctm_accepted::Bool = false,
     by::Symbol = :score,
     rev::Bool = false,
 )
+    require_ctm_accepted && diagnostics !== :ctm &&
+        throw(ArgumentError("require_ctm_accepted is only valid with diagnostics = :ctm"))
     scores = ScarFinderCandidateScore[]
     for iteration in result.iterations
         accepted_only && !iteration.accepted && continue
         score = _iteration_score(iteration, diagnostics)
         score === nothing && continue
+        require_ctm_accepted && score.ctm_accepted !== true && continue
         push!(scores, score)
     end
     if !hasfield(ScarFinderCandidateScore, by)
@@ -482,6 +526,13 @@ function _write_csv_log(io, result::ScarFinderResult)
         "max_bond_entropy",
         "max_truncerr",
         "score",
+        "ctm_chi",
+        "ctm_tol",
+        "ctm_maxiter",
+        "ctm_iterations",
+        "ctm_residual",
+        "ctm_converged",
+        "ctm_accepted",
     )
     println(io, join(header, ","))
     for score in _score_rows(result)
@@ -499,6 +550,13 @@ function _write_csv_log(io, result::ScarFinderResult)
             score.max_bond_entropy,
             score.max_truncerr,
             score.score,
+            score.ctm_chi,
+            score.ctm_tol,
+            score.ctm_maxiter,
+            score.ctm_iterations,
+            score.ctm_residual,
+            score.ctm_converged,
+            score.ctm_accepted,
         )
         println(io, join(_csv_value.(row), ","))
     end
@@ -533,6 +591,13 @@ function _score_json(score::ScarFinderCandidateScore)
         :max_bond_entropy,
         :max_truncerr,
         :score,
+        :ctm_chi,
+        :ctm_tol,
+        :ctm_maxiter,
+        :ctm_iterations,
+        :ctm_residual,
+        :ctm_converged,
+        :ctm_accepted,
     )
     pairs = ["\"$(field)\":$(_json_value(getfield(score, field)))" for field in fields]
     return "{" * join(pairs, ",") * "}"

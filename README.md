@@ -78,6 +78,20 @@ ScarFinder-lite is currently a scaffold/orchestration layer over `evolve!` and
 `measure_simple`, with optional callback-supplied CTM diagnostics for selected
 iterations; production CTMRG-quality ScarFinder validation is not yet shipped.
 
+```julia
+params_ctm = PEPSKitCTMRGParams(8, 1e-8, 100, 0)
+ctx = pepskit_ctmrg_context(psi; params = params_ctm)
+energy = pxp_energy_density_ctm(psi, ctx)
+diagnostics = ctm_diagnostics(ctx)
+```
+
+Inspect `diagnostics` before using CTM values for ranking, and repeat CTM
+measurements at multiple `chi` values before trusting energy comparisons. A
+`PEPSKitMeasurementContext` belongs to the exact state used at creation; if
+`psi` is mutated by `evolve!`, `project_star!`, or link-weight setters, the old
+context is stale and measurement calls throw. `ScarFinderCandidateScore.score`
+is a diagnostic sorting key, not a physics-quality energy target.
+
 ## Development
 
 Instantiate the package environment:

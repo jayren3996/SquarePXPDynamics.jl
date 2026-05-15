@@ -6,12 +6,14 @@ using TensorKit
 using ..SquareGeometry: SquareCoord
 using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
 using ..SquareUnitCells: PeriodicSquareUnitCell, wrap, neighbor
-using ..SquareIPEPS: SquareIPEPSState, physical_index, link_index, link_weight
+using ..SquareIPEPS:
+    SquareIPEPSState, physical_index, link_index, link_weight, state_version
 
-export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMObservableSummary
+export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
+export CTMObservableSummary
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export local_density_ctm, nearest_neighbor_density_ctm, blockade_violation_ctm
-export star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
+export star_expectation_ctm, pxp_energy_density_ctm, measure_ctm, ctm_diagnostics
 
 const _DIRECTIONS = (:right, :up, :left, :down)
 
@@ -37,10 +39,58 @@ struct PEPSKitCTMRGParams
         verbosity::Integer,
     )
         chi >= 1 || throw(ArgumentError("chi must be at least 1"))
-        tol > 0 || throw(ArgumentError("tol must be positive"))
+        isfinite(tol) && tol > 0 || throw(ArgumentError("tol must be finite and positive"))
         maxiter >= 1 || throw(ArgumentError("maxiter must be at least 1"))
         verbosity >= 0 || throw(ArgumentError("verbosity must be nonnegative"))
         return new(Int(chi), Float64(tol), Int(maxiter), Int(verbosity))
+    end
+end
+
+"""
+    CTMRGDiagnostics
+
+Structured summary of CTMRG convergence metadata exposed by the measurement
+adapter. `iterations`, `residual`, and `converged` are `nothing` when PEPSKit
+does not expose a recognized field. `accepted` is the adapter's downstream
+trust flag for ranking/logging.
+"""
+struct CTMRGDiagnostics
+    chi::Int
+    tol::Float64
+    maxiter::Int
+    iterations::Union{Int,Nothing}
+    residual::Union{Float64,Nothing}
+    converged::Union{Bool,Nothing}
+    accepted::Bool
+
+    function CTMRGDiagnostics(
+        chi::Integer,
+        tol::Real,
+        maxiter::Integer,
+        iterations::Union{Integer,Nothing},
+        residual::Union{Real,Nothing},
+        converged::Union{Bool,Nothing},
+        accepted::Bool,
+    )
+        chi >= 1 || throw(ArgumentError("chi must be at least 1"))
+        isfinite(tol) && tol > 0 || throw(ArgumentError("tol must be finite and positive"))
+        maxiter >= 1 || throw(ArgumentError("maxiter must be at least 1"))
+        if iterations !== nothing
+            iterations >= 0 || throw(ArgumentError("iterations must be nonnegative"))
+        end
+        if residual !== nothing
+            isfinite(residual) && residual >= 0 ||
+                throw(ArgumentError("residual must be finite and nonnegative"))
+        end
+        return new(
+            Int(chi),
+            Float64(tol),
+            Int(maxiter),
+            iterations === nothing ? nothing : Int(iterations),
+            residual === nothing ? nothing : Float64(residual),
+            converged,
+            accepted,
+        )
     end
 end
 
@@ -58,11 +108,30 @@ struct PEPSKitMeasurementContext
     env::Any
     info::Any
     params::PEPSKitCTMRGParams
+    diagnostics::CTMRGDiagnostics
+    source_state_id::UInt
+    source_state_version::Int
     operator_cache::Dict{Any,Any}
 end
 
-PEPSKitMeasurementContext(peps, env, info, params::PEPSKitCTMRGParams) =
-    PEPSKitMeasurementContext(peps, env, info, params, Dict{Any,Any}())
+PEPSKitMeasurementContext(
+    peps,
+    env,
+    info,
+    params::PEPSKitCTMRGParams,
+    diagnostics::CTMRGDiagnostics,
+    source_state_id::UInt,
+    source_state_version::Integer,
+) = PEPSKitMeasurementContext(
+    peps,
+    env,
+    info,
+    params,
+    diagnostics,
+    source_state_id,
+    Int(source_state_version),
+    Dict{Any,Any}(),
+)
 
 """
     CTMObservableSummary
@@ -77,6 +146,142 @@ struct CTMObservableSummary
     density_odd::Float64
     blockade_violation::Float64
     pxp_energy_density::Float64
+    diagnostics::Union{CTMRGDiagnostics,Nothing}
+end
+
+CTMObservableSummary(
+    density::Float64,
+    density_even::Float64,
+    density_odd::Float64,
+    blockade_violation::Float64,
+    pxp_energy_density::Float64,
+    diagnostics::CTMRGDiagnostics,
+) = invoke(
+    CTMObservableSummary,
+    Tuple{
+        Float64,
+        Float64,
+        Float64,
+        Float64,
+        Float64,
+        Union{CTMRGDiagnostics,Nothing},
+    },
+    density,
+    density_even,
+    density_odd,
+    blockade_violation,
+    pxp_energy_density,
+    diagnostics,
+)
+
+CTMObservableSummary(
+    density::Real,
+    density_even::Real,
+    density_odd::Real,
+    blockade_violation::Real,
+    pxp_energy_density::Real,
+) = CTMObservableSummary(
+    Float64(density),
+    Float64(density_even),
+    Float64(density_odd),
+    Float64(blockade_violation),
+    Float64(pxp_energy_density),
+    nothing,
+)
+
+CTMObservableSummary(
+    density::Real,
+    density_even::Real,
+    density_odd::Real,
+    blockade_violation::Real,
+    pxp_energy_density::Real,
+    diagnostics::CTMRGDiagnostics,
+) = CTMObservableSummary(
+    Float64(density),
+    Float64(density_even),
+    Float64(density_odd),
+    Float64(blockade_violation),
+    Float64(pxp_energy_density),
+    diagnostics,
+)
+
+"""
+    ctm_diagnostics(ctx)
+
+Return the structured CTMRG diagnostics attached to a PEPSKit measurement
+context.
+"""
+ctm_diagnostics(ctx::PEPSKitMeasurementContext)::CTMRGDiagnostics = ctx.diagnostics
+
+function _maybe_info_value(info, names)
+    for name in names
+        if info isa NamedTuple && haskey(info, name)
+            return getfield(info, name)
+        elseif hasproperty(info, name)
+            return getproperty(info, name)
+        elseif info isa AbstractDict && haskey(info, name)
+            return info[name]
+        elseif info isa AbstractDict && haskey(info, String(name))
+            return info[String(name)]
+        end
+    end
+    return nothing
+end
+
+function _maybe_int(value)
+    value === nothing && return nothing
+    value isa Integer || return nothing
+    return Int(value)
+end
+
+function _maybe_float(value)
+    value === nothing && return nothing
+    value isa Real || return nothing
+    converted = Float64(value)
+    isfinite(converted) && converted >= 0 || return nothing
+    return converted
+end
+
+function _maybe_bool(value)
+    value === nothing && return nothing
+    value isa Bool || return nothing
+    return value
+end
+
+function _ctmrg_diagnostics(params::PEPSKitCTMRGParams, info)::CTMRGDiagnostics
+    iterations = _maybe_int(
+        _maybe_info_value(info, (:iterations, :iteration, :iter, :niter, :numiter)),
+    )
+    residual = _maybe_float(
+        _maybe_info_value(
+            info,
+            (:residual, :err, :error, :normres, :conv_error, :truncation_error),
+        ),
+    )
+    converged = _maybe_bool(_maybe_info_value(info, (:converged, :conv, :isconverged)))
+    accepted =
+        converged === true ||
+        (converged === nothing && residual !== nothing && residual <= params.tol)
+    return CTMRGDiagnostics(
+        params.chi,
+        params.tol,
+        params.maxiter,
+        iterations,
+        residual,
+        converged,
+        accepted,
+    )
+end
+
+function _assert_fresh_context(psi::SquareIPEPSState, ctx::PEPSKitMeasurementContext)
+    objectid(psi) == ctx.source_state_id ||
+        throw(ArgumentError("PEPSKit measurement context belongs to a different iPEPS state"))
+    state_version(psi) == ctx.source_state_version || throw(
+        ArgumentError(
+            "PEPSKit measurement context is stale because the iPEPS state was mutated",
+        ),
+    )
+    return nothing
 end
 
 function _validate_direction(dir::Symbol)
@@ -333,7 +538,16 @@ function pepskit_ctmrg_context(
         verbosity = params.verbosity,
         trunc = PEPSKit.truncrank(params.chi),
     )
-    return PEPSKitMeasurementContext(peps, env, info, params)
+    diagnostics = _ctmrg_diagnostics(params, info)
+    return PEPSKitMeasurementContext(
+        peps,
+        env,
+        info,
+        params,
+        diagnostics,
+        objectid(psi),
+        state_version(psi),
+    )
 end
 
 function _expectation(ctx::PEPSKitMeasurementContext, op)
@@ -399,6 +613,7 @@ function local_density_ctm(
     c::SquareCoord,
     ctx::PEPSKitMeasurementContext,
 )::Float64
+    _assert_fresh_context(psi, ctx)
     return _expectation(ctx, _pepskit_density_operator(psi.unitcell, c))
 end
 
@@ -414,6 +629,7 @@ function nearest_neighbor_density_ctm(
     dir::Symbol,
     ctx::PEPSKitMeasurementContext,
 )::Float64
+    _assert_fresh_context(psi, ctx)
     _validate_direction(dir)
     return _expectation(ctx, _pepskit_twosite_nn_operator(psi.unitcell, c, dir))
 end
@@ -437,6 +653,7 @@ function star_expectation_ctm(
     O::AbstractMatrix,
     ctx::PEPSKitMeasurementContext,
 )::ComplexF64
+    _assert_fresh_context(psi, ctx)
     ctx.peps !== nothing || throw(ArgumentError("PEPSKit measurement context has no PEPS"))
     op = _cached_star_localoperator(psi, center, O, ctx)
     value = PEPSKit.expectation_value(ctx.peps, op, ctx.env)
@@ -454,6 +671,7 @@ function blockade_violation_ctm(
     psi::SquareIPEPSState,
     ctx::PEPSKitMeasurementContext,
 )::Float64
+    _assert_fresh_context(psi, ctx)
     total = 0.0
     count = 0
     for c in psi.unitcell.reps, dir in (:right, :up)
@@ -476,6 +694,7 @@ function pxp_energy_density_ctm(
     psi::SquareIPEPSState,
     ctx::PEPSKitMeasurementContext,
 )::Float64
+    _assert_fresh_context(psi, ctx)
     ctx.peps !== nothing || throw(ArgumentError("PEPSKit measurement context has no PEPS"))
     total = _expectation(ctx, _cached_pxp_energy_operator(psi, ctx))
     return total / length(psi.unitcell.reps)
@@ -520,6 +739,7 @@ function measure_ctm(
         _density_ctm(psi, ctx; sublattice = :odd),
         blockade_violation_ctm(psi, ctx),
         pxp_energy_density_ctm(psi, ctx),
+        ctx.diagnostics,
     )
 end
 

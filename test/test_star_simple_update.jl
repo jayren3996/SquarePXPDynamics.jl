@@ -97,6 +97,7 @@ end
     psi = product_square_ipeps(PeriodicSquareUnitCell(10, 10); state = :down, maxdim = 1)
     info = project_star!(psi, SquareCoord(5, 5), 0.0; maxdim = 1)
     @test info isa StarUpdateInfo
+    @test state_version(psi) == 1
 
     @test_throws ArgumentError project_star!(psi, SquareCoord(5, 5), Inf)
     @test_throws ArgumentError project_star!(psi, SquareCoord(5, 5), NaN)
@@ -287,12 +288,14 @@ end
 @testset "D=2 star update smoke test" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    @test psi.maxdim == 2
 
-    info = project_star!(psi, SquareCoord(5, 5), 0.03; maxdim = 2)
+    info = project_star!(psi, SquareCoord(5, 5), 0.03; maxdim = 3)
 
     @test isfinite(info.max_truncerr)
     @test all(isfinite, values(info.truncerrs))
-    @test all(k -> k <= 2, values(info.keptdims))
+    @test all(k -> k <= 3, values(info.keptdims))
+    @test psi.maxdim == 2
     for lambda in values(psi.link_weights)
         @test isfinite(norm(lambda))
         @test norm(lambda) ≈ 1 atol = 1e-12
@@ -322,5 +325,56 @@ end
                 summary.max_bond_entropy,
             ),
         )
+    end
+end
+
+@testset "D=2 zero-step and split-order observable regressions" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    center = SquareCoord(5, 5)
+    Hstar = square_pxp_star_hamiltonian()
+    psi_zero = product_square_ipeps(cell; state = :down, maxdim = 2)
+    density_before = local_density_simple(psi_zero, center)
+    star_before = star_expectation_simple(psi_zero, center, Hstar)
+    log_norm_before = log_norm(psi_zero)
+
+    project_star!(psi_zero, center, 0.0; projected = false, maxdim = 2)
+
+    @test local_density_simple(psi_zero, center) ≈ density_before atol = 1e-12
+    @test star_expectation_simple(psi_zero, center, Hstar) ≈ star_before atol = 1e-12
+    @test log_norm(psi_zero) ≈ log_norm_before atol = 1e-12
+
+    psi_default = product_square_ipeps(cell; state = :down, maxdim = 2)
+    psi_reordered = product_square_ipeps(cell; state = :down, maxdim = 2)
+    project_star!(psi_default, center, 0.03; evolution = :real, projected = true, maxdim = 2)
+    project_star!(
+        psi_reordered,
+        center,
+        0.03;
+        evolution = :real,
+        projected = true,
+        maxdim = 2,
+        split_order = (:up, :right, :down, :left),
+    )
+
+    @test local_density_simple(psi_reordered, center) ≈
+          local_density_simple(psi_default, center) atol = 1e-10 rtol = 1e-8
+    @test nearest_neighbor_density_simple(psi_reordered, center, :right) ≈
+          nearest_neighbor_density_simple(psi_default, center, :right) atol = 1e-10 rtol =
+        1e-8
+    @test star_expectation_simple(psi_reordered, center, Hstar) ≈
+          star_expectation_simple(psi_default, center, Hstar) atol = 1e-10 rtol = 1e-8
+end
+
+@testset "D=2 update tracks normalization scale ledger" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    center = SquareCoord(5, 5)
+    accumulated = 0.0
+
+    for _ = 1:20
+        info = project_star!(psi, center, 0.01; evolution = :real, projected = true, maxdim = 2)
+        accumulated += sum(log, values(info.norm_factors))
+        @test log_norm(psi) ≈ accumulated atol = 1e-10 rtol = 1e-10
+        @test all(T -> isfinite(norm(T)), values(psi.tensors))
     end
 end

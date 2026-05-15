@@ -47,6 +47,8 @@ blockade constraint. The basis order is `(center, right, up, left, down)`, with
 function square_star_basis_allowed(bits)
     length(bits) == SQUARE_STAR_SITES ||
         throw(ArgumentError("square star basis must have 5 sites"))
+    all(bit -> bit === 0 || bit === 1, bits) ||
+        throw(ArgumentError("square star basis bits must be integers 0 or 1"))
     center_is_up = bits[1] == 0
     for site = 2:SQUARE_STAR_SITES
         center_is_up && bits[site] == 0 && return false

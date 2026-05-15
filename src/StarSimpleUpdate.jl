@@ -13,6 +13,8 @@ using ..SquareIPEPS:
     link_weight,
     absorb_link_weight,
     deabsorb_link_weight,
+    _mark_mutated!,
+    _add_log_norm!,
     square_pxp_gate_itensor,
     projected_square_pxp_gate_itensor
 
@@ -338,6 +340,7 @@ function _commit_star_update!(
     new_tensors,
     new_links,
     new_weights,
+    info::StarUpdateInfo,
 )
     for (site, tensor) in new_tensors
         psi.tensors[site] = tensor
@@ -350,6 +353,8 @@ function _commit_star_update!(
         psi.link_indices[(leaf, to_center)] = link
         psi.link_weights[bondkey(psi.unitcell, coords.center, dir)] = new_weights[dir]
     end
+    _add_log_norm!(psi, sum(log, values(info.norm_factors)))
+    _mark_mutated!(psi)
     return psi
 end
 
@@ -370,7 +375,9 @@ ITensors iPEPS backend. The star order and gate physical order are
 `(center, right, up, left, down)`, and only this one local star is updated.
 The update is transactional: `psi` is mutated only after local weight
 absorption, QR reduction, gate application, SVD splitting, and reconstruction
-all succeed.
+all succeed. `maxdim` is the cap for this update and may be larger than
+`psi.maxdim`; in that case affected links may grow while `psi.maxdim` remains
+the state's construction/default cap.
 """
 function project_star!(
     psi::SquareIPEPSState,
@@ -423,7 +430,7 @@ function project_star!(
         )
     end
 
-    _commit_star_update!(psi, coords, new_tensors, new_links, new_weights)
+    _commit_star_update!(psi, coords, new_tensors, new_links, new_weights, info)
     return info
 end
 

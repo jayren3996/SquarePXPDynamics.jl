@@ -10,6 +10,7 @@ export SquareIPEPSState
 export product_square_ipeps, checkerboard_square_ipeps
 export physical_index, link_index
 export link_weight, set_link_weight!, link_weight_tensor
+export state_version, log_norm
 export absorb_link_weight, deabsorb_link_weight
 export weight_entropy, bond_entropy, all_bond_entropies
 export square_pxp_gate_itensor, projected_square_pxp_gate_itensor
@@ -19,7 +20,9 @@ export square_pxp_gate_itensor, projected_square_pxp_gate_itensor
 
 Periodic square-lattice iPEPS state in a simple-update Γ-λ representation.
 The site tensors are bare Γ tensors, `link_weights` store explicit λ spectra
-for canonical bonds, and `gauge` is currently `:simple`.
+for canonical bonds, and `gauge` is currently `:simple`. `maxdim` records the
+construction/default bond-dimension cap; individual updates may request a
+larger `maxdim` and grow affected links without rewriting this default.
 """
 struct SquareIPEPSState
     unitcell::PeriodicSquareUnitCell
@@ -29,6 +32,8 @@ struct SquareIPEPSState
     link_weights::Dict{BondKey,Vector{Float64}}
     maxdim::Int
     gauge::Symbol
+    mutation_version::Base.RefValue{Int}
+    log_norm_value::Base.RefValue{Float64}
 end
 
 function _validate_ipeps_cell(cell::PeriodicSquareUnitCell)
@@ -103,7 +108,37 @@ function _product_square_ipeps(cell::PeriodicSquareUnitCell, state_at; maxdim::I
         tensors[c] = tensor
     end
 
-    return SquareIPEPSState(cell, tensors, physical, links, weights, dim, :simple)
+    return SquareIPEPSState(cell, tensors, physical, links, weights, dim, :simple, Ref(0), Ref(0.0))
+end
+
+"""
+    state_version(psi)
+
+Return the mutation counter for `psi`. Operations that change tensors or
+stored link weights increment this counter so cached measurement contexts can
+detect stale states.
+"""
+state_version(psi::SquareIPEPSState)::Int = psi.mutation_version[]
+
+"""
+    log_norm(psi)
+
+Return the accumulated logarithmic normalization ledger recorded during
+simple-update star splits. This is diagnostic bookkeeping for normalized link
+spectra; it is not a physical observable.
+"""
+log_norm(psi::SquareIPEPSState)::Float64 = psi.log_norm_value[]
+
+function _mark_mutated!(psi::SquareIPEPSState)
+    psi.mutation_version[] += 1
+    return psi
+end
+
+function _add_log_norm!(psi::SquareIPEPSState, delta::Real)
+    value = Float64(delta)
+    isfinite(value) || throw(ArgumentError("log-norm increment must be finite"))
+    psi.log_norm_value[] += value
+    return psi
 end
 
 """
@@ -213,6 +248,7 @@ function set_link_weight!(
     _validate_link_direction(dir)
     psi.link_weights[bondkey(psi.unitcell, c, dir)] =
         _validate_link_weight_values(link_index(psi, c, dir), values)
+    _mark_mutated!(psi)
     return psi
 end
 

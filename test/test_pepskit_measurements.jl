@@ -11,8 +11,36 @@ const RUN_EXTENDED_CTM_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
     @testset "CTMRG parameter validation" begin
         @test_throws ArgumentError PEPSKitCTMRGParams(0, 1e-8, 10, 0)
         @test_throws ArgumentError PEPSKitCTMRGParams(4, 0.0, 10, 0)
+        @test_throws ArgumentError PEPSKitCTMRGParams(4, Inf, 10, 0)
+        @test_throws ArgumentError PEPSKitCTMRGParams(4, NaN, 10, 0)
         @test_throws ArgumentError PEPSKitCTMRGParams(4, 1e-8, 0, 0)
         @test_throws ArgumentError PEPSKitCTMRGParams(4, 1e-8, 10, -1)
+    end
+
+    @testset "CTMRG diagnostics expose acceptance metadata" begin
+        params = PEPSKitCTMRGParams(4, 1e-8, 10, 0)
+        diag = CTMRGDiagnostics(
+            params.chi,
+            params.tol,
+            params.maxiter,
+            7,
+            2e-9,
+            true,
+            true,
+        )
+
+        @test diag.chi == 4
+        @test diag.tol == 1e-8
+        @test diag.maxiter == 10
+        @test diag.iterations == 7
+        @test diag.residual == 2e-9
+        @test diag.converged === true
+        @test diag.accepted === true
+        @test_throws ArgumentError CTMRGDiagnostics(0, 1e-8, 10, nothing, nothing, nothing, false)
+        @test_throws ArgumentError CTMRGDiagnostics(4, NaN, 10, nothing, nothing, nothing, false)
+        @test_throws ArgumentError CTMRGDiagnostics(4, 1e-8, 0, nothing, nothing, nothing, false)
+        @test_throws ArgumentError CTMRGDiagnostics(4, 1e-8, 10, -1, nothing, nothing, false)
+        @test_throws ArgumentError CTMRGDiagnostics(4, 1e-8, 10, nothing, Inf, nothing, false)
     end
 
     @testset "product-state conversion" begin
@@ -133,6 +161,12 @@ const RUN_EXTENDED_CTM_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
         @test ctx isa PEPSKitMeasurementContext
         @test ctx.peps !== nothing
         @test ctx.env !== nothing
+        @test ctx.diagnostics isa CTMRGDiagnostics
+        @test ctm_diagnostics(ctx) === ctx.diagnostics
+        @test ctx.diagnostics.chi == params.chi
+        @test ctx.diagnostics.tol == params.tol
+        @test ctx.diagnostics.maxiter == params.maxiter
+        @test ctx.diagnostics.residual !== nothing
         @test star_expectation_ctm(psi, c, Hstar, ctx) ≈
               star_expectation_simple(psi, c, Hstar) atol = 1e-8 rtol = 1e-6
         @test_throws ArgumentError star_expectation_ctm(
@@ -141,18 +175,25 @@ const RUN_EXTENDED_CTM_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
             Hstar,
             ctx,
         )
+
+        psi_stale = product_square_ipeps(cell; state = :down, maxdim = 1)
+        ctx_stale = pepskit_ctmrg_context(psi_stale; params)
+        project_star!(psi_stale, c, dt; evolution = :real, projected = true, maxdim = 1)
+        @test_throws ArgumentError local_density_ctm(psi_stale, c, ctx_stale)
     end
 
-    @testset "PXP energy path does not call simple fallback" begin
-        src = read(
-            joinpath(pkgdir(SquarePXPDynamics), "src", "PEPSKitMeasurements.jl"),
-            String,
-        )
-        energy_body = match(
-            r"function pxp_energy_density_ctm[\s\S]*?end\n\nfunction _density_ctm",
-            src,
-        ).match
-        @test !occursin("star_expectation_simple", energy_body)
+    @testset "PXP energy density equals average CTM star expectations" begin
+        cell = PeriodicSquareUnitCell(3, 3)
+        psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+        Hstar = square_pxp_star_hamiltonian()
+        params = PEPSKitCTMRGParams(1, 1e-4, 1, 0)
+        ctx = pepskit_ctmrg_context(psi; params)
+
+        expected =
+            sum(real(star_expectation_ctm(psi, c, Hstar, ctx)) for c in cell.reps) /
+            length(cell.reps)
+
+        @test pxp_energy_density_ctm(psi, ctx) ≈ expected atol = 1e-8 rtol = 1e-6
     end
 
     if RUN_EXTENDED_CTM_TESTS

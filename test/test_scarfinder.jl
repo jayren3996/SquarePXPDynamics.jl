@@ -158,6 +158,68 @@ end
     @test result.iterations[3].ctm_score isa ScarFinderCandidateScore
     @test length(ranked_ctm) == 2
     @test all(score -> score.diagnostics === :ctm, ranked_ctm)
+    @test result.iterations[1].simple_score.ctm_accepted === nothing
+end
+
+@testset "ScarFinder CTM diagnostics are logged and can require trust" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    diag = CTMRGDiagnostics(4, 1e-8, 10, 10, 1e-9, true, true)
+    ctm_summary = CTMObservableSummary(0.0, 0.0, 0.0, 0.0, 0.0, diag)
+
+    result = scarfinder!(
+        psi,
+        params;
+        ctm_every = 1,
+        ctm_callback = (state, iteration, simple_score) -> ctm_summary,
+    )
+    ctm_score = only(rank_scarfinder_candidates(result; diagnostics = :ctm))
+
+    @test ctm_score.ctm_chi == 4
+    @test ctm_score.ctm_tol == 1e-8
+    @test ctm_score.ctm_maxiter == 10
+    @test ctm_score.ctm_iterations == 10
+    @test ctm_score.ctm_residual == 1e-9
+    @test ctm_score.ctm_converged === true
+    @test ctm_score.ctm_accepted === true
+    @test only(rank_scarfinder_candidates(result; diagnostics = :ctm, require_ctm_accepted = true)) ===
+          ctm_score
+
+    csv_path = tempname() * ".csv"
+    json_path = tempname() * ".json"
+    write_scarfinder_log(result, csv_path; format = :csv)
+    write_scarfinder_log(result, json_path; format = :json)
+    csv = read(csv_path, String)
+    json = read(json_path, String)
+    @test occursin("ctm_chi", csv)
+    ctm_row = split(split(chomp(csv), '\n')[3], ',')
+    @test ctm_row[4] == "ctm"
+    @test ctm_row[14:20] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
+    @test occursin("\"ctm_accepted\":true", json)
+
+    untrusted = CTMObservableSummary(
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        CTMRGDiagnostics(4, 1e-8, 10, 10, 1e-2, false, false),
+    )
+    result_untrusted = scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        ctm_every = 1,
+        ctm_callback = (state, iteration, simple_score) -> untrusted,
+    )
+    @test isempty(
+        rank_scarfinder_candidates(
+            result_untrusted;
+            diagnostics = :ctm,
+            require_ctm_accepted = true,
+        ),
+    )
 end
 
 @testset "ScarFinder iteration logs write CSV and JSON" begin
