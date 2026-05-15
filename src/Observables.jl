@@ -16,7 +16,8 @@ export SimpleObservableSummary, measure_simple
 const _DIRECTIONS = (:right, :up, :left, :down)
 
 function _validate_direction(dir::Symbol)
-    dir in _DIRECTIONS || throw(ArgumentError("direction must be :right, :up, :left, or :down"))
+    dir in _DIRECTIONS ||
+        throw(ArgumentError("direction must be :right, :up, :left, or :down"))
     return dir
 end
 
@@ -40,8 +41,11 @@ function _real_expectation(value; atol = 1e-10)
     z = ComplexF64(value)
     isfinite(real(z)) && isfinite(imag(z)) ||
         throw(ArgumentError("expectation value must be finite"))
-    abs(imag(z)) <= atol ||
-        throw(ArgumentError("Hermitian observable produced non-negligible imaginary part $(imag(z))"))
+    abs(imag(z)) <= atol || throw(
+        ArgumentError(
+            "Hermitian observable produced non-negligible imaginary part $(imag(z))",
+        ),
+    )
     return Float64(real(z))
 end
 
@@ -51,7 +55,11 @@ function _positive_norm(value; atol = 1e-14)
     return norm_value
 end
 
-function _site_tensor_with_weights(psi::SquareIPEPSState, c::SquareCoord; dirs = _DIRECTIONS)
+function _site_tensor_with_weights(
+    psi::SquareIPEPSState,
+    c::SquareCoord;
+    dirs = _DIRECTIONS,
+)
     site = wrap(psi.unitcell, c)
     T = copy(psi.tensors[site])
     for dir in dirs
@@ -73,13 +81,14 @@ end
 
 function _dense_operator_itensor(O::AbstractMatrix, phys::NTuple{N,Index}) where {N}
     size(O) == (2^N, 2^N) || throw(ArgumentError("dense operator must be $(2^N)x$(2^N)"))
-    all(p -> dim(p) == 2, phys) || throw(ArgumentError("physical indices must have dimension 2"))
+    all(p -> dim(p) == 2, phys) ||
+        throw(ArgumentError("physical indices must have dimension 2"))
 
     out = prime.(phys)
     data = zeros(ComplexF64, ntuple(Returns(2), 2N))
-    for out_values in Iterators.product((1:2 for _ in 1:N)...)
+    for out_values in Iterators.product((1:2 for _ = 1:N)...)
         out_idx = _dense_index(out_values)
-        for in_values in Iterators.product((1:2 for _ in 1:N)...)
+        for in_values in Iterators.product((1:2 for _ = 1:N)...)
             in_idx = _dense_index(in_values)
             data[out_values..., in_values...] = O[out_idx, in_idx]
         end
@@ -98,7 +107,8 @@ end
 function _expectation_from_patch(theta::ITensor, O::AbstractMatrix, phys)
     phys_tuple = Tuple(phys)
     op = _dense_operator_itensor(O, phys_tuple)
-    numerator = @disable_warn_order scalar(dag(_prime_physical(theta, phys_tuple)) * (op * theta))
+    numerator =
+        @disable_warn_order scalar(dag(_prime_physical(theta, phys_tuple)) * (op * theta))
     denominator = @disable_warn_order scalar(dag(theta) * theta)
     return ComplexF64(numerator / _positive_norm(denominator))
 end
@@ -130,8 +140,11 @@ end
 function _validate_distinct_star(psi::SquareIPEPSState, center::SquareCoord)
     coords = _star_coords(psi, center)
     sites = (coords.center, coords.right, coords.up, coords.left, coords.down)
-    length(Set(sites)) == SQUARE_STAR_SITES ||
-        throw(ArgumentError("wrapped square star must contain five distinct unit-cell representatives"))
+    length(Set(sites)) == SQUARE_STAR_SITES || throw(
+        ArgumentError(
+            "wrapped square star must contain five distinct unit-cell representatives",
+        ),
+    )
     return coords
 end
 
@@ -143,7 +156,11 @@ function _star_patch_tensor(psi::SquareIPEPSState, center::SquareCoord)
     theta = _site_tensor_with_weights(psi, coords.center)
     for dir in _DIRECTIONS
         leaf = getproperty(coords, dir)
-        theta = @disable_warn_order theta * _site_tensor_with_weights(psi, leaf; dirs = _external_dirs_for_leaf(dir))
+        theta = @disable_warn_order theta * _site_tensor_with_weights(
+            psi,
+            leaf;
+            dirs = _external_dirs_for_leaf(dir),
+        )
     end
     phys = (
         physical_index(psi, coords.center),
@@ -191,8 +208,10 @@ Return `(even = ..., odd = ...)` simple-update Rydberg densities for the even
 and odd parity sublattices of a square iPEPS state.
 """
 function sublattice_densities(psi::SquareIPEPSState)
-    return (even = density_simple(psi; sublattice = :even),
-            odd = density_simple(psi; sublattice = :odd))
+    return (
+        even = density_simple(psi; sublattice = :even),
+        odd = density_simple(psi; sublattice = :odd),
+    )
 end
 
 """
@@ -275,7 +294,9 @@ expectation using [`star_expectation_simple`](@ref). The dense
 """
 function pxp_energy_density_simple(psi::SquareIPEPSState)::Float64
     Hstar = square_pxp_star_hamiltonian()
-    value = sum(star_expectation_simple(psi, c, Hstar) for c in psi.unitcell.reps) / length(psi.unitcell.reps)
+    value =
+        sum(star_expectation_simple(psi, c, Hstar) for c in psi.unitcell.reps) /
+        length(psi.unitcell.reps)
     return _real_expectation(value)
 end
 

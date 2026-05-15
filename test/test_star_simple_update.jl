@@ -24,7 +24,7 @@ function _site_amplitudes_d1(psi, c)
     p = physical_index(psi, c)
     T = psi.tensors[wrap(psi.unitcell, c)]
     others = filter(!=(p), inds(T))
-    return [T[p => value, (i => 1 for i in others)...] for value in 1:2]
+    return [T[p=>value, (i=>1 for i in others)...] for value = 1:2]
 end
 
 function _local_density_d1_testhelper(psi, c)
@@ -39,9 +39,9 @@ function _dense_star_state_d1_testhelper(psi, center)
     sites = (coords.center, coords.right, coords.up, coords.left, coords.down)
     amplitudes = [_site_amplitudes_d1(psi, c) for c in sites]
     state = zeros(ComplexF64, 2^SQUARE_STAR_SITES)
-    for values in Iterators.product((1:2 for _ in 1:SQUARE_STAR_SITES)...)
+    for values in Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
         idx = _dense_square_star_index_test(values)
-        state[idx] = prod(amplitudes[i][values[i]] for i in 1:SQUARE_STAR_SITES)
+        state[idx] = prod(amplitudes[i][values[i]] for i = 1:SQUARE_STAR_SITES)
     end
     return state
 end
@@ -97,6 +97,9 @@ end
     psi = product_square_ipeps(PeriodicSquareUnitCell(10, 10); state = :down, maxdim = 1)
     info = project_star!(psi, SquareCoord(5, 5), 0.0; maxdim = 1)
     @test info isa StarUpdateInfo
+
+    @test_throws ArgumentError project_star!(psi, SquareCoord(5, 5), Inf)
+    @test_throws ArgumentError project_star!(psi, SquareCoord(5, 5), NaN)
 end
 
 @testset "invalid split order" begin
@@ -181,8 +184,11 @@ end
     c = SquareCoord(5, 5)
     infos = StarUpdateInfo[]
 
-    for _ in 1:10
-        push!(infos, project_star!(psi, c, 0.01; evolution = :real, projected = true, maxdim = 1))
+    for _ = 1:10
+        push!(
+            infos,
+            project_star!(psi, c, 0.01; evolution = :real, projected = true, maxdim = 1),
+        )
         _assert_finite_star_update_state_test(psi, infos)
     end
 end
@@ -197,8 +203,22 @@ end
     weights_before = deepcopy(psi.link_weights)
     affected_sites = _star_site_set_test(cell, centers)
 
-    info1 = project_star!(psi, centers[1], 0.02; evolution = :real, projected = true, maxdim = 1)
-    info2 = project_star!(psi, centers[2], 0.02; evolution = :real, projected = true, maxdim = 1)
+    info1 = project_star!(
+        psi,
+        centers[1],
+        0.02;
+        evolution = :real,
+        projected = true,
+        maxdim = 1,
+    )
+    info2 = project_star!(
+        psi,
+        centers[2],
+        0.02;
+        evolution = :real,
+        projected = true,
+        maxdim = 1,
+    )
 
     _assert_finite_star_update_state_test(psi, [info1, info2])
     for (bond, lambda_before) in weights_before
@@ -233,13 +253,21 @@ end
     actual_reordered = _normalized_dense_star_state_d1_testhelper(psi_reordered, center)
     _assert_dense_states_equivalent_test(actual_reordered, expected)
     _assert_dense_states_equivalent_test(actual_reordered, actual_default)
-    @test _local_density_d1_testhelper(psi_reordered, center) ≈ sin(dt)^2 atol = 1e-10 rtol = 1e-8
+    @test _local_density_d1_testhelper(psi_reordered, center) ≈ sin(dt)^2 atol = 1e-10 rtol =
+        1e-8
     _assert_finite_star_update_state_test(psi_reordered, [info])
 end
 
 @testset "invalid update after valid update does not partially corrupt state" begin
     psi = product_square_ipeps(PeriodicSquareUnitCell(10, 10); state = :down, maxdim = 1)
-    project_star!(psi, SquareCoord(5, 5), 0.03; evolution = :real, projected = true, maxdim = 1)
+    project_star!(
+        psi,
+        SquareCoord(5, 5),
+        0.03;
+        evolution = :real,
+        projected = true,
+        maxdim = 1,
+    )
     weights_before = deepcopy(psi.link_weights)
     density_before = density_simple(psi)
     blockade_before = blockade_violation_simple(psi)
@@ -268,5 +296,31 @@ end
     for lambda in values(psi.link_weights)
         @test isfinite(norm(lambda))
         @test norm(lambda) ≈ 1 atol = 1e-12
+    end
+end
+
+@testset "repeated D=2 star updates stay finite and normalized" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    c = SquareCoord(5, 5)
+    infos = StarUpdateInfo[]
+
+    for _ = 1:3
+        push!(
+            infos,
+            project_star!(psi, c, 0.01; evolution = :real, projected = true, maxdim = 2),
+        )
+        _assert_finite_star_update_state_test(psi, infos)
+        summary = measure_simple(psi)
+        @test all(
+            isfinite,
+            (
+                summary.density,
+                summary.blockade_violation,
+                summary.pxp_energy_density,
+                summary.mean_bond_entropy,
+                summary.max_bond_entropy,
+            ),
+        )
     end
 end

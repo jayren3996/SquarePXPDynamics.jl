@@ -59,7 +59,8 @@ function _lambda_vector(maxdim::Int)
 end
 
 function _validate_link_direction(dir::Symbol)
-    dir in (:right, :up, :left, :down) || throw(ArgumentError("direction must be :right, :up, :left, or :down"))
+    dir in (:right, :up, :left, :down) ||
+        throw(ArgumentError("direction must be :right, :up, :left, or :down"))
     return dir
 end
 
@@ -98,7 +99,7 @@ function _product_square_ipeps(cell::PeriodicSquareUnitCell, state_at; maxdim::I
         up = links[(c, :up)]
         down = links[(c, :down)]
         tensor = ITensor(ComplexF64, p, left, right, up, down)
-        tensor[p => state_at(c), left => 1, right => 1, up => 1, down => 1] = 1.0 + 0.0im
+        tensor[p=>state_at(c), left=>1, right=>1, up=>1, down=>1] = 1.0 + 0.0im
         tensors[c] = tensor
     end
 
@@ -112,7 +113,11 @@ Construct a periodic square iPEPS product state on `cell` using physical basis
 `:up` as index `1` and `:down` as index `2`. Neighboring representatives share
 virtual `Index` objects, so `cell.Lx` and `cell.Ly` must both be at least `2`.
 """
-function product_square_ipeps(cell::PeriodicSquareUnitCell; state::Symbol = :down, maxdim::Integer = 1)
+function product_square_ipeps(
+    cell::PeriodicSquareUnitCell;
+    state::Symbol = :down,
+    maxdim::Integer = 1,
+)
     basis = _basis_value(state)
     return _product_square_ipeps(cell, Returns(basis); maxdim)
 end
@@ -123,8 +128,13 @@ end
 Construct a periodic square iPEPS checkerboard product state. Even parity is
 defined by `iseven(c.x + c.y)`; excited sites use physical basis index `1`.
 """
-function checkerboard_square_ipeps(cell::PeriodicSquareUnitCell; excited_on::Symbol = :even, maxdim::Integer = 1)
-    excited_on === :even || excited_on === :odd ||
+function checkerboard_square_ipeps(
+    cell::PeriodicSquareUnitCell;
+    excited_on::Symbol = :even,
+    maxdim::Integer = 1,
+)
+    excited_on === :even ||
+        excited_on === :odd ||
         throw(ArgumentError("excited_on must be :even or :odd"))
 
     function state_at(c::SquareCoord)
@@ -142,7 +152,8 @@ end
 Return the physical ITensors index for coordinate `c`, after wrapping `c` into
 the iPEPS unit cell.
 """
-physical_index(psi::SquareIPEPSState, c::SquareCoord) = psi.physical_indices[wrap(psi.unitcell, c)]
+physical_index(psi::SquareIPEPSState, c::SquareCoord) =
+    psi.physical_indices[wrap(psi.unitcell, c)]
 
 """
     link_index(psi::SquareIPEPSState, c, dir)
@@ -163,16 +174,27 @@ neighbor bond from coordinate `c` in direction `dir`.
 """
 function link_weight(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol)
     _validate_link_direction(dir)
-    return copy(psi.link_weights[bondkey(psi.unitcell, c, dir)])
+    return copy(_validated_link_weight(psi, c, dir))
 end
 
-function _validate_link_weight_values(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol, values)
-    length(values) == dim(link_index(psi, c, dir)) ||
-        throw(ArgumentError("link weight length must match the corresponding link index dimension"))
+function _validate_link_weight_values(link::Index, values)
+    length(values) == dim(link) || throw(
+        ArgumentError(
+            "link weight length must match the corresponding link index dimension",
+        ),
+    )
     all(isfinite, values) || throw(ArgumentError("link weights must be finite"))
     all(x -> x >= 0, values) || throw(ArgumentError("link weights must be nonnegative"))
     any(!iszero, values) || throw(ArgumentError("link weights must not all be zero"))
     return Float64.(values)
+end
+
+function _validated_link_weight(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol)
+    link = link_index(psi, c, dir)
+    return _validate_link_weight_values(
+        link,
+        psi.link_weights[bondkey(psi.unitcell, c, dir)],
+    )
 end
 
 """
@@ -182,9 +204,15 @@ Replace the simple-update link-weight vector on the periodic nearest-neighbor
 bond from `c` in `dir`. Values must match the link dimension, be finite,
 nonnegative, and not all zero. The stored vector is copied.
 """
-function set_link_weight!(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol, values::AbstractVector{<:Real})
+function set_link_weight!(
+    psi::SquareIPEPSState,
+    c::SquareCoord,
+    dir::Symbol,
+    values::AbstractVector{<:Real},
+)
     _validate_link_direction(dir)
-    psi.link_weights[bondkey(psi.unitcell, c, dir)] = _validate_link_weight_values(psi, c, dir, values)
+    psi.link_weights[bondkey(psi.unitcell, c, dir)] =
+        _validate_link_weight_values(link_index(psi, c, dir), values)
     return psi
 end
 
@@ -197,29 +225,44 @@ link index for `(c, dir)` and its primed copy.
 function link_weight_tensor(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol)
     link = link_index(psi, c, dir)
     lambda = link_weight(psi, c, dir)
-    length(lambda) == dim(link) ||
-        throw(ArgumentError("link weight length must match the corresponding link index dimension"))
+    length(lambda) == dim(link) || throw(
+        ArgumentError(
+            "link weight length must match the corresponding link index dimension",
+        ),
+    )
     tensor = ITensor(ComplexF64, link, prime(link))
     for i in eachindex(lambda)
-        tensor[link => i, prime(link) => i] = lambda[i]
+        tensor[link=>i, prime(link)=>i] = lambda[i]
     end
     return tensor
 end
 
 function _link_weight_tensor_from_values(link::Index, values::AbstractVector{<:Real})
-    length(values) == dim(link) ||
-        throw(ArgumentError("link weight length must match the corresponding link index dimension"))
+    length(values) == dim(link) || throw(
+        ArgumentError(
+            "link weight length must match the corresponding link index dimension",
+        ),
+    )
     tensor = ITensor(ComplexF64, link, prime(link))
     for i in eachindex(values)
-        tensor[link => i, prime(link) => i] = values[i]
+        tensor[link=>i, prime(link)=>i] = values[i]
     end
     return tensor
 end
 
-function _apply_link_weight_values(T::ITensor, psi::SquareIPEPSState, c::SquareCoord, dir::Symbol, values)
+function _apply_link_weight_values(
+    T::ITensor,
+    psi::SquareIPEPSState,
+    c::SquareCoord,
+    dir::Symbol,
+    values,
+)
     link = link_index(psi, c, dir)
-    hasind(T, link) ||
-        throw(ArgumentError("tensor does not contain the virtual link index for direction $dir at coordinate $c"))
+    hasind(T, link) || throw(
+        ArgumentError(
+            "tensor does not contain the virtual link index for direction $dir at coordinate $c",
+        ),
+    )
     scaled = T * _link_weight_tensor_from_values(link, values)
     return permute(replaceind(scaled, prime(link), link), inds(T))
 end
@@ -231,7 +274,12 @@ Multiply tensor `T` by the diagonal simple-update link weight on the virtual
 leg `(c, dir)`. The returned tensor preserves the original indices and index
 ordering of `T`.
 """
-function absorb_link_weight(T::ITensor, psi::SquareIPEPSState, c::SquareCoord, dir::Symbol)::ITensor
+function absorb_link_weight(
+    T::ITensor,
+    psi::SquareIPEPSState,
+    c::SquareCoord,
+    dir::Symbol,
+)::ITensor
     return _apply_link_weight_values(T, psi, c, dir, link_weight(psi, c, dir))
 end
 
@@ -249,8 +297,10 @@ function deabsorb_link_weight(
     dir::Symbol;
     atol = 1e-14,
 )::ITensor
-    atol >= 0 || throw(ArgumentError("atol must be nonnegative"))
-    inverse = map(lambda -> abs(lambda) <= atol ? 0.0 : inv(lambda), link_weight(psi, c, dir))
+    isfinite(atol) && atol >= 0 ||
+        throw(ArgumentError("atol must be finite and nonnegative"))
+    inverse =
+        map(lambda -> abs(lambda) <= atol ? 0.0 : inv(lambda), link_weight(psi, c, dir))
     return _apply_link_weight_values(T, psi, c, dir, inverse)
 end
 
@@ -285,7 +335,8 @@ end
 Return `weight_entropy(link_weight(psi, c, dir))` for the periodic
 nearest-neighbor bond from `c` in direction `dir`.
 """
-bond_entropy(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol) = weight_entropy(link_weight(psi, c, dir))
+bond_entropy(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol) =
+    weight_entropy(link_weight(psi, c, dir))
 
 """
     all_bond_entropies(psi)
@@ -298,7 +349,8 @@ function all_bond_entropies(psi::SquareIPEPSState)
 end
 
 function _square_star_dense_index(values)
-    length(values) == SQUARE_STAR_SITES || throw(ArgumentError("square-star basis value tuple must have 5 sites"))
+    length(values) == SQUARE_STAR_SITES ||
+        throw(ArgumentError("square-star basis value tuple must have 5 sites"))
     idx = 1
     for (site, value) in enumerate(values)
         1 <= value <= 2 || throw(ArgumentError("square-star basis values must be 1 or 2"))
@@ -309,9 +361,13 @@ end
 
 function _square_star_indices(site_indices)
     sites = collect(site_indices)
-    length(sites) == SQUARE_STAR_SITES ||
-        throw(ArgumentError("square-star gate requires 5 physical indices in (center, right, up, left, down) order"))
-    all(i -> dim(i) == 2, sites) || throw(ArgumentError("square-star physical indices must all have dimension 2"))
+    length(sites) == SQUARE_STAR_SITES || throw(
+        ArgumentError(
+            "square-star gate requires 5 physical indices in (center, right, up, left, down) order",
+        ),
+    )
+    all(i -> dim(i) == 2, sites) ||
+        throw(ArgumentError("square-star physical indices must all have dimension 2"))
     return sites
 end
 
@@ -322,10 +378,10 @@ function _square_star_gate_itensor(dense_gate::AbstractMatrix, site_indices)
     out = prime.(sites)
     data = zeros(ComplexF64, ntuple(Returns(2), 2 * SQUARE_STAR_SITES))
 
-    basis_values = Iterators.product((1:2 for _ in 1:SQUARE_STAR_SITES)...)
+    basis_values = Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
     for out_values in basis_values
         out_idx = _square_star_dense_index(out_values)
-        for in_values in Iterators.product((1:2 for _ in 1:SQUARE_STAR_SITES)...)
+        for in_values in Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
             in_idx = _square_star_dense_index(in_values)
             data[out_values..., in_values...] = dense_gate[out_idx, in_idx]
         end
@@ -340,9 +396,24 @@ end
 Wrap `square_pxp_gate(step; evolution)` as an ITensor with primed output
 indices followed by unprimed input indices. `site_indices` must contain five
 dimension-2 indices in dense square-star order `(center, right, up, left, down)`.
+
+Example:
+
+```julia
+sites = (center, right, up, left, down)
+gate = square_pxp_gate_itensor(sites, 0.01; evolution = :real)
+```
 """
 function square_pxp_gate_itensor(site_indices, step::Real; evolution::Symbol = :real)
     return _square_star_gate_itensor(square_pxp_gate(step; evolution), site_indices)
+end
+
+function square_pxp_gate_itensor(
+    step::Real,
+    site_indices::Union{Tuple,AbstractVector};
+    evolution::Symbol = :real,
+)
+    return square_pxp_gate_itensor(site_indices, step; evolution)
 end
 
 """
@@ -351,9 +422,31 @@ end
 Wrap `projected_square_pxp_gate(step; evolution)` as an ITensor with primed
 output indices followed by unprimed input indices. `site_indices` must be in
 dense square-star order `(center, right, up, left, down)`.
+
+Example:
+
+```julia
+sites = (center, right, up, left, down)
+gate = projected_square_pxp_gate_itensor(sites, 0.01; evolution = :real)
+```
 """
-function projected_square_pxp_gate_itensor(site_indices, step::Real; evolution::Symbol = :real)
-    return _square_star_gate_itensor(projected_square_pxp_gate(step; evolution), site_indices)
+function projected_square_pxp_gate_itensor(
+    site_indices,
+    step::Real;
+    evolution::Symbol = :real,
+)
+    return _square_star_gate_itensor(
+        projected_square_pxp_gate(step; evolution),
+        site_indices,
+    )
+end
+
+function projected_square_pxp_gate_itensor(
+    step::Real,
+    site_indices::Union{Tuple,AbstractVector};
+    evolution::Symbol = :real,
+)
+    return projected_square_pxp_gate_itensor(site_indices, step; evolution)
 end
 
 end

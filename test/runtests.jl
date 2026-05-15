@@ -12,6 +12,7 @@ using SquarePXPDynamics
     include("test_star_simple_update.jl")
     include("test_ipeps_evolution.jl")
     include("test_observables_evolved.jl")
+    include("test_pepskit_measurements.jl")
     include("test_scarfinder.jl")
     include("test_public_docs.jl")
     include("test_aqua.jl")

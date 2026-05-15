@@ -81,7 +81,7 @@ Site numbering is one-based and follows the left-to-right tensor-product order.
 function embed_one_site(op::AbstractMatrix, site::Integer, nsites::Integer)
     size(op) == (2, 2) || throw(ArgumentError("op must be 2x2"))
     1 <= site <= nsites || throw(ArgumentError("site must be in 1:nsites"))
-    return kron_all([i == site ? op : identity2() for i in 1:nsites])
+    return kron_all([i == site ? op : identity2() for i = 1:nsites])
 end
 
 end

@@ -48,7 +48,8 @@ end
 
 Return the dense square-star sites in the convention `(center, right, up, left, down)`.
 """
-square_star_sites(c::SquareCoord) = (c, (square_neighbor(c, d) for d in SQUARE_DIRECTIONS)...)
+square_star_sites(c::SquareCoord) =
+    (c, (square_neighbor(c, d) for d in SQUARE_DIRECTIONS)...)
 
 """
     square_star_color(c)
@@ -97,7 +98,7 @@ struct FiveSiteSquareUC <: SquareUnitCell end
 Return representative coordinates for a square unit-cell convention.
 """
 unit_cell_representatives(::OneSiteSquareUC) = [SquareCoord(0, 0)]
-unit_cell_representatives(::FiveSiteSquareUC) = [SquareCoord(k, 0) for k in 0:4]
+unit_cell_representatives(::FiveSiteSquareUC) = [SquareCoord(k, 0) for k = 0:4]
 
 """
     wrap_square_coord(unit_cell, c)
@@ -105,6 +106,7 @@ unit_cell_representatives(::FiveSiteSquareUC) = [SquareCoord(k, 0) for k in 0:4]
 Map a square-lattice coordinate to its unit-cell representative.
 """
 wrap_square_coord(::OneSiteSquareUC, c::SquareCoord) = SquareCoord(0, 0)
-wrap_square_coord(::FiveSiteSquareUC, c::SquareCoord) = SquareCoord(square_star_color(c) - 1, 0)
+wrap_square_coord(::FiveSiteSquareUC, c::SquareCoord) =
+    SquareCoord(square_star_color(c) - 1, 0)
 
 end

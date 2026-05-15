@@ -10,21 +10,23 @@ end
 
 function _itensor_gate_entry(G, sites, out_values, in_values)
     out = prime.(sites)
-    return G[(out[i] => out_values[i] for i in eachindex(sites))...,
-             (sites[i] => in_values[i] for i in eachindex(sites))...]
+    return G[
+        (out[i]=>out_values[i] for i in eachindex(sites))...,
+        (sites[i]=>in_values[i] for i in eachindex(sites))...,
+    ]
 end
 
 function _itensor_basis_ket(sites, values)
     ket = ITensor(ComplexF64, sites...)
-    ket[(sites[i] => values[i] for i in eachindex(sites))...] = 1.0
+    ket[(sites[i]=>values[i] for i in eachindex(sites))...] = 1.0
     return ket
 end
 
 function _dense_from_itensor_gate(G, sites)
     dense = zeros(ComplexF64, 2^SQUARE_STAR_SITES, 2^SQUARE_STAR_SITES)
-    for out_values in Iterators.product((1:2 for _ in 1:SQUARE_STAR_SITES)...)
+    for out_values in Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
         out_idx = _dense_square_star_index(out_values)
-        for in_values in Iterators.product((1:2 for _ in 1:SQUARE_STAR_SITES)...)
+        for in_values in Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
             in_idx = _dense_square_star_index(in_values)
             dense[out_idx, in_idx] = _itensor_gate_entry(G, sites, out_values, in_values)
         end
@@ -47,8 +49,9 @@ function _filled_site_tensor(psi, c)
     up = link_index(psi, c, :up)
     down = link_index(psi, c, :down)
     T = ITensor(ComplexF64, p, left, right, up, down)
-    for pv in 1:dim(p), lv in 1:dim(left), rv in 1:dim(right), uv in 1:dim(up), dv in 1:dim(down)
-        T[p => pv, left => lv, right => rv, up => uv, down => dv] =
+    for pv = 1:dim(p), lv = 1:dim(left), rv = 1:dim(right), uv = 1:dim(up), dv = 1:dim(down)
+
+        T[p=>pv, left=>lv, right=>rv, up=>uv, down=>dv] =
             complex(100pv + 10lv + rv, 10uv + dv)
     end
     return T
@@ -79,8 +82,8 @@ end
         link = link_index(psi, c, dir)
         Lambda = link_weight_tensor(psi, c, dir)
         @test inds(Lambda) == (link, prime(link))
-        for i in 1:dim(link), j in 1:dim(link)
-            @test Lambda[link => i, prime(link) => j] == (i == j ? values[i] : 0.0)
+        for i = 1:dim(link), j = 1:dim(link)
+            @test Lambda[link=>i, prime(link)=>j] == (i == j ? values[i] : 0.0)
         end
     end
 
@@ -90,6 +93,15 @@ end
     @test_throws ArgumentError set_link_weight!(psi, c, :right, [1.0, Inf])
 
     psi.link_weights[bondkey(cell, c, :right)] = [1.0]
+    @test_throws ArgumentError link_weight(psi, c, :right)
+    @test_throws ArgumentError link_weight_tensor(psi, c, :right)
+
+    psi.link_weights[bondkey(cell, c, :right)] = [NaN, 0.0]
+    @test_throws ArgumentError link_weight(psi, c, :right)
+    @test_throws ArgumentError link_weight_tensor(psi, c, :right)
+
+    psi.link_weights[bondkey(cell, c, :right)] = [0.0, 0.0]
+    @test_throws ArgumentError link_weight(psi, c, :right)
     @test_throws ArgumentError link_weight_tensor(psi, c, :right)
 end
 
@@ -115,13 +127,22 @@ end
     right = link_index(psi, c, :right)
     up = link_index(psi, c, :up)
     down = link_index(psi, c, :down)
-    for pv in 1:dim(p), lv in 1:dim(left), rv in 1:dim(right), uv in 1:dim(up), dv in 1:dim(down)
-        expected[p => pv, left => lv, right => rv, up => uv, down => dv] =
-            rv == 1 ? T[p => pv, left => lv, right => rv, up => uv, down => dv] / 2 : 0.0
+    for pv = 1:dim(p), lv = 1:dim(left), rv = 1:dim(right), uv = 1:dim(up), dv = 1:dim(down)
+
+        expected[p=>pv, left=>lv, right=>rv, up=>uv, down=>dv] =
+            rv == 1 ? T[p=>pv, left=>lv, right=>rv, up=>uv, down=>dv] / 2 : 0.0
     end
     @test norm(deabsorbed - expected) < 1e-12
 
-    @test_throws ArgumentError absorb_link_weight(ITensor(physical_index(psi, c)), psi, c, :right)
+    @test_throws ArgumentError deabsorb_link_weight(T, psi, c, :right; atol = Inf)
+    @test_throws ArgumentError deabsorb_link_weight(T, psi, c, :right; atol = NaN)
+
+    @test_throws ArgumentError absorb_link_weight(
+        ITensor(physical_index(psi, c)),
+        psi,
+        c,
+        :right,
+    )
 end
 
 @testset "link weight entropy diagnostics" begin
@@ -131,7 +152,9 @@ end
 
     @test weight_entropy([1.0, 0.0]) ≈ 0.0
     @test weight_entropy([1.0, 1.0]) ≈ log(2)
+    @test_throws ArgumentError weight_entropy(Float64[])
     @test_throws ArgumentError weight_entropy([-1.0, 1.0])
+    @test_throws ArgumentError weight_entropy([1.0, Inf])
     @test_throws ArgumentError weight_entropy([0.0, 0.0])
 
     set_link_weight!(psi, c, :up, [1 / sqrt(2), 1 / sqrt(2)])
@@ -148,25 +171,68 @@ end
     t = 0.17
 
     for (G, dense) in (
-        (square_pxp_gate_itensor(sites, t; evolution = :real),
-         square_pxp_gate(t; evolution = :real)),
-        (projected_square_pxp_gate_itensor(sites, t; evolution = :imaginary),
-         projected_square_pxp_gate(t; evolution = :imaginary)),
+        (
+            square_pxp_gate_itensor(sites, t; evolution = :real),
+            square_pxp_gate(t; evolution = :real),
+        ),
+        (
+            projected_square_pxp_gate_itensor(sites, t; evolution = :imaginary),
+            projected_square_pxp_gate(t; evolution = :imaginary),
+        ),
     )
         @test inds(G) == (prime.(sites)..., sites...)
         @test _dense_from_itensor_gate(G, sites) ≈ dense
-        for in_values in Iterators.product((1:2 for _ in 1:SQUARE_STAR_SITES)...)
+        for in_values in Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
             in_idx = _dense_square_star_index(in_values)
             out_tensor = G * _itensor_basis_ket(sites, in_values)
-            for out_values in Iterators.product((1:2 for _ in 1:SQUARE_STAR_SITES)...)
+            for out_values in Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
                 out_idx = _dense_square_star_index(out_values)
                 out = prime.(sites)
-                @test out_tensor[(out[i] => out_values[i] for i in eachindex(sites))...] ≈ dense[out_idx, in_idx]
+                @test out_tensor[(out[i]=>out_values[i] for i in eachindex(sites))...] ≈
+                      dense[out_idx, in_idx]
             end
         end
     end
 
+    @test _dense_from_itensor_gate(
+        square_pxp_gate_itensor(t, sites; evolution = :real),
+        sites,
+    ) ≈ square_pxp_gate(t; evolution = :real)
+    @test _dense_from_itensor_gate(
+        projected_square_pxp_gate_itensor(t, sites; evolution = :imaginary),
+        sites,
+    ) ≈ projected_square_pxp_gate(t; evolution = :imaginary)
+    @test _dense_from_itensor_gate(
+        square_pxp_gate_itensor(t, sites; evolution = :real),
+        sites,
+    ) ≈ _dense_from_itensor_gate(
+        square_pxp_gate_itensor(sites, t; evolution = :real),
+        sites,
+    )
+    @test _dense_from_itensor_gate(
+        projected_square_pxp_gate_itensor(t, sites; evolution = :imaginary),
+        sites,
+    ) ≈ _dense_from_itensor_gate(
+        projected_square_pxp_gate_itensor(sites, t; evolution = :imaginary),
+        sites,
+    )
+
     @test_throws ArgumentError square_pxp_gate_itensor(sites[1:4], t)
-    @test_throws ArgumentError square_pxp_gate_itensor([Index(3, "bad"), sites[2:end]...], t)
+    @test_throws ArgumentError square_pxp_gate_itensor(
+        [Index(3, "bad"), sites[2:end]...],
+        t,
+    )
     @test_throws ArgumentError square_pxp_gate_itensor(sites, t; evolution = :thermal)
+    @test_throws ArgumentError square_pxp_gate_itensor(sites, Inf; evolution = :real)
+    @test_throws ArgumentError square_pxp_gate_itensor(sites, NaN; evolution = :real)
+    @test_throws ArgumentError projected_square_pxp_gate_itensor(
+        sites,
+        Inf;
+        evolution = :real,
+    )
+    @test_throws ArgumentError projected_square_pxp_gate_itensor(
+        sites,
+        NaN;
+        evolution = :real,
+    )
 end

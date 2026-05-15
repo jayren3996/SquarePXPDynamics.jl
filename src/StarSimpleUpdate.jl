@@ -49,21 +49,33 @@ function _validate_cutoff(cutoff::Real)
     return value
 end
 
+function _validate_step(step::Real)
+    isfinite(step) || throw(ArgumentError("step must be finite"))
+    return step
+end
+
 function _validate_split_order(split_order)
     order_values = try
         collect(split_order)
     catch
-        throw(ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"))
+        throw(
+            ArgumentError(
+                "split_order must be a permutation of (:right, :up, :left, :down)",
+            ),
+        )
     end
-    all(dir -> dir isa Symbol, order_values) ||
-        throw(ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"))
+    all(dir -> dir isa Symbol, order_values) || throw(
+        ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"),
+    )
     order = Tuple(order_values)
     length(order) == length(_STAR_DIRECTIONS) ||
         throw(ArgumentError("split_order must contain four directions"))
-    all(dir -> dir in _STAR_DIRECTIONS, order) ||
-        throw(ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"))
-    Set(order) == Set(_STAR_DIRECTIONS) ||
-        throw(ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"))
+    all(dir -> dir in _STAR_DIRECTIONS, order) || throw(
+        ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"),
+    )
+    Set(order) == Set(_STAR_DIRECTIONS) || throw(
+        ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"),
+    )
     return order
 end
 
@@ -82,8 +94,11 @@ end
 function _validate_distinct_star!(psi::SquareIPEPSState, center::SquareCoord)
     coords = _star_coords(psi, center)
     distinct = Set((coords.center, coords.right, coords.up, coords.left, coords.down))
-    length(distinct) == SQUARE_STAR_SITES ||
-        throw(ArgumentError("wrapped square star must contain five distinct unit-cell representatives"))
+    length(distinct) == SQUARE_STAR_SITES || throw(
+        ArgumentError(
+            "wrapped square star must contain five distinct unit-cell representatives",
+        ),
+    )
     return coords
 end
 
@@ -123,7 +138,13 @@ end
 
 function _site_order_indices(psi::SquareIPEPSState, c::SquareCoord, links_by_dir)
     p = physical_index(psi, c)
-    return (p, links_by_dir[:left], links_by_dir[:right], links_by_dir[:up], links_by_dir[:down])
+    return (
+        p,
+        links_by_dir[:left],
+        links_by_dir[:right],
+        links_by_dir[:up],
+        links_by_dir[:down],
+    )
 end
 
 function _singular_values_from_S(S)::Vector{Float64}
@@ -132,10 +153,41 @@ function _singular_values_from_S(S)::Vector{Float64}
     left, right = sinds
     n = min(dim(left), dim(right))
     values = Vector{Float64}(undef, n)
-    for i in 1:n
-        values[i] = abs(S[left => i, right => i])
+    for i = 1:n
+        values[i] = abs(S[left=>i, right=>i])
     end
     return values
+end
+
+function _normalized_link_weight_from_singular_values(svals::Vector{Float64})
+    !isempty(svals) ||
+        throw(ArgumentError("empty singular spectrum encountered during star split"))
+    all(isfinite, svals) ||
+        throw(ArgumentError("singular values must be finite during star split"))
+    all(>=(0), svals) ||
+        throw(ArgumentError("singular values must be nonnegative during star split"))
+
+    scale = norm(svals)
+    isfinite(scale) && scale > 0 || throw(
+        ArgumentError("zero or non-finite singular spectrum encountered during star split"),
+    )
+
+    lambda = svals ./ scale
+    all(isfinite, lambda) ||
+        throw(ArgumentError("normalized link weights must be finite during star split"))
+    isapprox(norm(lambda), 1; atol = 1e-12, rtol = 1e-12) ||
+        throw(ArgumentError("normalized link weights must have unit norm"))
+    return lambda, scale
+end
+
+function _validate_split_diagnostic(truncerr::Real, min_lambda::Real, norm_factor::Real)
+    isfinite(truncerr) && truncerr >= 0 ||
+        throw(ArgumentError("truncation error must be finite and nonnegative"))
+    isfinite(min_lambda) && min_lambda >= 0 ||
+        throw(ArgumentError("minimum link weight must be finite and nonnegative"))
+    isfinite(norm_factor) && norm_factor > 0 ||
+        throw(ArgumentError("star split norm factor must be finite and positive"))
+    return nothing
 end
 
 function _new_link_index(center::SquareCoord, dir::Symbol, keptdim::Int)
@@ -186,8 +238,9 @@ function _assert_reduced_theta(theta::ITensor, psi::SquareIPEPSState, coords, ph
     for dir in _STAR_DIRECTIONS
         leaf = getproperty(coords, dir)
         for ext in _external_dirs_for_leaf(dir)
-            hasind(theta, link_index(psi, leaf, ext)) &&
-                error("reduced star core unexpectedly contains external virtual leg $ext for $dir leaf")
+            hasind(theta, link_index(psi, leaf, ext)) && error(
+                "reduced star core unexpectedly contains external virtual leg $ext for $dir leaf",
+            )
         end
         hasind(theta, qinds[dir]) ||
             error("reduced star core is missing QR index for $dir leaf")
@@ -198,7 +251,15 @@ function _assert_reduced_theta(theta::ITensor, psi::SquareIPEPSState, coords, ph
     return nothing
 end
 
-function _split_reduced_theta(theta::ITensor, psi::SquareIPEPSState, coords, qinds, split_order, maxdim, cutoff)
+function _split_reduced_theta(
+    theta::ITensor,
+    psi::SquareIPEPSState,
+    coords,
+    qinds,
+    split_order,
+    maxdim,
+    cutoff,
+)
     leaf_active = Dict{Symbol,ITensor}()
     new_links = Dict{Symbol,Index}()
     new_weights = Dict{Symbol,Vector{Float64}}()
@@ -214,20 +275,20 @@ function _split_reduced_theta(theta::ITensor, psi::SquareIPEPSState, coords, qin
         q_leaf = qinds[dir]
         U, S, V, spec, u, v = svd(core, p_leaf, q_leaf; maxdim = maxdim, cutoff = cutoff)
         svals = _singular_values_from_S(S)
-        scale = norm(svals)
-        scale > 0 || throw(ArgumentError("zero singular spectrum encountered during star split"))
-
-        lambda_new = svals ./ scale
+        lambda_new, scale = _normalized_link_weight_from_singular_values(svals)
         keptdim = length(lambda_new)
         new_link = _new_link_index(coords.center, dir, keptdim)
+        truncerr = Float64(spec.truncerr)
+        lambda_min = minimum(lambda_new)
+        _validate_split_diagnostic(truncerr, lambda_min, scale)
 
         leaf_active[dir] = replaceind(U, u, new_link)
         core = replaceind(V, v, new_link) * scale
         new_links[dir] = new_link
         new_weights[dir] = lambda_new
-        truncerrs[dir] = Float64(spec.truncerr)
+        truncerrs[dir] = truncerr
         keptdims[dir] = keptdim
-        min_lambda[dir] = minimum(lambda_new)
+        min_lambda[dir] = lambda_min
         norm_factors[dir] = scale
     end
 
@@ -243,7 +304,14 @@ function _split_reduced_theta(theta::ITensor, psi::SquareIPEPSState, coords, qin
     return core, leaf_active, new_links, new_weights, info
 end
 
-function _reconstruct_leaf(psi::SquareIPEPSState, coords, dir::Symbol, Q, leaf_active, new_link)
+function _reconstruct_leaf(
+    psi::SquareIPEPSState,
+    coords,
+    dir::Symbol,
+    Q,
+    leaf_active,
+    new_link,
+)
     leaf = getproperty(coords, dir)
     T = Q * leaf_active
     for ext in _external_dirs_for_leaf(dir)
@@ -253,7 +321,8 @@ function _reconstruct_leaf(psi::SquareIPEPSState, coords, dir::Symbol, Q, leaf_a
     links_by_dir = Dict{Symbol,Index}()
     for site_dir in _STAR_DIRECTIONS
         links_by_dir[site_dir] =
-            site_dir === _center_dir_for_leaf(dir) ? new_link : link_index(psi, leaf, site_dir)
+            site_dir === _center_dir_for_leaf(dir) ? new_link :
+            link_index(psi, leaf, site_dir)
     end
     return permute(T, _site_order_indices(psi, leaf, links_by_dir)...)
 end
@@ -263,7 +332,13 @@ function _reconstruct_center(psi::SquareIPEPSState, coords, core, new_links)
     return permute(core, _site_order_indices(psi, coords.center, links_by_dir)...)
 end
 
-function _commit_star_update!(psi::SquareIPEPSState, coords, new_tensors, new_links, new_weights)
+function _commit_star_update!(
+    psi::SquareIPEPSState,
+    coords,
+    new_tensors,
+    new_links,
+    new_weights,
+)
     for (site, tensor) in new_tensors
         psi.tensors[site] = tensor
     end
@@ -307,20 +382,28 @@ function project_star!(
     cutoff::Real = 1e-12,
     split_order = _STAR_DIRECTIONS,
 )::StarUpdateInfo
+    finite_step = _validate_step(step)
     kept_maxdim = _validate_maxdim(maxdim)
     trunc_cutoff = _validate_cutoff(cutoff)
     order = _validate_split_order(split_order)
     coords = _validate_distinct_star!(psi, center)
     phys = _star_physical_indices(psi, coords)
 
-    gate = projected ?
-        projected_square_pxp_gate_itensor(phys, step; evolution = evolution) :
-        square_pxp_gate_itensor(phys, step; evolution = evolution)
+    gate =
+        projected ?
+        projected_square_pxp_gate_itensor(phys, finite_step; evolution = evolution) :
+        square_pxp_gate_itensor(phys, finite_step; evolution = evolution)
 
     center_tensor, absorbed_leaves, _ = _absorb_star_weights(psi, coords)
     qfactors, rfactors, qinds = _qr_reduce_leaves(psi, coords, absorbed_leaves)
 
-    theta = gate * center_tensor * rfactors[:right] * rfactors[:up] * rfactors[:left] * rfactors[:down]
+    theta =
+        gate *
+        center_tensor *
+        rfactors[:right] *
+        rfactors[:up] *
+        rfactors[:left] *
+        rfactors[:down]
     theta = noprime(theta)
     _assert_reduced_theta(theta, psi, coords, phys, qinds)
 
@@ -330,8 +413,14 @@ function project_star!(
     new_tensors = Dict{SquareCoord,ITensor}()
     new_tensors[coords.center] = _reconstruct_center(psi, coords, center_core, new_links)
     for dir in _STAR_DIRECTIONS
-        new_tensors[getproperty(coords, dir)] =
-            _reconstruct_leaf(psi, coords, dir, qfactors[dir], leaf_active[dir], new_links[dir])
+        new_tensors[getproperty(coords, dir)] = _reconstruct_leaf(
+            psi,
+            coords,
+            dir,
+            qfactors[dir],
+            leaf_active[dir],
+            new_links[dir],
+        )
     end
 
     _commit_star_update!(psi, coords, new_tensors, new_links, new_weights)

@@ -32,7 +32,7 @@ end
 function _site_grid(width::Integer, height::Integer)
     width >= 1 || throw(ArgumentError("width must be positive"))
     height >= 1 || throw(ArgumentError("height must be positive"))
-    return [SquareCoord(x, y) for y in 1:Int(height) for x in 1:Int(width)]
+    return [SquareCoord(x, y) for y = 1:Int(height) for x = 1:Int(width)]
 end
 
 function _has_site(site_set, c::SquareCoord)
@@ -71,7 +71,12 @@ Construct a finite `width` by `height` square PEPS product state. `state` may be
 `:up` or `:down`, using the convention `|up> = |0>` and `|down> = |1>`.
 Interior links have dimension `maxdim`; open-boundary links have dimension `1`.
 """
-function product_square_peps(width::Integer, height::Integer; state::Symbol = :down, maxdim::Integer = 1)
+function product_square_peps(
+    width::Integer,
+    height::Integer;
+    state::Symbol = :down,
+    maxdim::Integer = 1,
+)
     sites = _site_grid(width, height)
     links = _build_link_indices(sites, maxdim)
     physical = Dict(c => Index(2, "phys,$(c.x),$(c.y)") for c in sites)
@@ -85,8 +90,8 @@ function product_square_peps(width::Integer, height::Integer; state::Symbol = :d
         up = _link_or_boundary(links, c, :up)
         down = _link_or_boundary(links, c, :down)
         tensor = ITensor(ComplexF64, p, left, right, up, down)
-        for s in 1:2
-            tensor[p => s, left => 1, right => 1, up => 1, down => 1] = amplitudes[s]
+        for s = 1:2
+            tensor[p=>s, left=>1, right=>1, up=>1, down=>1] = amplitudes[s]
         end
         tensors[c] = tensor
     end
@@ -113,6 +118,7 @@ physical_index(psi::SquarePEPSState, c::SquareCoord) = psi.physical_indices[c]
 
 Return the nearest-neighbor link index at site `c` in `direction`.
 """
-link_index(psi::SquarePEPSState, c::SquareCoord, direction::Symbol) = psi.link_indices[(c, direction)]
+link_index(psi::SquarePEPSState, c::SquareCoord, direction::Symbol) =
+    psi.link_indices[(c, direction)]
 
 end
