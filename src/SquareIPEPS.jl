@@ -57,6 +57,18 @@ function _basis_value(state::Symbol)
     end
 end
 
+function _product_state_vector(state::Symbol)
+    if state in (:up, :z_up)
+        return ComplexF64[1, 0]
+    elseif state in (:down, :z_down)
+        return ComplexF64[0, 1]
+    elseif state === :x_plus
+        return ComplexF64[inv(sqrt(2)), inv(sqrt(2))]
+    else
+        throw(ArgumentError("state must be :up, :down, :z_up, :z_down, or :x_plus"))
+    end
+end
+
 function _lambda_vector(maxdim::Int)
     lambda = zeros(Float64, maxdim)
     lambda[1] = 1.0
@@ -104,7 +116,16 @@ function _product_square_ipeps(cell::PeriodicSquareUnitCell, state_at; maxdim::I
         up = links[(c, :up)]
         down = links[(c, :down)]
         tensor = ITensor(ComplexF64, p, left, right, up, down)
-        tensor[p=>state_at(c), left=>1, right=>1, up=>1, down=>1] = 1.0 + 0.0im
+        state = state_at(c)
+        if state isa Integer
+            tensor[p=>state, left=>1, right=>1, up=>1, down=>1] = 1.0 + 0.0im
+        else
+            length(state) == 2 ||
+                throw(ArgumentError("product state vector must have length 2"))
+            for s = 1:2
+                tensor[p=>s, left=>1, right=>1, up=>1, down=>1] = state[s]
+            end
+        end
         tensors[c] = tensor
     end
 
@@ -145,7 +166,8 @@ end
     product_square_ipeps(cell; state = :down, maxdim = 1)
 
 Construct a periodic square iPEPS product state on `cell` using physical basis
-`:up` as index `1` and `:down` as index `2`. Neighboring representatives share
+`:up`/`:z_up` as index `1`, `:down`/`:z_down` as index `2`, or `:x_plus`
+as equal amplitudes on both basis states. Neighboring representatives share
 virtual `Index` objects, so `cell.Lx` and `cell.Ly` must both be at least `2`.
 """
 function product_square_ipeps(
@@ -153,8 +175,8 @@ function product_square_ipeps(
     state::Symbol = :down,
     maxdim::Integer = 1,
 )
-    basis = _basis_value(state)
-    return _product_square_ipeps(cell, Returns(basis); maxdim)
+    amplitudes = _product_state_vector(state)
+    return _product_square_ipeps(cell, Returns(amplitudes); maxdim)
 end
 
 """

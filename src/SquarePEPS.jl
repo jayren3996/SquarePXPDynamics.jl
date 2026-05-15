@@ -20,12 +20,14 @@ struct SquarePEPSState
 end
 
 function _state_vector(state::Symbol)
-    if state === :up
+    if state in (:up, :z_up)
         return ComplexF64[1, 0]
-    elseif state === :down
+    elseif state in (:down, :z_down)
         return ComplexF64[0, 1]
+    elseif state === :x_plus
+        return ComplexF64[inv(sqrt(2)), inv(sqrt(2))]
     else
-        throw(ArgumentError("state must be :up or :down"))
+        throw(ArgumentError("state must be :up, :down, :z_up, :z_down, or :x_plus"))
     end
 end
 
@@ -68,8 +70,9 @@ end
     product_square_peps(width, height; state = :down, maxdim = 1)
 
 Construct a finite `width` by `height` square PEPS product state. `state` may be
-`:up` or `:down`, using the convention `|up> = |0>` and `|down> = |1>`.
-Interior links have dimension `maxdim`; open-boundary links have dimension `1`.
+`:up`/`:z_up`, `:down`/`:z_down`, or `:x_plus`, using the convention
+`|up> = |0>` and `|down> = |1>`. Interior links have dimension `maxdim`;
+open-boundary links have dimension `1`.
 """
 function product_square_peps(
     width::Integer,
