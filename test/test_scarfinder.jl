@@ -116,6 +116,81 @@ end
     @test result.accepted_iterations == 2
 end
 
+@testset "ScarFinder simple candidate scores rank without CTM" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = ScarFinderParams(0.01, trotter, 2, Inf, Inf, Inf, false)
+
+    result = scarfinder!(psi, params)
+    ranked = rank_scarfinder_candidates(result; diagnostics = :simple)
+
+    @test length(ranked) == 2
+    @test all(score -> score isa ScarFinderCandidateScore, ranked)
+    @test all(score -> score.diagnostics === :simple, ranked)
+    @test all(score -> isfinite(score.score), ranked)
+    @test all(iteration -> iteration.simple_score.diagnostics === :simple, result.iterations)
+    @test all(iteration -> iteration.ctm_score === nothing, result.iterations)
+end
+
+@testset "ScarFinder CTM callback is optional and scheduled" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = ScarFinderParams(0.0, trotter, 3, Inf, Inf, Inf, false)
+    calls = Int[]
+
+    result = scarfinder!(
+        psi,
+        params;
+        ctm_every = 2,
+        ctm_at_end = true,
+        ctm_callback = (state, iteration, simple_score) -> begin
+            push!(calls, iteration)
+            return measure_simple(state)
+        end,
+    )
+    ranked_ctm = rank_scarfinder_candidates(result; diagnostics = :ctm)
+
+    @test calls == [2, 3]
+    @test result.iterations[1].ctm_score === nothing
+    @test result.iterations[2].ctm_score isa ScarFinderCandidateScore
+    @test result.iterations[3].ctm_score isa ScarFinderCandidateScore
+    @test length(ranked_ctm) == 2
+    @test all(score -> score.diagnostics === :ctm, ranked_ctm)
+end
+
+@testset "ScarFinder iteration logs write CSV and JSON" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+
+    csv_path = tempname() * ".csv"
+    json_path = tempname() * ".json"
+
+    csv_result = scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        log_path = csv_path,
+        log_format = :csv,
+    )
+    json_result = scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        log_path = json_path,
+        log_format = :json,
+    )
+
+    csv = read(csv_path, String)
+    json = read(json_path, String)
+    @test occursin("iteration,accepted,reject_reason", csv)
+    @test occursin(",simple,", csv)
+    @test occursin("\"iterations\"", json)
+    @test occursin("\"diagnostics\":\"simple\"", json)
+    @test length(csv_result.iterations) == 1
+    @test length(json_result.iterations) == 1
+end
+
 @testset "ScarFinder source stays above star projection layer" begin
     source = read(joinpath(@__DIR__, "..", "src", "ScarFinder.jl"), String)
 

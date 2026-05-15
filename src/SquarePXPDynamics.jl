@@ -72,10 +72,17 @@ using .PEPSKitMeasurements: PEPSKitCTMRGParams, PEPSKitMeasurementContext
 using .PEPSKitMeasurements: CTMObservableSummary, to_pepskit_infinitepeps
 using .PEPSKitMeasurements: pepskit_ctmrg_context, local_density_ctm
 using .PEPSKitMeasurements: nearest_neighbor_density_ctm, blockade_violation_ctm
-using .PEPSKitMeasurements: pxp_energy_density_ctm, measure_ctm
+using .PEPSKitMeasurements: star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
 using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!
-using .ScarFinder: ScarFinderParams, ScarFinderIteration, ScarFinderResult, scarfinder!
+using .ScarFinder:
+    ScarFinderParams,
+    ScarFinderCandidateScore,
+    ScarFinderIteration,
+    ScarFinderResult,
+    rank_scarfinder_candidates,
+    write_scarfinder_log,
+    scarfinder!
 
 export pauli_x, pauli_y, pauli_z, identity2, projector_up, projector_down
 export kron_all, embed_one_site
@@ -102,9 +109,10 @@ export SimpleObservableSummary, measure_simple
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMObservableSummary
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export local_density_ctm, nearest_neighbor_density_ctm
-export blockade_violation_ctm, pxp_energy_density_ctm, measure_ctm
+export blockade_violation_ctm, star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
 export StarUpdateInfo, project_star!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!
-export ScarFinderParams, ScarFinderIteration, ScarFinderResult, scarfinder!
+export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
+export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
 end

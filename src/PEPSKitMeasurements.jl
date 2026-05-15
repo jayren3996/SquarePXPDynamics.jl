@@ -4,15 +4,14 @@ using ITensors
 using PEPSKit
 using TensorKit
 using ..SquareGeometry: SquareCoord
-using ..SquarePXP: square_pxp_star_hamiltonian
+using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
 using ..SquareUnitCells: PeriodicSquareUnitCell, wrap, neighbor
 using ..SquareIPEPS: SquareIPEPSState, physical_index, link_index, link_weight
-using ..Observables: star_expectation_simple
 
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMObservableSummary
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export local_density_ctm, nearest_neighbor_density_ctm, blockade_violation_ctm
-export pxp_energy_density_ctm, measure_ctm
+export star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
 
 const _DIRECTIONS = (:right, :up, :left, :down)
 
@@ -50,21 +49,27 @@ end
 
 Reusable PEPSKit measurement cache containing the converted `InfinitePEPS`, the
 CTMRG environment returned by PEPSKit, the raw CTMRG info object, and the
-parameters used to construct it.
+parameters used to construct it. Local operators are cached by unit-cell
+coordinate and operator identity so repeated measurements reuse the same
+PEPSKit `LocalOperator` without rerunning CTMRG.
 """
 struct PEPSKitMeasurementContext
     peps::Any
     env::Any
     info::Any
     params::PEPSKitCTMRGParams
+    operator_cache::Dict{Any,Any}
 end
+
+PEPSKitMeasurementContext(peps, env, info, params::PEPSKitCTMRGParams) =
+    PEPSKitMeasurementContext(peps, env, info, params, Dict{Any,Any}())
 
 """
     CTMObservableSummary
 
 Summary of PEPSKit CTMRG observables for a custom ITensors square iPEPS state:
 total density, even/odd sublattice densities, nearest-neighbor blockade
-violation, and the mixed CTM/simple five-site PXP energy density diagnostic.
+violation, and the five-site PXP energy density.
 """
 struct CTMObservableSummary
     density::Float64
@@ -161,6 +166,9 @@ function _star_sites_cartesian(cell::PeriodicSquareUnitCell, center::SquareCoord
     )
 end
 
+_pepskit_star_sites(cell::PeriodicSquareUnitCell, center::SquareCoord) =
+    _star_sites_cartesian(cell, center)
+
 function _dense_operator_tensor_map(O::AbstractMatrix, nsites::Int)
     size(O) == (2^nsites, 2^nsites) ||
         throw(ArgumentError("dense operator must be $(2^nsites)x$(2^nsites)"))
@@ -176,6 +184,10 @@ function _dense_operator_tensor_map(O::AbstractMatrix, nsites::Int)
     spaces = ntuple(_ -> p, nsites)
     product_space = reduce(⊗, spaces)
     return TensorKit.TensorMap(data, product_space ← product_space)
+end
+
+function _pepskit_pxp_star_tensormap()
+    return _dense_operator_tensor_map(square_pxp_star_hamiltonian(), SQUARE_STAR_SITES)
 end
 
 function _pepskit_density_operator(cell::PeriodicSquareUnitCell, c::SquareCoord)
@@ -203,11 +215,17 @@ function _pepskit_twosite_nn_operator(
 end
 
 function _pepskit_pxp_star_operator(cell::PeriodicSquareUnitCell, center::SquareCoord)
-    op = _dense_operator_tensor_map(square_pxp_star_hamiltonian(), 5)
+    op = _pepskit_pxp_star_tensormap()
     return PEPSKit.LocalOperator(
         _physical_lattice(cell),
-        _star_sites_cartesian(cell, center) => op,
+        _pepskit_star_sites(cell, center) => op,
     )
+end
+
+function _pepskit_pxp_energy_operator(cell::PeriodicSquareUnitCell)
+    op = _pepskit_pxp_star_tensormap()
+    terms = [_pepskit_star_sites(cell, c) => op for c in cell.reps]
+    return PEPSKit.LocalOperator(_physical_lattice(cell), terms...)
 end
 
 function _require_dense_index(index::Index, label)
@@ -322,6 +340,53 @@ function _expectation(ctx::PEPSKitMeasurementContext, op)
     return _real_expectation(PEPSKit.expectation_value(ctx.peps, op, ctx.env))
 end
 
+function _operator_cache_key(
+    tag::Symbol,
+    cell::PeriodicSquareUnitCell,
+    center::SquareCoord,
+    O::AbstractMatrix,
+)
+    c = wrap(cell, center)
+    return (tag, cell.Lx, cell.Ly, c.x, c.y, size(O), objectid(O))
+end
+
+function _pepskit_star_localoperator(
+    cell::PeriodicSquareUnitCell,
+    center::SquareCoord,
+    O::AbstractMatrix,
+)
+    size(O) == (2^SQUARE_STAR_SITES, 2^SQUARE_STAR_SITES) ||
+        throw(ArgumentError("dense square-star operator must be 32x32"))
+    op = _dense_operator_tensor_map(O, SQUARE_STAR_SITES)
+    return PEPSKit.LocalOperator(
+        _physical_lattice(cell),
+        _pepskit_star_sites(cell, center) => op,
+    )
+end
+
+function _cached_star_localoperator(
+    psi::SquareIPEPSState,
+    center::SquareCoord,
+    O::AbstractMatrix,
+    ctx::PEPSKitMeasurementContext,
+)
+    key = _operator_cache_key(:star, psi.unitcell, center, O)
+    return get!(ctx.operator_cache, key) do
+        _pepskit_star_localoperator(psi.unitcell, center, O)
+    end
+end
+
+function _cached_pxp_energy_operator(
+    psi::SquareIPEPSState,
+    ctx::PEPSKitMeasurementContext,
+)
+    cell = psi.unitcell
+    key = (:pxp_energy_density, cell.Lx, cell.Ly)
+    return get!(ctx.operator_cache, key) do
+        _pepskit_pxp_energy_operator(cell)
+    end
+end
+
 """
     local_density_ctm(psi, c, ctx)::Float64
 
@@ -354,6 +419,32 @@ function nearest_neighbor_density_ctm(
 end
 
 """
+    star_expectation_ctm(psi, center, O, ctx)::ComplexF64
+
+Measure the normalized five-site square-star expectation of dense `32x32`
+operator `O` using PEPSKit `expectation_value` and the precomputed CTMRG
+context `ctx`. The dense site order is `(center, right, up, left, down)`, with
+physical basis `1 = :up`/Rydberg and `2 = :down`/vacancy. PEPSKit site keys are
+literal tuples in the adapter coordinate convention
+`SquareCoord(x,y) -> CartesianIndex(row = Ly - y + 1, col = x)`.
+
+This function reuses `ctx`; it does not run CTMRG. The corresponding
+`LocalOperator` is cached in `ctx.operator_cache`.
+"""
+function star_expectation_ctm(
+    psi::SquareIPEPSState,
+    center::SquareCoord,
+    O::AbstractMatrix,
+    ctx::PEPSKitMeasurementContext,
+)::ComplexF64
+    ctx.peps !== nothing || throw(ArgumentError("PEPSKit measurement context has no PEPS"))
+    op = _cached_star_localoperator(psi, center, O, ctx)
+    value = PEPSKit.expectation_value(ctx.peps, op, ctx.env)
+    _real_expectation(value)
+    return ComplexF64(value)
+end
+
+"""
     blockade_violation_ctm(psi, ctx)::Float64
 
 Return the average nearest-neighbor blockade violation over canonical
@@ -375,29 +466,18 @@ end
 """
     pxp_energy_density_ctm(psi, ctx)::Float64
 
-Return the unit-cell average five-site square-star PXP energy density as a
-mixed CTM/simple diagnostic. The dense `square_pxp_star_hamiltonian()` from
-`SquarePXP.jl` is the source of truth, in star order
-`(center, right, up, left, down)`.
-
-PEPSKit 0.7.0 supports constructing the corresponding 5-site `LocalOperator`,
-but its public `expectation_value` path specializes on literal site tuples and
-is too expensive to compile once per unit-cell center. Until that PEPSKit path
-is practical for repeated star measurements, this method uses the existing
-dense five-site local measurement for the PXP term while the same CTMRG context
-is used for density and blockade measurements. This is not a production
-CTMRG-quality PXP energy measurement.
+Return the unit-cell average five-site square-star PXP energy density using
+PEPSKit CTMRG. The dense `square_pxp_star_hamiltonian()` from `SquarePXP.jl` is
+the source of truth, in star order `(center, right, up, left, down)` and
+physical basis `1 = :up`/Rydberg, `2 = :down`/vacancy. The supplied context is
+reused for every center; this function does not rerun CTMRG.
 """
 function pxp_energy_density_ctm(
     psi::SquareIPEPSState,
     ctx::PEPSKitMeasurementContext,
 )::Float64
     ctx.peps !== nothing || throw(ArgumentError("PEPSKit measurement context has no PEPS"))
-    total = 0.0
-    Hstar = square_pxp_star_hamiltonian()
-    for c in psi.unitcell.reps
-        total += _real_expectation(star_expectation_simple(psi, c, Hstar))
-    end
+    total = _expectation(ctx, _cached_pxp_energy_operator(psi, ctx))
     return total / length(psi.unitcell.reps)
 end
 
@@ -424,10 +504,10 @@ end
 
 Build one PEPSKit CTMRG measurement context for `psi` and reuse it to compute
 density, even/odd densities, nearest-neighbor blockade violation, and
-five-site PXP energy density. Density and blockade are CTMRG-backed; PXP energy
-currently falls back to the local square-star measurement path. This is a
-measurement backend for states produced by the custom ITensors simple-update
-engine; it does not update or evolve the state.
+five-site PXP energy density. Density, blockade, and PXP energy are all
+CTMRG-backed PEPSKit `expectation_value` measurements. This is a measurement
+backend for states produced by the custom ITensors simple-update engine; it
+does not update or evolve the state.
 """
 function measure_ctm(
     psi::SquareIPEPSState;

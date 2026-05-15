@@ -1,6 +1,8 @@
 using PEPSKit
 using TensorKit
 
+const RUN_EXTENDED_CTM_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
+
 @testset "PEPSKit CTMRG measurement adapter" begin
     @testset "PEPSKit loads" begin
         @test isdefined(SquarePXPDynamics, :PEPSKitCTMRGParams)
@@ -101,99 +103,149 @@ using TensorKit
             cell,
             SquareCoord(5, 5),
         ) !== nothing
+        @test SquarePXPDynamics.PEPSKitMeasurements._pepskit_star_sites(
+            cell,
+            SquareCoord(5, 5),
+        ) == star
+        @test length(star) == SQUARE_STAR_SITES
         @test_throws ArgumentError SquarePXPDynamics.PEPSKitMeasurements._pepskit_pxp_star_operator(
             PeriodicSquareUnitCell(2, 2),
             SquareCoord(1, 1),
         )
     end
 
-    @testset "CTMRG product-state density/blockade with local PXP energy fallback" begin
+    @testset "five-site CTM star expectation smoke test" begin
         cell = PeriodicSquareUnitCell(3, 3)
-        params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
-        psi_down = product_square_ipeps(cell; state = :down, maxdim = 1)
-        psi_up = product_square_ipeps(cell; state = :up, maxdim = 1)
-
-        ctx_down = pepskit_ctmrg_context(psi_down; params)
-        ctx_up = pepskit_ctmrg_context(psi_up; params)
-
-        @test ctx_down isa PEPSKitMeasurementContext
-        @test ctx_down.peps !== nothing
-        @test ctx_down.env !== nothing
-        @test local_density_ctm(psi_down, SquareCoord(2, 2), ctx_down) ≈ 0 atol = 1e-8
-        @test local_density_ctm(psi_up, SquareCoord(2, 2), ctx_up) ≈ 1 atol = 1e-8
-        @test blockade_violation_ctm(psi_down, ctx_down) ≈ 0 atol = 1e-8
-        @test blockade_violation_ctm(psi_up, ctx_up) ≈ 1 atol = 1e-8
-        @test pxp_energy_density_ctm(psi_down, ctx_down) ≈ 0 atol = 1e-8
-        @test pxp_energy_density_ctm(psi_up, ctx_up) ≈ 0 atol = 1e-8
-        @test_throws ArgumentError nearest_neighbor_density_ctm(
-            psi_down,
-            SquareCoord(1, 1),
-            :bad,
-            ctx_down,
-        )
-        @test_throws ArgumentError SquarePXPDynamics.PEPSKitMeasurements._local_neighbor_cartesianindex(
-            cell,
-            SquareCoord(1, 1),
-            :bad,
-        )
-    end
-
-    @testset "mixed CTM/simple product observables agree with simple diagnostics" begin
-        product_cell = PeriodicSquareUnitCell(3, 3)
-        checkerboard_cell = PeriodicSquareUnitCell(4, 4)
-        params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
-        cases = (
-            (
-                psi = product_square_ipeps(product_cell; state = :down, maxdim = 1),
-                density = 0.0,
-                blockade = 0.0,
-                energy = 0.0,
-            ),
-            (
-                psi = product_square_ipeps(product_cell; state = :up, maxdim = 1),
-                density = 1.0,
-                blockade = 1.0,
-                energy = 0.0,
-            ),
-            (
-                psi = checkerboard_square_ipeps(
-                    checkerboard_cell;
-                    excited_on = :even,
-                    maxdim = 1,
-                ),
-                density = 0.5,
-                blockade = 0.0,
-                energy = 0.0,
-            ),
-        )
-
-        for case in cases
-            psi = case.psi
-            summary_ctm = measure_ctm(psi; params)
-            summary_simple = measure_simple(psi)
-            @test summary_ctm.density ≈ summary_simple.density atol = 1e-8
-            @test summary_ctm.blockade_violation ≈ summary_simple.blockade_violation atol =
-                1e-8
-            @test summary_ctm.pxp_energy_density ≈ summary_simple.pxp_energy_density atol =
-                1e-8
-            @test summary_ctm.density ≈ case.density atol = 1e-8
-            @test summary_ctm.blockade_violation ≈ case.blockade atol = 1e-8
-            @test summary_ctm.pxp_energy_density ≈ case.energy atol = 1e-8
-        end
-    end
-
-    @testset "short-evolved mixed CTM/simple smoke test" begin
-        cell = PeriodicSquareUnitCell(5, 5)
         psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-        evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, true, 1, 1e-12))
+        c = SquareCoord(2, 2)
+        dt = 0.05
+        Hstar = square_pxp_star_hamiltonian()
 
-        params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
+        project_star!(psi, c, dt; evolution = :real, projected = true, maxdim = 1)
+        @test abs(star_expectation_simple(psi, c, Hstar)) > 0
+
+        # Keep default CI to one minimal CTMRG solve. PEPSKit's first CTMRG
+        # expectation compiles a substantial tensor stack, so broader
+        # product/full-unit-cell sweeps live behind SQUAREPXP_EXTENDED_TESTS=1.
+        params = PEPSKitCTMRGParams(1, 1e-4, 1, 0)
         ctx = pepskit_ctmrg_context(psi; params)
-        summary = measure_ctm(psi; params)
 
         @test ctx isa PEPSKitMeasurementContext
-        @test isfinite(summary.density)
-        @test isfinite(summary.blockade_violation)
-        @test isfinite(summary.pxp_energy_density)
+        @test ctx.peps !== nothing
+        @test ctx.env !== nothing
+        @test star_expectation_ctm(psi, c, Hstar, ctx) ≈
+              star_expectation_simple(psi, c, Hstar) atol = 1e-8 rtol = 1e-6
+        @test_throws ArgumentError star_expectation_ctm(
+            product_square_ipeps(PeriodicSquareUnitCell(2, 2); state = :down, maxdim = 1),
+            SquareCoord(1, 1),
+            Hstar,
+            ctx,
+        )
+    end
+
+    @testset "PXP energy path does not call simple fallback" begin
+        src = read(
+            joinpath(pkgdir(SquarePXPDynamics), "src", "PEPSKitMeasurements.jl"),
+            String,
+        )
+        energy_body = match(
+            r"function pxp_energy_density_ctm[\s\S]*?end\n\nfunction _density_ctm",
+            src,
+        ).match
+        @test !occursin("star_expectation_simple", energy_body)
+    end
+
+    if RUN_EXTENDED_CTM_TESTS
+        @testset "extended CTMRG product-state density/blockade/PXP energy" begin
+            cell = PeriodicSquareUnitCell(3, 3)
+            params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
+            psi_down = product_square_ipeps(cell; state = :down, maxdim = 1)
+            psi_up = product_square_ipeps(cell; state = :up, maxdim = 1)
+            psi_checker = checkerboard_square_ipeps(
+                PeriodicSquareUnitCell(4, 4);
+                excited_on = :even,
+                maxdim = 1,
+            )
+
+            ctx_down = pepskit_ctmrg_context(psi_down; params)
+            ctx_up = pepskit_ctmrg_context(psi_up; params)
+            ctx_checker = pepskit_ctmrg_context(psi_checker; params)
+
+            @test local_density_ctm(psi_down, SquareCoord(2, 2), ctx_down) ≈ 0 atol = 1e-8
+            @test local_density_ctm(psi_up, SquareCoord(2, 2), ctx_up) ≈ 1 atol = 1e-8
+            @test blockade_violation_ctm(psi_down, ctx_down) ≈ 0 atol = 1e-8
+            @test blockade_violation_ctm(psi_up, ctx_up) ≈ 1 atol = 1e-8
+            @test pxp_energy_density_ctm(psi_down, ctx_down) ≈ 0 atol = 1e-8
+            @test pxp_energy_density_ctm(psi_up, ctx_up) ≈ 0 atol = 1e-8
+            @test pxp_energy_density_ctm(psi_checker, ctx_checker) ≈ 0 atol = 1e-8
+            @test_throws ArgumentError nearest_neighbor_density_ctm(
+                psi_down,
+                SquareCoord(1, 1),
+                :bad,
+                ctx_down,
+            )
+            @test_throws ArgumentError SquarePXPDynamics.PEPSKitMeasurements._local_neighbor_cartesianindex(
+                cell,
+                SquareCoord(1, 1),
+                :bad,
+            )
+        end
+
+        @testset "extended CTM product observables agree with simple diagnostics" begin
+            product_cell = PeriodicSquareUnitCell(3, 3)
+            checkerboard_cell = PeriodicSquareUnitCell(4, 4)
+            params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
+            cases = (
+                (
+                    psi = product_square_ipeps(product_cell; state = :down, maxdim = 1),
+                    density = 0.0,
+                    blockade = 0.0,
+                    energy = 0.0,
+                ),
+                (
+                    psi = product_square_ipeps(product_cell; state = :up, maxdim = 1),
+                    density = 1.0,
+                    blockade = 1.0,
+                    energy = 0.0,
+                ),
+                (
+                    psi = checkerboard_square_ipeps(
+                        checkerboard_cell;
+                        excited_on = :even,
+                        maxdim = 1,
+                    ),
+                    density = 0.5,
+                    blockade = 0.0,
+                    energy = 0.0,
+                ),
+            )
+
+            for case in cases
+                psi = case.psi
+                summary_ctm = measure_ctm(psi; params)
+                summary_simple = measure_simple(psi)
+                @test summary_ctm.density ≈ summary_simple.density atol = 1e-8
+                @test summary_ctm.blockade_violation ≈
+                      summary_simple.blockade_violation atol = 1e-8
+                @test summary_ctm.pxp_energy_density ≈
+                      summary_simple.pxp_energy_density atol = 1e-8
+                @test summary_ctm.density ≈ case.density atol = 1e-8
+                @test summary_ctm.blockade_violation ≈ case.blockade atol = 1e-8
+                @test summary_ctm.pxp_energy_density ≈ case.energy atol = 1e-8
+            end
+        end
+
+        @testset "extended short-evolved CTM full-summary smoke test" begin
+            cell = PeriodicSquareUnitCell(5, 5)
+            psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+            evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, true, 1, 1e-12))
+
+            params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
+            summary = measure_ctm(psi; params)
+
+            @test isfinite(summary.density)
+            @test isfinite(summary.blockade_violation)
+            @test isfinite(summary.pxp_energy_density)
+        end
     end
 end

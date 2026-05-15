@@ -11,15 +11,17 @@ simple/local observables, and S6-lite ScarFinder orchestration.
 
 Simple/local observables are useful diagnostics for development and regression
 tests, but they are not final CTMRG-quality measurements. ScarFinder-lite
-currently uses these simple/local diagnostics. Do not make physics claims from
+uses these simple/local diagnostics by default, with optional scheduled CTM
+diagnostics supplied by caller callbacks. Do not make physics claims from
 simple diagnostics alone.
 
 This checkout also contains PEPSKit/TensorKit-facing measurement code in
 `src/PEPSKitMeasurements.jl`. The PEPSKit CTMRG measurement adapter is shipped
-as an experimental S5b-facing API, not production ScarFinder validation.
-Within that adapter, density and blockade diagnostics use PEPSKit CTMRG, while
-PXP energy density currently falls back to the simple/local square-star
-measurement path.
+as an experimental S5c-facing API, not production ScarFinder validation.
+Within that adapter, density, blockade diagnostics, and five-site square-star
+PXP energy density use PEPSKit CTMRG. The dense square-star Hamiltonian remains
+the source of truth for the PXP energy operator, with site order `(center,
+right, up, left, down)` and basis order `1 = :up`, `2 = :down`.
 PEPSKit and TensorKit therefore remain main dependencies while this exported
 measurement surface is present.
 
@@ -43,15 +45,14 @@ measurement surface is present.
 - QR-reduced five-site star update via `project_star!` (`src/StarSimpleUpdate.jl`).
 - Deterministic five-color Trotter evolution via `evolve!` (`src/IPEPSEvolution.jl`).
 - Simple/local density, blockade, energy-density, and entropy observables via `measure_simple` (`src/Observables.jl`).
-- Experimental PEPSKit/TensorKit CTMRG density/blockade measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
-- S6-lite `scarfinder!` orchestration using simple/local diagnostics (`src/ScarFinder.jl`).
+- Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
+- S6-lite `scarfinder!` orchestration, candidate ranking, and CSV/JSON diagnostic logging using simple/local diagnostics by default (`src/ScarFinder.jl`).
 
 ## Not Yet Shipped
 
-- CTMRG-quality observables suitable for physics claims.
+- Production CTMRG convergence policy and finite-chi validation suitable for physics claims.
 - Full-update gauge fixing.
 - Energy targeting or correction.
-- Candidate ranking.
 - Production ScarFinder validation.
 
 ## Minimal Example
@@ -70,10 +71,12 @@ summary = measure_simple(psi)
 `summary` contains simple/local diagnostics only. These are useful for smoke
 tests and regression checks, but they are not CTMRG-quality measurements.
 An experimental PEPSKit CTMRG measurement adapter is present as `measure_ctm`,
-with CTMRG density/blockade diagnostics and a simple/local PXP energy fallback.
+with CTMRG density, blockade, and five-site PXP energy diagnostics. Check the
+raw CTMRG convergence information and finite-chi sensitivity before treating
+these measurements as physics-quality observables.
 ScarFinder-lite is currently a scaffold/orchestration layer over `evolve!` and
-`measure_simple`; production CTMRG-quality ScarFinder validation is not yet
-shipped.
+`measure_simple`, with optional callback-supplied CTM diagnostics for selected
+iterations; production CTMRG-quality ScarFinder validation is not yet shipped.
 
 ## Development
 

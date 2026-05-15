@@ -3,8 +3,10 @@ module ScarFinder
 using ..SquareIPEPS: SquareIPEPSState
 using ..IPEPSEvolution: TrotterParams, EvolutionLog, evolve!
 using ..Observables: SimpleObservableSummary, measure_simple
+using ..PEPSKitMeasurements: CTMObservableSummary
 
-export ScarFinderParams, ScarFinderIteration, ScarFinderResult, scarfinder!
+export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
+export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
 """
     ScarFinderParams(
@@ -21,7 +23,8 @@ Parameters for the S6-lite ScarFinder orchestration loop. Each iteration
 evolves the supplied iPEPS state with [`evolve!`](@ref), records
 [`measure_simple`](@ref) diagnostics, and accepts or rejects the iteration
 using simple-update/local observables only. This does not run CTMRG, perform
-energy targeting, rank candidates, or apply any imaginary-time correction.
+energy targeting, or apply any imaginary-time correction. Candidate scores are
+computed from recorded diagnostics by the orchestration layer.
 """
 struct ScarFinderParams
     projection_time::Float64
@@ -64,12 +67,40 @@ struct ScarFinderParams
 end
 
 """
+    ScarFinderCandidateScore
+
+One ranked ScarFinder candidate diagnostic record. `diagnostics` is `:simple`
+for the default local/simple measurements or `:ctm` for records supplied by an
+optional CTM measurement callback. The scalar `score` is an operational sorting
+key built from existing diagnostics only; it is not an energy correction or a
+physics claim.
+"""
+struct ScarFinderCandidateScore
+    iteration::Int
+    diagnostics::Symbol
+    accepted::Bool
+    reject_reason::Union{Nothing,String}
+    density::Float64
+    density_even::Float64
+    density_odd::Float64
+    blockade_violation::Float64
+    pxp_energy_density::Float64
+    mean_bond_entropy::Union{Nothing,Float64}
+    max_bond_entropy::Union{Nothing,Float64}
+    max_truncerr::Float64
+    score::Float64
+end
+
+"""
     ScarFinderIteration
 
 Diagnostics for one S6-lite ScarFinder iteration. `evolution` is the
 [`EvolutionLog`](@ref) returned by [`evolve!`](@ref), and `observables` is the
-[`SimpleObservableSummary`](@ref) returned by [`measure_simple`](@ref).
-Rejected iterations carry a short deterministic `reject_reason`.
+[`SimpleObservableSummary`](@ref) returned by [`measure_simple`](@ref). The
+`simple_score` field is always present. The `ctm_score` field is populated only
+when a caller supplies a CTM measurement callback and the callback is scheduled
+for that iteration. Rejected iterations carry a short deterministic
+`reject_reason`.
 """
 struct ScarFinderIteration
     iteration::Int
@@ -77,15 +108,34 @@ struct ScarFinderIteration
     reject_reason::Union{Nothing,String}
     evolution::EvolutionLog
     observables::SimpleObservableSummary
+    simple_score::ScarFinderCandidateScore
+    ctm_score::Union{Nothing,ScarFinderCandidateScore}
 end
+
+ScarFinderIteration(
+    iteration::Int,
+    accepted::Bool,
+    reject_reason::Union{Nothing,String},
+    evolution::EvolutionLog,
+    observables::SimpleObservableSummary,
+) = ScarFinderIteration(
+    iteration,
+    accepted,
+    reject_reason,
+    evolution,
+    observables,
+    _candidate_score(iteration, :simple, accepted, reject_reason, evolution, observables),
+    nothing,
+)
 
 """
     ScarFinderResult
 
 Result of [`scarfinder!`](@ref). `state` is the same mutably evolved
 [`SquareIPEPSState`](@ref) passed to `scarfinder!`; iteration records contain
-the local/simple diagnostics used for acceptance. These diagnostics are not
-CTMRG-quality environment measurements.
+the local/simple diagnostics used for acceptance plus optional CTM callback
+diagnostics. Simple diagnostics are not CTMRG-quality environment
+measurements.
 """
 struct ScarFinderResult
     state::SquareIPEPSState
@@ -116,6 +166,97 @@ function _finite_summary(obs::SimpleObservableSummary)
     )
 end
 
+function _finite_summary(obs::CTMObservableSummary)
+    return all(
+        isfinite,
+        (
+            obs.density,
+            obs.density_even,
+            obs.density_odd,
+            obs.blockade_violation,
+            obs.pxp_energy_density,
+        ),
+    )
+end
+
+function _score_value(
+    obs,
+    log::EvolutionLog,
+    mean_bond_entropy::Union{Nothing,Float64},
+    max_bond_entropy::Union{Nothing,Float64},
+)
+    entropy_penalty = max_bond_entropy === nothing ? 0.0 : max_bond_entropy
+    return abs(obs.pxp_energy_density) +
+           obs.blockade_violation +
+           entropy_penalty +
+           log.max_truncerr
+end
+
+function _candidate_score(
+    iteration::Int,
+    diagnostics::Symbol,
+    accepted::Bool,
+    reject_reason::Union{Nothing,String},
+    log::EvolutionLog,
+    obs::SimpleObservableSummary,
+)
+    return ScarFinderCandidateScore(
+        iteration,
+        diagnostics,
+        accepted,
+        reject_reason,
+        obs.density,
+        obs.density_even,
+        obs.density_odd,
+        obs.blockade_violation,
+        obs.pxp_energy_density,
+        obs.mean_bond_entropy,
+        obs.max_bond_entropy,
+        log.max_truncerr,
+        _score_value(obs, log, obs.mean_bond_entropy, obs.max_bond_entropy),
+    )
+end
+
+function _candidate_score(
+    iteration::Int,
+    diagnostics::Symbol,
+    accepted::Bool,
+    reject_reason::Union{Nothing,String},
+    log::EvolutionLog,
+    obs::CTMObservableSummary,
+)
+    return ScarFinderCandidateScore(
+        iteration,
+        diagnostics,
+        accepted,
+        reject_reason,
+        obs.density,
+        obs.density_even,
+        obs.density_odd,
+        obs.blockade_violation,
+        obs.pxp_energy_density,
+        nothing,
+        nothing,
+        log.max_truncerr,
+        _score_value(obs, log, nothing, nothing),
+    )
+end
+
+function _candidate_score(
+    iteration::Int,
+    diagnostics::Symbol,
+    accepted::Bool,
+    reject_reason::Union{Nothing,String},
+    log::EvolutionLog,
+    obs,
+)
+    throw(
+        ArgumentError(
+            "CTM callback must return SimpleObservableSummary or CTMObservableSummary",
+        ),
+    )
+end
+
 function _evaluate_scarfinder_iteration(
     log::EvolutionLog,
     obs::SimpleObservableSummary,
@@ -139,6 +280,54 @@ end
 _count_accepted(iterations) = count(iteration -> iteration.accepted, iterations)
 _count_rejected(iterations) = count(iteration -> !iteration.accepted, iterations)
 
+function _nonnegative_int(value::Integer, name::String)
+    converted = Int(value)
+    converted >= 0 || throw(ArgumentError("$name must be nonnegative"))
+    return converted
+end
+
+function _should_measure_ctm(iteration::Int, total::Int, ctm_every::Int, ctm_at_end::Bool)
+    return (ctm_every > 0 && iteration % ctm_every == 0) ||
+           (ctm_at_end && iteration == total)
+end
+
+function _iteration_score(iteration::ScarFinderIteration, diagnostics::Symbol)
+    if diagnostics === :simple
+        return iteration.simple_score
+    elseif diagnostics === :ctm
+        return iteration.ctm_score
+    else
+        throw(ArgumentError("diagnostics must be :simple or :ctm"))
+    end
+end
+
+"""
+    rank_scarfinder_candidates(result; diagnostics = :simple, accepted_only = false, by = :score)
+
+Return candidate scores sorted by a field of [`ScarFinderCandidateScore`](@ref).
+Simple ranking is available for every iteration. CTM ranking includes only
+iterations where an optional CTM callback supplied diagnostics.
+"""
+function rank_scarfinder_candidates(
+    result::ScarFinderResult;
+    diagnostics::Symbol = :simple,
+    accepted_only::Bool = false,
+    by::Symbol = :score,
+    rev::Bool = false,
+)
+    scores = ScarFinderCandidateScore[]
+    for iteration in result.iterations
+        accepted_only && !iteration.accepted && continue
+        score = _iteration_score(iteration, diagnostics)
+        score === nothing && continue
+        push!(scores, score)
+    end
+    if !hasfield(ScarFinderCandidateScore, by)
+        throw(ArgumentError("unknown ScarFinderCandidateScore field: $by"))
+    end
+    return sort(scores; by = score -> getfield(score, by), rev)
+end
+
 """
     scarfinder!(psi::SquareIPEPSState, params::ScarFinderParams)::ScarFinderResult
 
@@ -147,30 +336,54 @@ For each requested iteration, this calls [`evolve!`](@ref) for
 `params.projection_time`, calls [`measure_simple`](@ref), records diagnostics,
 and accepts or rejects the iteration by truncation error, simple blockade
 violation, simple bond entropy, and finite-diagnostic checks. `psi` is mutated
-like [`evolve!`](@ref). No CTMRG, energy correction, candidate ranking, or
-direct star-projection logic is performed here.
+like [`evolve!`](@ref). CTM diagnostics are recorded only when a caller
+supplies `ctm_callback` and schedules it with `ctm_every` or `ctm_at_end`. No
+energy correction, new CTMRG algorithm, or direct star-projection logic is
+performed here.
 """
-function scarfinder!(psi::SquareIPEPSState, params::ScarFinderParams)::ScarFinderResult
+function scarfinder!(
+    psi::SquareIPEPSState,
+    params::ScarFinderParams;
+    ctm_callback = nothing,
+    ctm_every::Integer = 0,
+    ctm_at_end::Bool = false,
+    log_path::Union{Nothing,AbstractString} = nothing,
+    log_format::Symbol = :csv,
+)::ScarFinderResult
+    ctm_period = _nonnegative_int(ctm_every, "ctm_every")
     iterations = ScarFinderIteration[]
 
     for n = 1:params.iterations
         log = evolve!(psi, params.projection_time; params = params.trotter)
         obs = measure_simple(psi)
         accepted, reason = _evaluate_scarfinder_iteration(log, obs, params)
-        push!(iterations, ScarFinderIteration(n, accepted, reason, log, obs))
+        simple_score = _candidate_score(n, :simple, accepted, reason, log, obs)
+        ctm_score = nothing
+        if ctm_callback !== nothing &&
+           _should_measure_ctm(n, params.iterations, ctm_period, ctm_at_end)
+            ctm_obs = ctm_callback(psi, n, simple_score)
+            _finite_summary(ctm_obs) || throw(ArgumentError("non-finite CTM diagnostic"))
+            ctm_score = _candidate_score(n, :ctm, accepted, reason, log, ctm_obs)
+        end
+        push!(
+            iterations,
+            ScarFinderIteration(n, accepted, reason, log, obs, simple_score, ctm_score),
+        )
 
         if !accepted && params.stop_on_reject
             break
         end
     end
 
-    return ScarFinderResult(
+    result = ScarFinderResult(
         psi,
         params,
         iterations,
         _count_accepted(iterations),
         _count_rejected(iterations),
     )
+    log_path === nothing || write_scarfinder_log(result, log_path; format = log_format)
+    return result
 end
 
 """
@@ -198,6 +411,11 @@ function scarfinder!(
     max_blockade_violation::Real = Inf,
     max_bond_entropy::Real = Inf,
     stop_on_reject::Bool = false,
+    ctm_callback = nothing,
+    ctm_every::Integer = 0,
+    ctm_at_end::Bool = false,
+    log_path::Union{Nothing,AbstractString} = nothing,
+    log_format::Symbol = :csv,
 )::ScarFinderResult
     params = ScarFinderParams(
         projection_time,
@@ -208,7 +426,145 @@ function scarfinder!(
         max_bond_entropy,
         stop_on_reject,
     )
-    return scarfinder!(psi, params)
+    return scarfinder!(
+        psi,
+        params;
+        ctm_callback,
+        ctm_every,
+        ctm_at_end,
+        log_path,
+        log_format,
+    )
+end
+
+function _csv_value(value::Nothing)
+    return ""
+end
+
+function _csv_value(value::Bool)
+    return string(value)
+end
+
+function _csv_value(value::Real)
+    return string(value)
+end
+
+function _csv_value(value::Symbol)
+    return String(value)
+end
+
+function _csv_value(value::AbstractString)
+    escaped = replace(value, "\"" => "\"\"")
+    return any(ch -> ch in escaped, (',', '"', '\n', '\r')) ? "\"$escaped\"" : escaped
+end
+
+function _score_rows(result::ScarFinderResult)
+    rows = ScarFinderCandidateScore[]
+    for iteration in result.iterations
+        push!(rows, iteration.simple_score)
+        iteration.ctm_score === nothing || push!(rows, iteration.ctm_score)
+    end
+    return rows
+end
+
+function _write_csv_log(io, result::ScarFinderResult)
+    header = (
+        "iteration",
+        "accepted",
+        "reject_reason",
+        "diagnostics",
+        "density",
+        "density_even",
+        "density_odd",
+        "blockade_violation",
+        "pxp_energy_density",
+        "mean_bond_entropy",
+        "max_bond_entropy",
+        "max_truncerr",
+        "score",
+    )
+    println(io, join(header, ","))
+    for score in _score_rows(result)
+        row = (
+            score.iteration,
+            score.accepted,
+            score.reject_reason,
+            score.diagnostics,
+            score.density,
+            score.density_even,
+            score.density_odd,
+            score.blockade_violation,
+            score.pxp_energy_density,
+            score.mean_bond_entropy,
+            score.max_bond_entropy,
+            score.max_truncerr,
+            score.score,
+        )
+        println(io, join(_csv_value.(row), ","))
+    end
+end
+
+function _json_escape(value::AbstractString)
+    escaped = replace(value, "\\" => "\\\\")
+    escaped = replace(escaped, "\"" => "\\\"")
+    escaped = replace(escaped, "\n" => "\\n")
+    escaped = replace(escaped, "\r" => "\\r")
+    return escaped
+end
+
+_json_value(value::Nothing) = "null"
+_json_value(value::Bool) = value ? "true" : "false"
+_json_value(value::Real) = isfinite(value) ? string(value) : "\"$(value)\""
+_json_value(value::Symbol) = _json_value(String(value))
+_json_value(value::AbstractString) = "\"$(_json_escape(value))\""
+
+function _score_json(score::ScarFinderCandidateScore)
+    fields = (
+        :iteration,
+        :accepted,
+        :reject_reason,
+        :diagnostics,
+        :density,
+        :density_even,
+        :density_odd,
+        :blockade_violation,
+        :pxp_energy_density,
+        :mean_bond_entropy,
+        :max_bond_entropy,
+        :max_truncerr,
+        :score,
+    )
+    pairs = ["\"$(field)\":$(_json_value(getfield(score, field)))" for field in fields]
+    return "{" * join(pairs, ",") * "}"
+end
+
+function _write_json_log(io, result::ScarFinderResult)
+    rows = _score_json.(_score_rows(result))
+    println(io, "{\"iterations\":[" * join(rows, ",") * "]}")
+end
+
+"""
+    write_scarfinder_log(result, path; format = :csv)
+
+Write recorded ScarFinder candidate diagnostics to CSV or JSON. This function
+serializes diagnostics already stored in `result`; it does not run CTMRG or
+refresh any environment.
+"""
+function write_scarfinder_log(
+    result::ScarFinderResult,
+    path::AbstractString;
+    format::Symbol = :csv,
+)
+    open(path, "w") do io
+        if format === :csv
+            _write_csv_log(io, result)
+        elseif format === :json
+            _write_json_log(io, result)
+        else
+            throw(ArgumentError("log format must be :csv or :json"))
+        end
+    end
+    return path
 end
 
 end
