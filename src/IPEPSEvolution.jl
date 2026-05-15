@@ -4,8 +4,7 @@ using ..SquareUnitCells:
     assert_five_color_compatible, update_centers, stars_are_disjoint_mod_unitcell
 using ..SquareIPEPS: SquareIPEPSState, all_bond_entropies, log_norm
 using ..StarSimpleUpdate: StarUpdateInfo, project_star!
-using ..StarModels:
-    AbstractModelProtocol, PXPStarModel, StaticModel, model_at
+using ..StarModels: AbstractModelProtocol, PXPStarModel, StaticModel, model_at
 
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!
 
@@ -55,6 +54,16 @@ struct LegacyPXPParams
     trotter::TrotterParams
     protocol::StaticModel{PXPStarModel}
 end
+
+"""
+    legacy_trotter_params(params)
+
+Return the model-agnostic [`TrotterParams`](@ref) from either a current
+`TrotterParams` value or the legacy PXP compatibility wrapper returned by the
+old six-argument constructor.
+"""
+legacy_trotter_params(params::TrotterParams) = params
+legacy_trotter_params(params::LegacyPXPParams) = params.trotter
 
 function TrotterParams(
     dt::Real,
@@ -145,6 +154,9 @@ function trotter_sequence(params::TrotterParams)::Vector{Tuple{Int,Float64}}
         throw(ArgumentError("order must be 1 or 2"))
     end
 end
+
+trotter_sequence(params::LegacyPXPParams)::Vector{Tuple{Int,Float64}} =
+    trotter_sequence(params.trotter)
 
 function _nsteps_for_total_time(total_time::Real, params::TrotterParams)
     total = Float64(total_time)

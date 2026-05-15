@@ -1,5 +1,7 @@
 @testset "ScarFinder parameter validation" begin
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.01, trotter, 1, Inf, Inf, Inf, false)
+    @test params.trotter == TrotterParams(0.01, 1, :real, 1, 1e-12)
 
     @test_throws ArgumentError ScarFinderParams(-0.1, trotter, 1, Inf, Inf, Inf, false)
     @test_throws ArgumentError ScarFinderParams(Inf, trotter, 1, Inf, Inf, Inf, false)

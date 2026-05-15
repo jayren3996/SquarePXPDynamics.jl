@@ -1,7 +1,7 @@
 module ScarFinder
 
 using ..SquareIPEPS: SquareIPEPSState
-using ..IPEPSEvolution: TrotterParams, EvolutionLog, evolve!
+using ..IPEPSEvolution: TrotterParams, EvolutionLog, legacy_trotter_params, evolve!
 using ..Observables: SimpleObservableSummary, measure_simple
 using ..PEPSKitMeasurements: CTMObservableSummary, CTMRGDiagnostics
 
@@ -37,7 +37,7 @@ struct ScarFinderParams
 
     function ScarFinderParams(
         projection_time::Real,
-        trotter::TrotterParams,
+        trotter,
         iterations::Integer,
         max_truncerr::Real,
         max_blockade_violation::Real,
@@ -56,7 +56,7 @@ struct ScarFinderParams
 
         return new(
             time,
-            trotter,
+            legacy_trotter_params(trotter),
             niterations,
             truncerr_limit,
             blockade_limit,
@@ -462,7 +462,7 @@ diagnostics from [`measure_simple`](@ref).
 function scarfinder!(
     psi::SquareIPEPSState;
     projection_time::Real,
-    trotter::TrotterParams,
+    trotter,
     iterations::Integer,
     max_truncerr::Real = Inf,
     max_blockade_violation::Real = Inf,

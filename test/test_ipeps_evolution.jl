@@ -250,9 +250,13 @@ end
 
 @testset "legacy TrotterParams constructor remains accepted" begin
     old = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    current = TrotterParams(0.01, 1, :real, 1, 1e-12)
+    @test trotter_sequence(old) == trotter_sequence(current)
+
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     log = evolve!(psi, 0.01; params = old)
+    @test log.params == current
     @test log.nsteps == 1
     @test isfinite(log.max_truncerr)
 
