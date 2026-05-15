@@ -1,30 +1,52 @@
-# KagomePXPDynamics.jl
+# SquarePXPDynamics.jl
 
-Internal Julia tooling for PEPS-based dynamics on the 2D kagome lattice, built for the 2D kagome-lattice PXP ScarFinder project.
+`SquarePXPDynamics` is a Julia package for PEPS-based dynamics on the 2D square-lattice PXP model.
 
 ## Status
 
-In active development. The first implementation pass is the kagome PESS Simple Update prototype — see [`docs/superpowers/plans/2026-05-09-kagome-pess-pxp-dynamics.md`](docs/superpowers/plans/2026-05-09-kagome-pess-pxp-dynamics.md).
-NTU follow-up is sketched in [`Notes/2026-05-09-kagome-pess-ntu-followup.md`](Notes/2026-05-09-kagome-pess-ntu-followup.md).
+The package is in an early square-lattice restart. The current code is a small, tested foundation: square geometry, dense 5-site projected PXP gates, and a minimal ITensors-backed square PEPS product-state container.
+
+## Package Layout
+
+- `Project.toml`: package metadata, dependencies, compatibility bounds, and the test workspace.
+- `src/SquarePXPDynamics.jl`: package module entrypoint.
+- `src/*.jl`: implementation modules included by the entrypoint.
+- `test/runtests.jl`: package test runner.
+- `test/Project.toml`: test-only environment for Julia's workspace-based test dependency workflow.
 
 ## Currently shipped
 
 - Generic spin-1/2 operators (`src/SpinOps.jl`).
-- Solvable benchmark helpers (`src/SolvableModels.jl`).
+- Square-lattice geometry and 5-site star scheduling helpers (`src/SquareGeometry.jl`).
+- Dense square-star PXP Hamiltonian, blockade projector, and projected real/imaginary gates (`src/SquarePXP.jl`).
+- Minimal square PEPS product-state construction with ITensors (`src/SquarePEPS.jl`).
 
-## Planned (per the active spec/plan)
+## Planned Work
 
-- KagomeGeometry, KagomePESS state container, kagome PXP gate, 3-color schedule
-- Simple Update on PESS via cluster-and-HOSVD decomposition
-- Three-layer validation: kernel ED, finite torus integration (indicator), kagome stabilizer benchmark
-- ScarFinder driver
+- Square PEPS update kernels for fixed-bond-dimension evolve-project loops.
+- Blockade-violation diagnostics on square nearest-neighbor edges.
+- ScarFinder orchestration and low-entanglement candidate ranking.
+- ScarFinder driver.
 
-## History
+## Development
 
-An earlier attempt targeted the triangular lattice. It was abandoned due to two structural blockers in cluster-and-split Simple Update at D>1 (sublattice aliasing in 3-site UC writeback and 2^7*D^18 cluster scaling). See git log before commit `eef0ead` for the triangular source tree.
+Instantiate the package environment:
 
-## Test
+```bash
+julia --project=. -e 'using Pkg; Pkg.instantiate()'
+```
+
+Load the package from the repository root:
+
+```bash
+julia --project=. -e 'using SquarePXPDynamics'
+```
+
+Run the package tests:
 
 ```bash
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
+
+The test suite includes API docstring coverage for exported names and Aqua.jl
+package-quality checks.

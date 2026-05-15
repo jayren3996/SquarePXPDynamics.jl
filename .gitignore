@@ -1,3 +1,7 @@
-.DS_Store
+# Julia
 Manifest.toml
+*.cov
+
+# Local/editor metadata
+.DS_Store
 .claude/
