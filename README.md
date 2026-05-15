@@ -15,8 +15,10 @@ currently uses these simple/local diagnostics. Do not make physics claims from
 simple diagnostics alone.
 
 This checkout also contains PEPSKit/TensorKit-facing measurement code in
-`src/PEPSKitMeasurements.jl`. It is treated as experimental S5b-facing surface
-in this cleanup audit, not production ScarFinder validation.
+`src/PEPSKitMeasurements.jl`. The PEPSKit CTMRG measurement adapter is shipped
+as an experimental S5b-facing API, not production ScarFinder validation.
+PEPSKit and TensorKit therefore remain main dependencies while this exported
+measurement surface is present.
 
 ## Package Layout
 
@@ -38,11 +40,11 @@ in this cleanup audit, not production ScarFinder validation.
 - QR-reduced five-site star update via `project_star!` (`src/StarSimpleUpdate.jl`).
 - Deterministic five-color Trotter evolution via `evolve!` (`src/IPEPSEvolution.jl`).
 - Simple/local density, blockade, energy-density, and entropy observables via `measure_simple` (`src/Observables.jl`).
+- Experimental PEPSKit/TensorKit CTMRG measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
 - S6-lite `scarfinder!` orchestration using simple/local diagnostics (`src/ScarFinder.jl`).
 
 ## Not Yet Shipped
 
-- Production PEPSKit/TensorKit CTMRG measurement adapter.
 - CTMRG-quality observables suitable for physics claims.
 - Full-update gauge fixing.
 - Energy targeting or correction.
@@ -64,9 +66,9 @@ summary = measure_simple(psi)
 
 `summary` contains simple/local diagnostics only. These are useful for smoke
 tests and regression checks, but they are not CTMRG-quality measurements.
-ScarFinder-lite is currently a scaffold/orchestration layer over `evolve!` and
-`measure_simple`; PEPSKit CTMRG-quality measurement integration remains planned
-work before production ScarFinder validation.
+An experimental PEPSKit CTMRG measurement adapter is present as `measure_ctm`,
+but ScarFinder-lite is currently a scaffold/orchestration layer over `evolve!`
+and `measure_simple`; production-quality ScarFinder validation is still pending.
 
 ## Development
 

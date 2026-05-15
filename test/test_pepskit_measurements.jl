@@ -30,6 +30,27 @@ using TensorKit
         @test psi.tensors[SquareCoord(5, 5)] == before
     end
 
+    @testset "lambda absorption does not mutate source state" begin
+        cell = PeriodicSquareUnitCell(3, 3)
+        c = SquareCoord(2, 2)
+        right = neighbor(cell, c, :right)
+        psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+        before_center = copy(psi.tensors[c])
+        before_right = copy(psi.tensors[right])
+
+        set_link_weight!(psi, c, :right, [9.0, 4.0])
+
+        center_data = SquarePXPDynamics.PEPSKitMeasurements._absorbed_site_array(psi, c)
+        right_data =
+            SquarePXPDynamics.PEPSKitMeasurements._absorbed_site_array(psi, right)
+
+        @test center_data[2, 1, 1, 1, 1] ≈ 3.0 + 0.0im atol = 1e-12
+        @test right_data[2, 1, 1, 1, 1] ≈ 3.0 + 0.0im atol = 1e-12
+        @test psi.tensors[c] == before_center
+        @test psi.tensors[right] == before_right
+        @test link_weight(psi, c, :right) == [9.0, 4.0]
+    end
+
     @testset "coordinate mapping catches transpose" begin
         cell = PeriodicSquareUnitCell(2, 3)
         @test SquarePXPDynamics.PEPSKitMeasurements._squarecoord_to_cartesianindex(
@@ -72,10 +93,19 @@ using TensorKit
             SquareCoord(5, 5),
             :right,
         ) !== nothing
+        @test_throws ArgumentError SquarePXPDynamics.PEPSKitMeasurements._pepskit_twosite_nn_operator(
+            cell,
+            SquareCoord(5, 5),
+            :bad,
+        )
         @test SquarePXPDynamics.PEPSKitMeasurements._pepskit_pxp_star_operator(
             cell,
             SquareCoord(5, 5),
         ) !== nothing
+        @test_throws ArgumentError SquarePXPDynamics.PEPSKitMeasurements._pepskit_pxp_star_operator(
+            PeriodicSquareUnitCell(2, 2),
+            SquareCoord(1, 1),
+        )
     end
 
     @testset "CTMRG product-state measurements" begin
@@ -102,18 +132,44 @@ using TensorKit
             :bad,
             ctx_down,
         )
+        @test_throws ArgumentError SquarePXPDynamics.PEPSKitMeasurements._local_neighbor_cartesianindex(
+            cell,
+            SquareCoord(1, 1),
+            :bad,
+        )
     end
 
     @testset "CTM and simple product observables agree" begin
-        cell = PeriodicSquareUnitCell(3, 3)
+        product_cell = PeriodicSquareUnitCell(3, 3)
+        checkerboard_cell = PeriodicSquareUnitCell(4, 4)
         params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
-        states = (
-            product_square_ipeps(cell; state = :down, maxdim = 1),
-            product_square_ipeps(cell; state = :up, maxdim = 1),
-            checkerboard_square_ipeps(cell; excited_on = :even, maxdim = 1),
+        cases = (
+            (
+                psi = product_square_ipeps(product_cell; state = :down, maxdim = 1),
+                density = 0.0,
+                blockade = 0.0,
+                energy = 0.0,
+            ),
+            (
+                psi = product_square_ipeps(product_cell; state = :up, maxdim = 1),
+                density = 1.0,
+                blockade = 1.0,
+                energy = 0.0,
+            ),
+            (
+                psi = checkerboard_square_ipeps(
+                    checkerboard_cell;
+                    excited_on = :even,
+                    maxdim = 1,
+                ),
+                density = 0.5,
+                blockade = 0.0,
+                energy = 0.0,
+            ),
         )
 
-        for psi in states
+        for case in cases
+            psi = case.psi
             summary_ctm = measure_ctm(psi; params)
             summary_simple = measure_simple(psi)
             @test summary_ctm.density ≈ summary_simple.density atol = 1e-8
@@ -121,6 +177,9 @@ using TensorKit
                 1e-8
             @test summary_ctm.pxp_energy_density ≈ summary_simple.pxp_energy_density atol =
                 1e-8
+            @test summary_ctm.density ≈ case.density atol = 1e-8
+            @test summary_ctm.blockade_violation ≈ case.blockade atol = 1e-8
+            @test summary_ctm.pxp_energy_density ≈ case.energy atol = 1e-8
         end
     end
 
