@@ -36,7 +36,7 @@ end
         PeriodicSquareUnitCell(10, 10),
         :z_up,
         0.01,
-        TrotterParams(0.01, 1, :real, 1, 1e-12),
+        TrotterParams(0.01, 1, :real, 1, 1e-12, (:up, :right, :down, :left)),
         1,
     )
     result = run_benchmark(spec; run_label = "serialize-test")
@@ -52,6 +52,7 @@ end
     @test parsed[:run_label] == "serialize-test"
     @test parsed[:metadata][:observable_source] == "simple"
     @test parsed[:metadata][:package_version] == string(Base.pkgversion(SquarePXPDynamics))
+    @test collect(parsed[:metadata][:split_order]) == ["up", "right", "down", "left"]
     @test length(parsed[:samples]) == 2
 
     csv = read(csv_path, String)

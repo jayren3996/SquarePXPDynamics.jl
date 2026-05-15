@@ -88,6 +88,7 @@ struct BenchmarkMetadata
     evolution::Symbol
     maxdim::Int
     cutoff::Float64
+    split_order::NTuple{4,Symbol}
     measure_every::Int
 end
 
@@ -190,6 +191,7 @@ function _metadata(spec::BenchmarkSpec)
         spec.trotter.evolution,
         spec.trotter.maxdim,
         spec.trotter.cutoff,
+        spec.trotter.split_order,
         spec.measure_every,
     )
 end
@@ -236,6 +238,7 @@ function run_benchmark(spec::BenchmarkSpec; run_label::AbstractString = "manual"
 end
 
 _json_scalar(x::Symbol) = String(x)
+_json_scalar(x::Tuple) = map(_json_scalar, x)
 _json_scalar(x) = x
 
 function _summary_nt(obs::TFIMObservableSummary)
@@ -291,6 +294,13 @@ end
 function _assert_serializable_finite(x::NamedTuple, path::String)
     for name in keys(x)
         _assert_serializable_finite(getfield(x, name), "$path.$name")
+    end
+    return nothing
+end
+
+function _assert_serializable_finite(xs::Tuple, path::String)
+    for (idx, x) in pairs(xs)
+        _assert_serializable_finite(x, "$path[$idx]")
     end
     return nothing
 end
