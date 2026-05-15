@@ -15,6 +15,7 @@ const TEST_FILES = [
     "test_observables_evolved.jl",
     "test_tfim_observables.jl",
     "test_tfim_schedule_reference.jl",
+    "test_benchmarks.jl",
     "test_pepskit_measurements.jl",
     "test_scarfinder.jl",
     "test_public_docs.jl",

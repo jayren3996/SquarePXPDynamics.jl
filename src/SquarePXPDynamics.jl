@@ -19,6 +19,7 @@ include("Observables.jl")
 include("PEPSKitMeasurements.jl")
 include("StarSimpleUpdate.jl")
 include("IPEPSEvolution.jl")
+include("Benchmarks.jl")
 include("ScarFinder.jl")
 
 using .SpinOps:
@@ -96,6 +97,15 @@ using .PEPSKitMeasurements: star_expectation_ctm, pxp_energy_density_ctm, measur
 using .PEPSKitMeasurements: ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
 using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!
+using .Benchmarks:
+    BenchmarkSpec,
+    BenchmarkMetadata,
+    EvolutionDiagnostics,
+    BenchmarkSample,
+    BenchmarkResult,
+    run_benchmark,
+    write_benchmark_json,
+    write_benchmark_csv
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -144,6 +154,8 @@ export blockade_violation_ctm, star_expectation_ctm, pxp_energy_density_ctm, mea
 export ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
 export StarUpdateInfo, project_star!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!
+export BenchmarkSpec, BenchmarkMetadata, EvolutionDiagnostics, BenchmarkSample, BenchmarkResult
+export run_benchmark, write_benchmark_json, write_benchmark_csv
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
