@@ -1,0 +1,132 @@
+using LinearAlgebra
+
+@testset "Trotter parameter validation" begin
+    @test_throws ArgumentError TrotterParams(0.0, 1, :real, true, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 3, :real, true, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :bad, true, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 0, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 1, -1e-12)
+end
+
+@testset "Trotter schedules" begin
+    p1 = TrotterParams(0.1, 1, :real, true, 1, 1e-12)
+    @test trotter_sequence(p1) == [(1, 0.1), (2, 0.1), (3, 0.1), (4, 0.1), (5, 0.1)]
+
+    p2 = TrotterParams(0.1, 2, :real, true, 1, 1e-12)
+    @test trotter_sequence(p2) == [
+        (1, 0.05), (2, 0.05), (3, 0.05), (4, 0.05),
+        (5, 0.1),
+        (4, 0.05), (3, 0.05), (2, 0.05), (1, 0.05),
+    ]
+end
+
+@testset "zero-time evolution does not mutate state" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = checkerboard_square_ipeps(cell; excited_on = :even, maxdim = 1)
+    weights_before = deepcopy(psi.link_weights)
+    density_before = density_simple(psi)
+    blockade_before = blockade_violation_simple(psi)
+    params = TrotterParams(0.1, 2, :real, true, 1, 1e-12)
+
+    log = evolve!(psi, 0.0; params = params)
+
+    @test log.nsteps == 0
+    @test isempty(log.layer_infos)
+    @test density_simple(psi) ≈ density_before
+    @test blockade_violation_simple(psi) ≈ blockade_before
+    @test psi.link_weights == weights_before
+end
+
+@testset "evolution rejects non-integer step counts" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.1, 1, :real, true, 1, 1e-12)
+
+    @test_throws ArgumentError evolve!(psi, 0.25; params = params)
+end
+
+@testset "evolution requires five-color-compatible unit cells" begin
+    psi_bad = product_square_ipeps(PeriodicSquareUnitCell(4, 4); state = :down, maxdim = 1)
+    params = TrotterParams(0.1, 1, :real, true, 1, 1e-12)
+
+    @test_throws ArgumentError evolve!(psi_bad, 0.1; params = params)
+end
+
+@testset "one first-order step from all-down state" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.02, 1, :real, true, 1, 1e-12)
+
+    log = evolve!(psi, 0.02; params = params)
+
+    @test log.nsteps == 1
+    @test length(log.layer_infos) == 5
+    @test all(length(layer) == length(update_centers(cell, color)) for (layer, color) in zip(log.layer_infos, 1:5))
+    @test isfinite(log.max_truncerr)
+    @test log.max_truncerr >= 0
+    @test isfinite(log.max_bond_entropy)
+    @test isfinite(log.mean_bond_entropy)
+end
+
+@testset "one second-order step from all-down state" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.02, 2, :real, true, 1, 1e-12)
+
+    log = evolve!(psi, 0.02; params = params)
+
+    @test log.nsteps == 1
+    @test length(log.layer_infos) == 9
+    @test isfinite(log.max_truncerr)
+    @test all(isfinite, [log.max_bond_entropy, log.mean_bond_entropy])
+end
+
+@testset "repeated small steps remain finite" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+
+    log = evolve!(psi, 0.05; params = params)
+
+    @test log.nsteps == 5
+    @test isfinite(log.max_truncerr)
+    @test all(isfinite, values(all_bond_entropies(psi)))
+    for lambda in values(psi.link_weights)
+        @test norm(lambda) ≈ 1 atol = 1e-10
+    end
+end
+
+@testset "imaginary-time smoke test" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.01, 1, :imaginary, true, 1, 1e-12)
+
+    log = evolve!(psi, 0.01; params = params)
+
+    @test log.nsteps == 1
+    @test isfinite(log.max_truncerr)
+    @test all(isfinite, values(all_bond_entropies(psi)))
+end
+
+@testset "D=2 evolution smoke test" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    params = TrotterParams(0.01, 1, :real, true, 2, 1e-12)
+
+    log = evolve!(psi, 0.01; params = params)
+
+    @test log.nsteps == 1
+    @test isfinite(log.max_truncerr)
+    @test all(length(lambda) <= 2 for lambda in values(psi.link_weights))
+    @test all(isapprox(norm(lambda), 1; atol = 1e-10) for lambda in values(psi.link_weights))
+end
+
+@testset "evolution convenience constructor delegates to parameterized method" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+
+    log = evolve!(psi, 0.01; dt = 0.01, order = 1, evolution = :real, projected = true)
+
+    @test log.params == TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    @test log.nsteps == 1
+end
