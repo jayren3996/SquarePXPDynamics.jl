@@ -6,14 +6,16 @@ using TensorKit
 using ..SquareGeometry: SquareCoord
 using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
 using ..SquareUnitCells: PeriodicSquareUnitCell, wrap, neighbor
+using ..Observables: SimpleObservableSummary, measure_simple
 using ..SquareIPEPS:
     SquareIPEPSState, physical_index, link_index, link_weight, state_version
 
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
-export CTMObservableSummary
+export CTMObservableSummary, CTMValidationPoint
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export local_density_ctm, nearest_neighbor_density_ctm, blockade_violation_ctm
 export star_expectation_ctm, pxp_energy_density_ctm, measure_ctm, ctm_diagnostics
+export validate_ctm_sweep, write_ctm_validation_csv
 
 const _DIRECTIONS = (:right, :up, :left, :down)
 
@@ -204,6 +206,76 @@ CTMObservableSummary(
     Float64(pxp_energy_density),
     diagnostics,
 )
+
+function _ctm_observable_summary(obs::CTMObservableSummary)
+    return obs
+end
+
+function _ctm_observable_summary(obs::SimpleObservableSummary)
+    return CTMObservableSummary(
+        obs.density,
+        obs.density_even,
+        obs.density_odd,
+        obs.blockade_violation,
+        obs.pxp_energy_density,
+    )
+end
+
+function _assert_finite_ctm_summary(obs::CTMObservableSummary, label::String)
+    all(
+        isfinite,
+        (
+            obs.density,
+            obs.density_even,
+            obs.density_odd,
+            obs.blockade_violation,
+            obs.pxp_energy_density,
+        ),
+    ) || throw(ArgumentError("$label CTM validation summary must be finite"))
+    return obs
+end
+
+"""
+    CTMValidationPoint(params, reference, measurement)
+
+One point in a CTMRG finite-`chi`/tolerance validation sweep. `reference` is
+usually a simple/local diagnostic summary for the same state, while
+`measurement` is a CTMRG-backed summary produced with `params`. The `delta_*`
+fields are `measurement - reference` for the observables shared by both
+summaries, and `diagnostics` mirrors `measurement.diagnostics`.
+"""
+struct CTMValidationPoint
+    params::PEPSKitCTMRGParams
+    reference::CTMObservableSummary
+    measurement::CTMObservableSummary
+    diagnostics::Union{CTMRGDiagnostics,Nothing}
+    delta_density::Float64
+    delta_density_even::Float64
+    delta_density_odd::Float64
+    delta_blockade_violation::Float64
+    delta_pxp_energy_density::Float64
+
+    function CTMValidationPoint(
+        params::PEPSKitCTMRGParams,
+        reference,
+        measurement,
+    )
+        ref = _assert_finite_ctm_summary(_ctm_observable_summary(reference), "reference")
+        meas =
+            _assert_finite_ctm_summary(_ctm_observable_summary(measurement), "measurement")
+        return new(
+            params,
+            ref,
+            meas,
+            meas.diagnostics,
+            meas.density - ref.density,
+            meas.density_even - ref.density_even,
+            meas.density_odd - ref.density_odd,
+            meas.blockade_violation - ref.blockade_violation,
+            meas.pxp_energy_density - ref.pxp_energy_density,
+        )
+    end
+end
 
 """
     ctm_diagnostics(ctx)
@@ -741,6 +813,116 @@ function measure_ctm(
         pxp_energy_density_ctm(psi, ctx),
         ctx.diagnostics,
     )
+end
+
+"""
+    validate_ctm_sweep(psi; params, reference = measure_simple(psi), measure = measure_ctm)
+
+Run a CTMRG validation sweep over an iterable of [`PEPSKitCTMRGParams`](@ref)
+values. Each sweep point calls `measure(psi; params = p)`, compares the result
+against `reference`, and returns a vector of [`CTMValidationPoint`](@ref)
+records. The default reference is the current simple/local diagnostic summary,
+which is useful for smoke checks and regression tracking but is not a
+physics-quality substitute for finite-`chi` convergence analysis.
+"""
+function validate_ctm_sweep(
+    psi::SquareIPEPSState;
+    params,
+    reference = measure_simple(psi),
+    measure = measure_ctm,
+)::Vector{CTMValidationPoint}
+    param_values = collect(params)
+    isempty(param_values) && throw(ArgumentError("params must contain at least one value"))
+    return [
+        CTMValidationPoint(p, reference, measure(psi; params = p)) for p in param_values
+    ]
+end
+
+function _csv_value(value::Nothing)
+    return ""
+end
+
+function _csv_value(value::Bool)
+    return string(value)
+end
+
+function _csv_value(value::Real)
+    return string(value)
+end
+
+function _diagnostic_field(::Nothing, ::Symbol)
+    return nothing
+end
+
+function _diagnostic_field(diagnostics::CTMRGDiagnostics, field::Symbol)
+    return getfield(diagnostics, field)
+end
+
+"""
+    write_ctm_validation_csv(points, path)
+
+Write CTMRG validation sweep records to `path` as CSV. The output includes
+CTMRG controls, reference values, CTM values, deltas, and any convergence
+metadata carried by each point's diagnostics.
+"""
+function write_ctm_validation_csv(points, path::AbstractString)
+    header = (
+        "chi",
+        "tol",
+        "maxiter",
+        "verbosity",
+        "reference_density",
+        "ctm_density",
+        "delta_density",
+        "reference_density_even",
+        "ctm_density_even",
+        "delta_density_even",
+        "reference_density_odd",
+        "ctm_density_odd",
+        "delta_density_odd",
+        "reference_blockade_violation",
+        "ctm_blockade_violation",
+        "delta_blockade_violation",
+        "reference_pxp_energy_density",
+        "ctm_pxp_energy_density",
+        "delta_pxp_energy_density",
+        "ctm_iterations",
+        "ctm_residual",
+        "ctm_converged",
+        "ctm_accepted",
+    )
+    open(path, "w") do io
+        println(io, join(header, ","))
+        for point in points
+            row = (
+                point.params.chi,
+                point.params.tol,
+                point.params.maxiter,
+                point.params.verbosity,
+                point.reference.density,
+                point.measurement.density,
+                point.delta_density,
+                point.reference.density_even,
+                point.measurement.density_even,
+                point.delta_density_even,
+                point.reference.density_odd,
+                point.measurement.density_odd,
+                point.delta_density_odd,
+                point.reference.blockade_violation,
+                point.measurement.blockade_violation,
+                point.delta_blockade_violation,
+                point.reference.pxp_energy_density,
+                point.measurement.pxp_energy_density,
+                point.delta_pxp_energy_density,
+                _diagnostic_field(point.diagnostics, :iterations),
+                _diagnostic_field(point.diagnostics, :residual),
+                _diagnostic_field(point.diagnostics, :converged),
+                _diagnostic_field(point.diagnostics, :accepted),
+            )
+            println(io, join(_csv_value.(row), ","))
+        end
+    end
+    return path
 end
 
 end

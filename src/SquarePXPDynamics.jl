@@ -70,11 +70,12 @@ using .Observables: star_expectation_simple, pxp_energy_density_simple
 using .Observables: mean_bond_entropy, max_bond_entropy
 using .Observables: SimpleObservableSummary, measure_simple
 using .PEPSKitMeasurements: PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
-using .PEPSKitMeasurements: CTMObservableSummary, to_pepskit_infinitepeps
+using .PEPSKitMeasurements: CTMObservableSummary, CTMValidationPoint
+using .PEPSKitMeasurements: to_pepskit_infinitepeps
 using .PEPSKitMeasurements: pepskit_ctmrg_context, local_density_ctm
 using .PEPSKitMeasurements: nearest_neighbor_density_ctm, blockade_violation_ctm
 using .PEPSKitMeasurements: star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
-using .PEPSKitMeasurements: ctm_diagnostics
+using .PEPSKitMeasurements: ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
 using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!
 using .ScarFinder:
@@ -110,10 +111,11 @@ export star_expectation_simple, pxp_energy_density_simple
 export mean_bond_entropy, max_bond_entropy
 export SimpleObservableSummary, measure_simple
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics, CTMObservableSummary
+export CTMValidationPoint
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export local_density_ctm, nearest_neighbor_density_ctm
 export blockade_violation_ctm, star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
-export ctm_diagnostics
+export ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
 export StarUpdateInfo, project_star!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult

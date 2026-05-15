@@ -62,6 +62,21 @@ function _assert_finite_star_update_state_test(psi, infos = StarUpdateInfo[])
     end
 end
 
+function _assert_finite_simple_summary_test(summary)
+    @test all(
+        isfinite,
+        (
+            summary.density,
+            summary.density_even,
+            summary.density_odd,
+            summary.blockade_violation,
+            summary.pxp_energy_density,
+            summary.mean_bond_entropy,
+            summary.max_bond_entropy,
+        ),
+    )
+end
+
 function _seeded_nontrivial_d2_ipeps_test(cell)
     psi = product_square_ipeps(cell; state = :down, maxdim = 2)
     for c in cell.reps
@@ -454,4 +469,65 @@ end
         @test log_norm(psi) ≈ accumulated atol = 1e-10 rtol = 1e-10
         @test all(T -> isfinite(norm(T)), values(psi.tensors))
     end
+end
+
+@testset "repeated nontrivial D=2 star updates keep diagnostics finite" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = _seeded_nontrivial_d2_ipeps_test(cell)
+    center = SquareCoord(5, 5)
+    accumulated = 0.0
+
+    @test _has_active_second_virtual_sector_test(psi)
+    for _ = 1:100
+        info = project_star!(psi, center, 0.005; evolution = :real, projected = true, maxdim = 2)
+        accumulated += sum(log, values(info.norm_factors))
+        @test log_norm(psi) ≈ accumulated atol = 1e-10 rtol = 1e-12
+        _assert_finite_star_update_state_test(psi, [info])
+    end
+
+    summary = measure_simple(psi)
+    _assert_finite_simple_summary_test(summary)
+    @test 0 <= summary.density <= 1
+    @test summary.blockade_violation >= 0
+    @test summary.mean_bond_entropy >= 0
+    @test summary.max_bond_entropy >= summary.mean_bond_entropy
+end
+
+@testset "repeated nontrivial D=2 split orders agree on observables" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    center = SquareCoord(5, 5)
+    Hstar = square_pxp_star_hamiltonian()
+    psi_default = _seeded_nontrivial_d2_ipeps_test(cell)
+    psi_reordered = _seeded_nontrivial_d2_ipeps_test(cell)
+
+    for _ = 1:25
+        project_star!(
+            psi_default,
+            center,
+            0.005;
+            evolution = :real,
+            projected = true,
+            maxdim = 2,
+            split_order = (:right, :up, :left, :down),
+        )
+        project_star!(
+            psi_reordered,
+            center,
+            0.005;
+            evolution = :real,
+            projected = true,
+            maxdim = 2,
+            split_order = (:up, :right, :down, :left),
+        )
+    end
+
+    _assert_finite_simple_summary_test(measure_simple(psi_default))
+    _assert_finite_simple_summary_test(measure_simple(psi_reordered))
+    @test local_density_simple(psi_reordered, center) ≈
+          local_density_simple(psi_default, center) atol = 1e-10 rtol = 1e-8
+    @test nearest_neighbor_density_simple(psi_reordered, center, :right) ≈
+          nearest_neighbor_density_simple(psi_default, center, :right) atol = 1e-10 rtol =
+        1e-8
+    @test star_expectation_simple(psi_reordered, center, Hstar) ≈
+          star_expectation_simple(psi_default, center, Hstar) atol = 1e-10 rtol = 1e-8
 end

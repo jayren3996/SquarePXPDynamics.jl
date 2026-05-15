@@ -209,6 +209,15 @@ Replace source-inspection tests with behavior tests:
 
 This protects the true CTM-backed energy path without brittle regex/source checks.
 
+Status:
+
+- Added default product-state coverage comparing `pxp_energy_density_ctm(psi, ctx)`
+  against the average of per-center `star_expectation_ctm(psi, c, Hstar, ctx)`.
+- Added extended short-evolved D=1 coverage behind `SQUAREPXP_EXTENDED_TESTS=1`
+  using one PEPSKit CTMRG context and modest `PEPSKitCTMRGParams(2, 1e-6, 20, 0)`.
+- Deferred a D=2 CTM energy stress test because the extended PEPSKit CTMRG
+  measurement file already takes about five minutes on the current setup.
+
 ### Phase 7: Documentation
 
 Likely file:

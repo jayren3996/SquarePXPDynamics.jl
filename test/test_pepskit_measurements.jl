@@ -3,6 +3,12 @@ using TensorKit
 
 const RUN_EXTENDED_CTM_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
 
+function _ctm_star_energy_average(psi, ctx)
+    Hstar = square_pxp_star_hamiltonian()
+    return sum(real(star_expectation_ctm(psi, c, Hstar, ctx)) for c in psi.unitcell.reps) /
+           length(psi.unitcell.reps)
+end
+
 @testset "PEPSKit CTMRG measurement adapter" begin
     @testset "PEPSKit loads" begin
         @test isdefined(SquarePXPDynamics, :PEPSKitCTMRGParams)
@@ -196,6 +202,71 @@ const RUN_EXTENDED_CTM_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
         @test pxp_energy_density_ctm(psi, ctx) ≈ expected atol = 1e-8 rtol = 1e-6
     end
 
+    @testset "CTM validation sweep records deltas and diagnostics" begin
+        cell = PeriodicSquareUnitCell(3, 3)
+        psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+        params = (
+            PEPSKitCTMRGParams(1, 1e-4, 1, 0),
+            PEPSKitCTMRGParams(2, 1e-5, 3, 0),
+        )
+
+        points = validate_ctm_sweep(
+            psi;
+            params = params,
+            measure = (state; params) -> CTMObservableSummary(
+                0.1 * params.chi,
+                0.1 * params.chi,
+                0.1 * params.chi,
+                0.01 * params.chi,
+                -0.2 * params.chi,
+                CTMRGDiagnostics(
+                    params.chi,
+                    params.tol,
+                    params.maxiter,
+                    params.maxiter,
+                    params.tol / 10,
+                    true,
+                    true,
+                ),
+            ),
+        )
+
+        @test length(points) == 2
+        @test points[1] isa CTMValidationPoint
+        @test points[1].params === params[1]
+        @test points[1].diagnostics.chi == 1
+        @test points[1].delta_density ≈ 0.1 atol = 1e-12
+        @test points[1].delta_blockade_violation ≈ 0.01 atol = 1e-12
+        @test points[1].delta_pxp_energy_density ≈ -0.2 atol = 1e-12
+        @test points[2].delta_density ≈ 0.2 atol = 1e-12
+        @test points[2].diagnostics.accepted === true
+    end
+
+    @testset "CTM validation CSV includes sweep metadata" begin
+        point = CTMValidationPoint(
+            PEPSKitCTMRGParams(4, 1e-8, 10, 0),
+            CTMObservableSummary(0.5, 0.5, 0.5, 0.0, -0.1),
+            CTMObservableSummary(
+                0.51,
+                0.52,
+                0.50,
+                1e-3,
+                -0.11,
+                CTMRGDiagnostics(4, 1e-8, 10, 7, 2e-9, true, true),
+            ),
+        )
+        path = tempname() * ".csv"
+
+        write_ctm_validation_csv([point], path)
+        csv = read(path, String)
+
+        @test occursin("chi,tol,maxiter", csv)
+        @test occursin("delta_density", csv)
+        @test occursin("ctm_accepted", csv)
+        @test occursin("4,1.0e-8,10", csv)
+        @test occursin("0.010000000000000009", csv)
+    end
+
     if RUN_EXTENDED_CTM_TESTS
         @testset "extended CTMRG product-state density/blockade/PXP energy" begin
             cell = PeriodicSquareUnitCell(3, 3)
@@ -287,6 +358,21 @@ const RUN_EXTENDED_CTM_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
             @test isfinite(summary.density)
             @test isfinite(summary.blockade_violation)
             @test isfinite(summary.pxp_energy_density)
+        end
+
+        @testset "extended short-evolved CTM energy equals average star expectations" begin
+            cell = PeriodicSquareUnitCell(5, 5)
+            psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+            evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, true, 1, 1e-12))
+
+            # Modest CTMRG settings keep this extended regression practical.
+            # The comparison isolates aggregate-vs-local operator behavior with
+            # the same approximate environment, so tight agreement is expected.
+            params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
+            ctx = pepskit_ctmrg_context(psi; params)
+
+            @test pxp_energy_density_ctm(psi, ctx) ≈
+                  _ctm_star_energy_average(psi, ctx) atol = 1e-8 rtol = 1e-6
         end
     end
 end
