@@ -17,6 +17,12 @@ Parameters for deterministic five-color iPEPS Trotter evolution. `dt` is the
 positive full time-step size, `order` must be `1` or `2`, `evolution` must be
 `:real` or `:imaginary`, and `maxdim`/`cutoff`/`split_order` are forwarded to
 [`project_star!`](@ref).
+
+The legacy six-argument PXP constructor
+`TrotterParams(dt, order, evolution, projected, maxdim, cutoff)` returns a
+compatibility wrapper accepted by `evolve!`, `trotter_sequence`, and existing
+PXP orchestration APIs. New model-aware code should keep `TrotterParams`
+model-agnostic and pass an explicit model protocol to `evolve!`.
 """
 struct TrotterParams
     dt::Float64
@@ -64,6 +70,24 @@ old six-argument constructor.
 """
 legacy_trotter_params(params::TrotterParams) = params
 legacy_trotter_params(params::LegacyPXPParams) = params.trotter
+legacy_trotter_params(params) = throw(
+    ArgumentError("trotter must be a TrotterParams or legacy PXP TrotterParams"),
+)
+
+function Base.getproperty(params::LegacyPXPParams, name::Symbol)
+    if name === :projected
+        return getfield(getfield(params, :protocol), :model).projected
+    elseif name in (:dt, :order, :evolution, :maxdim, :cutoff, :split_order)
+        return getproperty(getfield(params, :trotter), name)
+    else
+        return getfield(params, name)
+    end
+end
+
+function Base.propertynames(params::LegacyPXPParams; private::Bool = false)
+    public = (:dt, :order, :evolution, :maxdim, :cutoff, :split_order, :projected)
+    return private ? (public..., :trotter, :protocol) : public
+end
 
 function TrotterParams(
     dt::Real,

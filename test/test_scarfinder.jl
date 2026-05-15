@@ -13,6 +13,7 @@
     @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, NaN, Inf, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, Inf, NaN, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, Inf, Inf, NaN, false)
+    @test_throws ArgumentError ScarFinderParams(0.01, "bad", 1, Inf, Inf, Inf, false)
 end
 
 @testset "ScarFinder zero iterations do not mutate state" begin

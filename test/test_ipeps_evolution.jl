@@ -252,6 +252,10 @@ end
     old = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
     current = TrotterParams(0.01, 1, :real, 1, 1e-12)
     @test trotter_sequence(old) == trotter_sequence(current)
+    @test old.dt == current.dt
+    @test old.order == current.order
+    @test old.evolution == current.evolution
+    @test old.projected === true
 
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
@@ -267,4 +271,19 @@ end
         params = old,
         protocol = StaticModel(PXPStarModel(true)),
     )
+
+    old_unprojected = TrotterParams(0.01, 1, :real, false, 1, 1e-12)
+    @test old_unprojected.projected === false
+    legacy_unprojected = product_square_ipeps(cell; state = :down, maxdim = 1)
+    explicit_unprojected = product_square_ipeps(cell; state = :down, maxdim = 1)
+    legacy_unprojected_log = evolve!(legacy_unprojected, 0.01; params = old_unprojected)
+    explicit_unprojected_log = evolve!(
+        explicit_unprojected,
+        0.01;
+        params = current,
+        protocol = StaticModel(PXPStarModel(false)),
+    )
+    @test legacy_unprojected_log.max_truncerr ≈ explicit_unprojected_log.max_truncerr atol =
+        1e-12
+    @test log_norm(legacy_unprojected) ≈ log_norm(explicit_unprojected) atol = 1e-12
 end
