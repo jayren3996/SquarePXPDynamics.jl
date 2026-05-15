@@ -1,6 +1,7 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PEPSKit = "52969e89-939e-4361-9b68-9bc7cde4bdeb"
 SquarePXPDynamics = "6f0e7c3a-7e61-4f61-8b55-0c69f1dd7c75"
