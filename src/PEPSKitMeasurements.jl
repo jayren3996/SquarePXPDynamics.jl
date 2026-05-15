@@ -64,7 +64,7 @@ end
 
 Summary of PEPSKit CTMRG observables for a custom ITensors square iPEPS state:
 total density, even/odd sublattice densities, nearest-neighbor blockade
-violation, and five-site PXP energy density.
+violation, and the mixed CTM/simple five-site PXP energy density diagnostic.
 """
 struct CTMObservableSummary
     density::Float64
@@ -375,16 +375,18 @@ end
 """
     pxp_energy_density_ctm(psi, ctx)::Float64
 
-Return the unit-cell average five-site square-star PXP energy density. The
-dense `square_pxp_star_hamiltonian()` from `SquarePXP.jl` is the source of
-truth, in star order `(center, right, up, left, down)`.
+Return the unit-cell average five-site square-star PXP energy density as a
+mixed CTM/simple diagnostic. The dense `square_pxp_star_hamiltonian()` from
+`SquarePXP.jl` is the source of truth, in star order
+`(center, right, up, left, down)`.
 
 PEPSKit 0.7.0 supports constructing the corresponding 5-site `LocalOperator`,
 but its public `expectation_value` path specializes on literal site tuples and
 is too expensive to compile once per unit-cell center. Until that PEPSKit path
 is practical for repeated star measurements, this method uses the existing
 dense five-site local measurement for the PXP term while the same CTMRG context
-is used for density and blockade measurements.
+is used for density and blockade measurements. This is not a production
+CTMRG-quality PXP energy measurement.
 """
 function pxp_energy_density_ctm(
     psi::SquareIPEPSState,
@@ -422,9 +424,10 @@ end
 
 Build one PEPSKit CTMRG measurement context for `psi` and reuse it to compute
 density, even/odd densities, nearest-neighbor blockade violation, and
-five-site PXP energy density. This is a measurement backend for states produced
-by the custom ITensors simple-update engine; it does not update or evolve the
-state.
+five-site PXP energy density. Density and blockade are CTMRG-backed; PXP energy
+currently falls back to the local square-star measurement path. This is a
+measurement backend for states produced by the custom ITensors simple-update
+engine; it does not update or evolve the state.
 """
 function measure_ctm(
     psi::SquareIPEPSState;

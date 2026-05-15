@@ -41,8 +41,7 @@ using TensorKit
         set_link_weight!(psi, c, :right, [9.0, 4.0])
 
         center_data = SquarePXPDynamics.PEPSKitMeasurements._absorbed_site_array(psi, c)
-        right_data =
-            SquarePXPDynamics.PEPSKitMeasurements._absorbed_site_array(psi, right)
+        right_data = SquarePXPDynamics.PEPSKitMeasurements._absorbed_site_array(psi, right)
 
         @test center_data[2, 1, 1, 1, 1] ≈ 3.0 + 0.0im atol = 1e-12
         @test right_data[2, 1, 1, 1, 1] ≈ 3.0 + 0.0im atol = 1e-12
@@ -108,7 +107,7 @@ using TensorKit
         )
     end
 
-    @testset "CTMRG product-state measurements" begin
+    @testset "CTMRG product-state density/blockade with local PXP energy fallback" begin
         cell = PeriodicSquareUnitCell(3, 3)
         params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
         psi_down = product_square_ipeps(cell; state = :down, maxdim = 1)
@@ -139,7 +138,7 @@ using TensorKit
         )
     end
 
-    @testset "CTM and simple product observables agree" begin
+    @testset "mixed CTM/simple product observables agree with simple diagnostics" begin
         product_cell = PeriodicSquareUnitCell(3, 3)
         checkerboard_cell = PeriodicSquareUnitCell(4, 4)
         params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
@@ -183,7 +182,7 @@ using TensorKit
         end
     end
 
-    @testset "short-evolved CTM smoke test" begin
+    @testset "short-evolved mixed CTM/simple smoke test" begin
         cell = PeriodicSquareUnitCell(5, 5)
         psi = product_square_ipeps(cell; state = :down, maxdim = 1)
         evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, true, 1, 1e-12))
