@@ -1,17 +1,11 @@
 # Open Questions
 
-## Integration State
-
-- Open question: Should `codex/infinite-tfim-benchmark` be merged locally,
-  pushed as a PR, or extended before review?
-- Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
-
 ## TFIM Schedule Reference Scope
 
 - Open question: The broad TFIM design mentions a tiny dense/sparse finite
   Hilbert-space schedule reference. The executed implementation plan delivered
   coefficient, non-overlap, and mapping schedule checks. Decide whether a full
-  finite Hilbert-space TFIM simulator is required before integration.
+  finite Hilbert-space TFIM simulator is required after the initial merge.
 - Source: `docs/superpowers/specs/2026-05-15-infinite-tfim-benchmark-design.md`
 - Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
 
@@ -20,7 +14,7 @@
 - Open question: The broad TFIM design lists a Tier 2 smoke matrix across
   `J = 0`, `h = 0`, small field, near-critical field, and large field. The
   executed plan's manual smoke covered the planned `J = 0` case. Decide whether
-  to add the broader matrix before publishing the branch.
+  to add the broader matrix as follow-up work.
 - Source: `docs/superpowers/specs/2026-05-15-infinite-tfim-benchmark-design.md`
 - Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
 

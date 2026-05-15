@@ -1,14 +1,11 @@
 # Next Steps
 
-1. Review the new memory files for tone, scope, and accuracy.
-2. Stage and commit `memory/`, `AGENTS.md`, and the existing current-work note
-   if the memory system should become part of the repo history.
-3. Choose an integration path for `codex/infinite-tfim-benchmark`: merge
-   locally, push/open PR, or extend with the optional finite Hilbert-space TFIM
-   reference and broader smoke matrix first.
-4. If continuing TFIM work, read
+1. Verify the merged `main` tree with the package test suite.
+2. Commit the post-merge memory updates.
+3. Push `main` to GitHub.
+4. If continuing TFIM work after push, read
    `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
-   and the branch worktree before making changes.
+   and the merged source files before making changes.
 5. If continuing CTM/ScarFinder work, start from
    `memory/mid_term/open_questions.md` and `README.md` warnings about CTM trust.
 

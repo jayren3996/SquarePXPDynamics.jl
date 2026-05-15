@@ -17,20 +17,21 @@
 - Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 - Source: `src/PEPSKitMeasurements.jl`
 
-## Completed On Feature Branch
+## Completed And Merged Locally
 
 - Confirmed: `codex/infinite-tfim-benchmark` implemented the v1 TFIM benchmark
   framework with star-model abstraction, protocol-aware evolution, TFIM simple
   observables, finite schedule checks, benchmark runner, JSON/CSV writers, docs,
-  and full-suite verification.
+  and full-suite verification. The branch was merged into local `main` on
+  2026-05-15.
 - Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
 - Source: `git log` in
   `/Users/ren/.config/superpowers/worktrees/iPEPS/codex-infinite-tfim-benchmark`
 
 ## Future Milestones
 
-- Open question: Decide how to integrate `codex/infinite-tfim-benchmark`:
-  local merge, push and PR, or add remaining follow-up scope first.
+- Confirmed: The local integration path chosen on 2026-05-15 was direct merge
+  into `main`, followed by verification and push to GitHub.
 - Open question: Add a full finite Hilbert-space TFIM schedule reference if it
   is required beyond the current coefficient/non-overlap/mapping tests.
 - Open question: Add the broader Tier 2 TFIM smoke matrix across multiple

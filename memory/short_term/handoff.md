@@ -10,7 +10,8 @@ Create a curated repository-local project memory system for
 Inspected README, project files, notes, docs, source/test layout, git status,
 recent commits, and the TFIM benchmark handoff note. Created `memory/` with
 long-term, mid-term, and short-term memory files plus a top-level `AGENTS.md`
-pointer.
+pointer. Then committed the memory system and merged
+`codex/infinite-tfim-benchmark` into local `main`.
 
 ## Important files touched
 
@@ -37,16 +38,17 @@ running `git diff --check`.
 
 ## Known problems
 
-- The memory system is newly created and uncommitted.
-- The completed TFIM benchmark work is in a separate worktree/branch and is not
-  merged into the current `main` checkout.
+- The memory system is committed, but this post-merge handoff update still
+  needs its own commit.
+- The completed TFIM benchmark work is merged into local `main`, but `main`
+  has not been pushed to GitHub yet.
 - Existing notes contain some superseded descriptions of earlier repo state;
   current README/source should be preferred for architecture status.
 
 ## Next recommended actions
 
-Review the memory files, then stage and commit them if they should be kept. Next
-decide whether to merge, push, or further extend `codex/infinite-tfim-benchmark`.
+Run verification on the merged tree, commit these memory updates, then push
+`main` to GitHub.
 
 ## Things not to do
 

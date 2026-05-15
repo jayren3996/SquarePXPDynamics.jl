@@ -57,8 +57,8 @@
   `h_c = -h X_c - (J/2) Z_c (Z_right + Z_up + Z_left + Z_down)`.
 - Confirmed: The `J/2` factor is intended to avoid double-counting nearest
   neighbor bonds when summing star terms over every lattice site.
-- Confirmed: The TFIM implementation is complete on branch
-  `codex/infinite-tfim-benchmark` in an isolated worktree, but it is not part
-  of the current `main` checkout at the time this memory was created.
+- Confirmed: The TFIM implementation was completed on branch
+  `codex/infinite-tfim-benchmark` and then merged into `main` locally on
+  2026-05-15.
 - Source: `docs/superpowers/specs/2026-05-15-infinite-tfim-benchmark-design.md`
 - Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
