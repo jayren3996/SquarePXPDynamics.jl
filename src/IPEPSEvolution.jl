@@ -1,6 +1,7 @@
 module IPEPSEvolution
 
-using ..SquareUnitCells: assert_five_color_compatible, update_centers, stars_are_disjoint_mod_unitcell
+using ..SquareUnitCells:
+    assert_five_color_compatible, update_centers, stars_are_disjoint_mod_unitcell
 using ..SquareIPEPS: SquareIPEPSState, all_bond_entropies
 using ..StarSimpleUpdate: StarUpdateInfo, project_star!
 
@@ -34,7 +35,8 @@ struct TrotterParams
         isfinite(step) && step > 0 || throw(ArgumentError("dt must be finite and positive"))
         ord = Int(order)
         ord in (1, 2) || throw(ArgumentError("order must be 1 or 2"))
-        evolution in (:real, :imaginary) || throw(ArgumentError("evolution must be :real or :imaginary"))
+        evolution in (:real, :imaginary) ||
+            throw(ArgumentError("evolution must be :real or :imaginary"))
         dim = Int(maxdim)
         dim >= 1 || throw(ArgumentError("maxdim must be at least 1"))
         trunc_cutoff = Float64(cutoff)
@@ -72,13 +74,19 @@ layers receive `dt / 2`.
 """
 function trotter_sequence(params::TrotterParams)::Vector{Tuple{Int,Float64}}
     if params.order == 1
-        return [(color, params.dt) for color in 1:5]
+        return [(color, params.dt) for color = 1:5]
     elseif params.order == 2
         half_step = params.dt / 2
         return [
-            (1, half_step), (2, half_step), (3, half_step), (4, half_step),
+            (1, half_step),
+            (2, half_step),
+            (3, half_step),
+            (4, half_step),
             (5, params.dt),
-            (4, half_step), (3, half_step), (2, half_step), (1, half_step),
+            (4, half_step),
+            (3, half_step),
+            (2, half_step),
+            (1, half_step),
         ]
     else
         throw(ArgumentError("order must be 1 or 2"))
@@ -104,8 +112,44 @@ function _assert_finite_diagnostics(max_truncerr, max_bond_entropy, mean_bond_en
     return nothing
 end
 
-function _finish_evolution_log(psi::SquareIPEPSState, total_time::Float64, params::TrotterParams, nsteps::Int, layer_infos)
-    max_truncerr = isempty(layer_infos) ? 0.0 : maximum(info.max_truncerr for info in Iterators.flatten(layer_infos))
+function _assert_finite_star_update_info(info::StarUpdateInfo)
+    isfinite(info.max_truncerr) && info.max_truncerr >= 0 ||
+        throw(ArgumentError("star update max_truncerr must be finite and nonnegative"))
+    all(isfinite, values(info.truncerrs)) ||
+        throw(ArgumentError("star update truncation errors must be finite"))
+    all(>=(0), values(info.truncerrs)) ||
+        throw(ArgumentError("star update truncation errors must be nonnegative"))
+    all(>(0), values(info.keptdims)) ||
+        throw(ArgumentError("star update kept dimensions must be positive"))
+    all(isfinite, values(info.min_lambda)) ||
+        throw(ArgumentError("star update minimum link weights must be finite"))
+    all(>=(0), values(info.min_lambda)) ||
+        throw(ArgumentError("star update minimum link weights must be nonnegative"))
+    all(isfinite, values(info.norm_factors)) ||
+        throw(ArgumentError("star update norm factors must be finite"))
+    all(>(0), values(info.norm_factors)) ||
+        throw(ArgumentError("star update norm factors must be positive"))
+    return nothing
+end
+
+function _assert_finite_star_update_infos(layer_infos)
+    for info in Iterators.flatten(layer_infos)
+        _assert_finite_star_update_info(info)
+    end
+    return nothing
+end
+
+function _finish_evolution_log(
+    psi::SquareIPEPSState,
+    total_time::Float64,
+    params::TrotterParams,
+    nsteps::Int,
+    layer_infos,
+)
+    max_truncerr =
+        isempty(layer_infos) ? 0.0 :
+        maximum(info.max_truncerr for info in Iterators.flatten(layer_infos))
+    _assert_finite_star_update_infos(layer_infos)
     entropy_values = collect(values(all_bond_entropies(psi)))
     max_bond_entropy = maximum(entropy_values)
     mean_bond_entropy = sum(entropy_values) / length(entropy_values)
@@ -133,7 +177,7 @@ function _evolve_with_params!(
 
     assert_five_color_compatible(psi.unitcell)
     sequence = trotter_sequence(params)
-    for _ in 1:nsteps
+    for _ = 1:nsteps
         for (color, layer_dt) in sequence
             centers = update_centers(psi.unitcell, color)
             stars_are_disjoint_mod_unitcell(psi.unitcell, centers) ||

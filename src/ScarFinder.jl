@@ -42,11 +42,13 @@ struct ScarFinderParams
         stop_on_reject::Bool,
     )
         time = Float64(projection_time)
+        isfinite(time) || throw(ArgumentError("projection_time must be finite"))
         time >= 0 || throw(ArgumentError("projection_time must be nonnegative"))
         niterations = Int(iterations)
         niterations >= 0 || throw(ArgumentError("iterations must be nonnegative"))
         truncerr_limit = _nonnegative_float(max_truncerr, "max_truncerr")
-        blockade_limit = _nonnegative_float(max_blockade_violation, "max_blockade_violation")
+        blockade_limit =
+            _nonnegative_float(max_blockade_violation, "max_blockade_violation")
         entropy_limit = _nonnegative_float(max_bond_entropy, "max_bond_entropy")
 
         return new(
@@ -100,15 +102,18 @@ function _nonnegative_float(value::Real, name::String)
 end
 
 function _finite_summary(obs::SimpleObservableSummary)
-    return all(isfinite, (
-        obs.density,
-        obs.density_even,
-        obs.density_odd,
-        obs.blockade_violation,
-        obs.pxp_energy_density,
-        obs.mean_bond_entropy,
-        obs.max_bond_entropy,
-    ))
+    return all(
+        isfinite,
+        (
+            obs.density,
+            obs.density_even,
+            obs.density_odd,
+            obs.blockade_violation,
+            obs.pxp_energy_density,
+            obs.mean_bond_entropy,
+            obs.max_bond_entropy,
+        ),
+    )
 end
 
 function _evaluate_scarfinder_iteration(
@@ -145,13 +150,10 @@ violation, simple bond entropy, and finite-diagnostic checks. `psi` is mutated
 like [`evolve!`](@ref). No CTMRG, energy correction, candidate ranking, or
 direct star-projection logic is performed here.
 """
-function scarfinder!(
-    psi::SquareIPEPSState,
-    params::ScarFinderParams,
-)::ScarFinderResult
+function scarfinder!(psi::SquareIPEPSState, params::ScarFinderParams)::ScarFinderResult
     iterations = ScarFinderIteration[]
 
-    for n in 1:params.iterations
+    for n = 1:params.iterations
         log = evolve!(psi, params.projection_time; params = params.trotter)
         obs = measure_simple(psi)
         accepted, reason = _evaluate_scarfinder_iteration(log, obs, params)

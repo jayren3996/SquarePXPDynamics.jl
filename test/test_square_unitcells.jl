@@ -23,7 +23,7 @@ end
     cell = PeriodicSquareUnitCell(10, 10)
     @test assert_five_color_compatible(cell) === cell
 
-    for color in 1:5
+    for color = 1:5
         centers = update_centers(cell, color)
         @test !isempty(centers)
         @test stars_are_disjoint_mod_unitcell(cell, centers)

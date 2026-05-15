@@ -26,4 +26,10 @@ using LinearAlgebra
     @test projected_square_pxp_gate(t; evolution = :real) ≈ P * U
     @test projected_square_pxp_gate(t; evolution = :imaginary) ≈ P * exp(-t * H)
     @test_throws ArgumentError square_pxp_gate(t; evolution = :thermal)
+    @test_throws ArgumentError square_pxp_gate(Inf; evolution = :real)
+    @test_throws ArgumentError square_pxp_gate(NaN; evolution = :real)
+    @test_throws ArgumentError projected_square_pxp_gate(Inf; evolution = :real)
+    @test_throws ArgumentError projected_square_pxp_gate(NaN; evolution = :real)
+    @test size(square_pxp_gate(-t; evolution = :real)) == (32, 32)
+    @test size(projected_square_pxp_gate(-t; evolution = :real)) == (32, 32)
 end

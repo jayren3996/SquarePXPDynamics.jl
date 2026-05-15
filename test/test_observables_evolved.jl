@@ -39,8 +39,12 @@ end
     project_star!(psi, c, dt; evolution = :real, projected = true, maxdim = 1)
 
     @test local_density_simple(psi, c) ≈ sin(dt)^2 atol = 1e-10 rtol = 1e-8
-    for leaf in (neighbor(cell, c, :right), neighbor(cell, c, :up),
-                 neighbor(cell, c, :left), neighbor(cell, c, :down))
+    for leaf in (
+        neighbor(cell, c, :right),
+        neighbor(cell, c, :up),
+        neighbor(cell, c, :left),
+        neighbor(cell, c, :down),
+    )
         @test local_density_simple(psi, leaf) ≈ 0 atol = 1e-12
     end
 end
@@ -78,15 +82,18 @@ end
 
     summary = measure_simple(psi)
     @test summary isa SimpleObservableSummary
-    @test all(isfinite, (
-        summary.density,
-        summary.density_even,
-        summary.density_odd,
-        summary.blockade_violation,
-        summary.pxp_energy_density,
-        summary.mean_bond_entropy,
-        summary.max_bond_entropy,
-    ))
+    @test all(
+        isfinite,
+        (
+            summary.density,
+            summary.density_even,
+            summary.density_odd,
+            summary.blockade_violation,
+            summary.pxp_energy_density,
+            summary.mean_bond_entropy,
+            summary.max_bond_entropy,
+        ),
+    )
     @test 0 <= summary.density <= 1
     @test summary.blockade_violation >= 0
 end

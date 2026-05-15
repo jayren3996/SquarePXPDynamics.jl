@@ -99,24 +99,15 @@ if peps !== nothing
     end
 
     op2 = report("construct nearest-neighbor 2-site LocalOperator") do
-        LocalOperator(
-            lattice_1x1,
-            (CartesianIndex(1, 1), CartesianIndex(1, 2)) => two_site_xx,
-        )
+        LocalOperator(lattice_1x1, (CartesianIndex(1, 1), CartesianIndex(1, 2)) => two_site_xx)
     end
 
     op5 = report("construct custom 5-site star LocalOperator on 3x3 cell") do
-        LocalOperator(
-            lattice_3x3,
-            star_sites => five_site_id,
-        )
+        LocalOperator(lattice_3x3, star_sites => five_site_id)
     end
 
     report("construct custom 5-site LocalCircuit gate") do
-        PEPSKit.LocalCircuit(
-            lattice_3x3,
-            star_sites => five_site_id,
-        )
+        PEPSKit.LocalCircuit(lattice_3x3, star_sites => five_site_id)
     end
 
     report("trotterize 5-site LocalOperator") do

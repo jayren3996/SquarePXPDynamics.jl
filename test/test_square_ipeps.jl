@@ -14,7 +14,8 @@ using ITensors
     @test all(lambda[1] ≈ 1.0 for lambda in values(psi.link_weights))
 
     for c in cell.reps
-        @test link_index(psi, c, :right) == link_index(psi, neighbor(cell, c, :right), :left)
+        @test link_index(psi, c, :right) ==
+              link_index(psi, neighbor(cell, c, :right), :left)
         @test link_index(psi, c, :up) == link_index(psi, neighbor(cell, c, :up), :down)
     end
 
@@ -42,9 +43,21 @@ end
 
     @test_throws ArgumentError product_square_ipeps(cell; state = :bad, maxdim = 1)
     @test_throws ArgumentError product_square_ipeps(cell; state = :down, maxdim = 0)
-    @test_throws ArgumentError checkerboard_square_ipeps(cell; excited_on = :bad, maxdim = 1)
-    @test_throws ArgumentError product_square_ipeps(PeriodicSquareUnitCell(1, 10); state = :down, maxdim = 1)
-    @test_throws ArgumentError product_square_ipeps(PeriodicSquareUnitCell(10, 1); state = :down, maxdim = 1)
+    @test_throws ArgumentError checkerboard_square_ipeps(
+        cell;
+        excited_on = :bad,
+        maxdim = 1,
+    )
+    @test_throws ArgumentError product_square_ipeps(
+        PeriodicSquareUnitCell(1, 10);
+        state = :down,
+        maxdim = 1,
+    )
+    @test_throws ArgumentError product_square_ipeps(
+        PeriodicSquareUnitCell(10, 1);
+        state = :down,
+        maxdim = 1,
+    )
 
     psi = product_square_ipeps(cell; state = :down, maxdim = 2)
     @test density_simple(psi) ≈ 0 atol = 1e-14

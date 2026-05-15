@@ -23,7 +23,7 @@ struct PeriodicSquareUnitCell <: SquareUnitCell
         Ly >= 1 || throw(ArgumentError("Ly must be at least 1"))
         nx = Int(Lx)
         ny = Int(Ly)
-        reps = [SquareCoord(x, y) for y in 1:ny for x in 1:nx]
+        reps = [SquareCoord(x, y) for y = 1:ny for x = 1:nx]
         return new(nx, ny, reps)
     end
 end
@@ -34,7 +34,8 @@ end
 Wrap square-lattice coordinate `c` into the one-based representatives of
 periodic unit cell `cell`.
 """
-wrap(cell::PeriodicSquareUnitCell, c::SquareCoord) = SquareCoord(mod1(c.x, cell.Lx), mod1(c.y, cell.Ly))
+wrap(cell::PeriodicSquareUnitCell, c::SquareCoord) =
+    SquareCoord(mod1(c.x, cell.Lx), mod1(c.y, cell.Ly))
 
 """
     neighbor(cell, c, dir)
@@ -42,7 +43,8 @@ wrap(cell::PeriodicSquareUnitCell, c::SquareCoord) = SquareCoord(mod1(c.x, cell.
 Return the periodic nearest neighbor of `c` in `:right`, `:up`, `:left`, or
 `:down`, wrapping the result into `cell`.
 """
-neighbor(cell::PeriodicSquareUnitCell, c::SquareCoord, dir::Symbol) = wrap(cell, square_neighbor(c, dir))
+neighbor(cell::PeriodicSquareUnitCell, c::SquareCoord, dir::Symbol) =
+    wrap(cell, square_neighbor(c, dir))
 
 """
     update_centers(cell, color)
@@ -83,7 +85,7 @@ have disjoint wrapped stars. Returns `cell` on success.
 function assert_five_color_compatible(cell::PeriodicSquareUnitCell)
     cell.Lx % 5 == 0 || throw(ArgumentError("Lx must be a multiple of 5"))
     cell.Ly % 5 == 0 || throw(ArgumentError("Ly must be a multiple of 5"))
-    for color in 1:5
+    for color = 1:5
         stars_are_disjoint_mod_unitcell(cell, update_centers(cell, color)) ||
             throw(ArgumentError("color layer $color has overlapping wrapped stars"))
     end
@@ -102,7 +104,9 @@ struct BondKey
     dir::Symbol
 
     function BondKey(site::SquareCoord, dir::Symbol)
-        dir === :right || dir === :up || throw(ArgumentError("BondKey direction must be :right or :up"))
+        dir === :right ||
+            dir === :up ||
+            throw(ArgumentError("BondKey direction must be :right or :up"))
         return new(site, dir)
     end
 end

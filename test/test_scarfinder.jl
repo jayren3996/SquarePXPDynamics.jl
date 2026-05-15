@@ -2,10 +2,15 @@
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
 
     @test_throws ArgumentError ScarFinderParams(-0.1, trotter, 1, Inf, Inf, Inf, false)
+    @test_throws ArgumentError ScarFinderParams(Inf, trotter, 1, Inf, Inf, Inf, false)
+    @test_throws ArgumentError ScarFinderParams(NaN, trotter, 1, Inf, Inf, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.1, trotter, -1, Inf, Inf, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.1, trotter, 1, -1.0, Inf, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.1, trotter, 1, Inf, -1.0, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.1, trotter, 1, Inf, Inf, -1.0, false)
+    @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, NaN, Inf, Inf, false)
+    @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, Inf, NaN, Inf, false)
+    @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, Inf, Inf, NaN, false)
 end
 
 @testset "ScarFinder zero iterations do not mutate state" begin
@@ -105,12 +110,7 @@ end
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
 
-    result = scarfinder!(
-        psi;
-        projection_time = 0.01,
-        trotter = trotter,
-        iterations = 2,
-    )
+    result = scarfinder!(psi; projection_time = 0.01, trotter = trotter, iterations = 2)
 
     @test length(result.iterations) == 2
     @test result.accepted_iterations == 2

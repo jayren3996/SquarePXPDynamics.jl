@@ -2,10 +2,14 @@ using LinearAlgebra
 
 @testset "Trotter parameter validation" begin
     @test_throws ArgumentError TrotterParams(0.0, 1, :real, true, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(Inf, 1, :real, true, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(NaN, 1, :real, true, 1, 1e-12)
     @test_throws ArgumentError TrotterParams(0.1, 3, :real, true, 1, 1e-12)
     @test_throws ArgumentError TrotterParams(0.1, 1, :bad, true, 1, 1e-12)
     @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 0, 1e-12)
     @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 1, -1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 1, Inf)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 1, NaN)
 end
 
 @testset "Trotter schedules" begin
@@ -14,9 +18,15 @@ end
 
     p2 = TrotterParams(0.1, 2, :real, true, 1, 1e-12)
     @test trotter_sequence(p2) == [
-        (1, 0.05), (2, 0.05), (3, 0.05), (4, 0.05),
+        (1, 0.05),
+        (2, 0.05),
+        (3, 0.05),
+        (4, 0.05),
         (5, 0.1),
-        (4, 0.05), (3, 0.05), (2, 0.05), (1, 0.05),
+        (4, 0.05),
+        (3, 0.05),
+        (2, 0.05),
+        (1, 0.05),
     ]
 end
 
@@ -43,6 +53,9 @@ end
     params = TrotterParams(0.1, 1, :real, true, 1, 1e-12)
 
     @test_throws ArgumentError evolve!(psi, 0.25; params = params)
+    @test_throws ArgumentError evolve!(psi, -0.1; params = params)
+    @test_throws ArgumentError evolve!(psi, Inf; params = params)
+    @test_throws ArgumentError evolve!(psi, NaN; params = params)
 end
 
 @testset "evolution requires five-color-compatible unit cells" begin
@@ -61,7 +74,10 @@ end
 
     @test log.nsteps == 1
     @test length(log.layer_infos) == 5
-    @test all(length(layer) == length(update_centers(cell, color)) for (layer, color) in zip(log.layer_infos, 1:5))
+    @test all(
+        length(layer) == length(update_centers(cell, color)) for
+        (layer, color) in zip(log.layer_infos, 1:5)
+    )
     @test isfinite(log.max_truncerr)
     @test log.max_truncerr >= 0
     @test isfinite(log.max_bond_entropy)
@@ -118,7 +134,9 @@ end
     @test log.nsteps == 1
     @test isfinite(log.max_truncerr)
     @test all(length(lambda) <= 2 for lambda in values(psi.link_weights))
-    @test all(isapprox(norm(lambda), 1; atol = 1e-10) for lambda in values(psi.link_weights))
+    @test all(
+        isapprox(norm(lambda), 1; atol = 1e-10) for lambda in values(psi.link_weights)
+    )
 end
 
 @testset "evolution convenience constructor delegates to parameterized method" begin
