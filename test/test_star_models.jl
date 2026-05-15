@@ -1,4 +1,34 @@
+using ITensors
 using LinearAlgebra
+
+function _star_models_dense_index_test(values)
+    idx = 1
+    for (site, value) in enumerate(values)
+        idx += (value - 1) * 2^(SQUARE_STAR_SITES - site)
+    end
+    return idx
+end
+
+function _star_models_gate_entry_test(G, sites, out_values, in_values)
+    out = prime.(sites)
+    return G[
+        (out[i]=>out_values[i] for i in eachindex(sites))...,
+        (sites[i]=>in_values[i] for i in eachindex(sites))...,
+    ]
+end
+
+function _star_models_dense_from_itensor_gate_test(G, sites)
+    dense = zeros(ComplexF64, 2^SQUARE_STAR_SITES, 2^SQUARE_STAR_SITES)
+    for out_values in Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
+        out_idx = _star_models_dense_index_test(out_values)
+        for in_values in Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
+            in_idx = _star_models_dense_index_test(in_values)
+            dense[out_idx, in_idx] =
+                _star_models_gate_entry_test(G, sites, out_values, in_values)
+        end
+    end
+    return dense
+end
 
 @testset "star model conventions" begin
     @test star_site_order() == (:center, :right, :up, :left, :down)
@@ -26,6 +56,14 @@ end
     @test tfim_product_basis_energy(model, (:up, :up, :up, :up, :up)) ≈ -4.0
     @test tfim_product_basis_energy(model, (:up, :down, :up, :down, :up)) ≈ 0.0
     @test tfim_product_basis_energy(model, (:down, :up, :up, :up, :up)) ≈ 4.0
+    @test H[
+        _star_models_dense_index_test((1, 1, 1, 1, 1)),
+        _star_models_dense_index_test((1, 1, 1, 1, 1)),
+    ] ≈ tfim_product_basis_energy(model, (:up, :up, :up, :up, :up))
+    @test H[
+        _star_models_dense_index_test((2, 1, 1, 1, 1)),
+        _star_models_dense_index_test((2, 1, 1, 1, 1)),
+    ] ≈ tfim_product_basis_energy(model, (:down, :up, :up, :up, :up))
 end
 
 @testset "TFIM dense gates" begin
@@ -44,6 +82,27 @@ end
     @test_throws ArgumentError star_gate(model, NaN; evolution = :imaginary)
     @test_throws ArgumentError TFIMStarModel(Inf, 1.0)
     @test_throws ArgumentError TFIMStarModel(1.0, NaN)
+end
+
+@testset "TFIM ITensor star gate convention" begin
+    sites = [Index(2, tag) for tag in ("center", "right", "up", "left", "down")]
+    model = TFIMStarModel(1.0, 0.7)
+    dt = 0.011
+    G = star_gate_itensor(model, sites, dt; evolution = :real)
+
+    @test inds(G) == (prime.(sites)..., sites...)
+    @test _star_models_dense_from_itensor_gate_test(G, sites) ≈
+          star_gate(model, dt; evolution = :real)
+    @test _star_models_dense_from_itensor_gate_test(
+        star_gate_itensor(model, dt, sites; evolution = :imaginary),
+        sites,
+    ) ≈ star_gate(model, dt; evolution = :imaginary)
+    @test_throws ArgumentError star_gate_itensor(model, sites[1:4], dt)
+    @test_throws ArgumentError star_gate_itensor(
+        model,
+        [Index(3, "bad"), sites[2:end]...],
+        dt,
+    )
 end
 
 @testset "static model protocol" begin
