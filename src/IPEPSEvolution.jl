@@ -2,7 +2,7 @@ module IPEPSEvolution
 
 using ..SquareUnitCells:
     assert_five_color_compatible, update_centers, stars_are_disjoint_mod_unitcell
-using ..SquareIPEPS: SquareIPEPSState, all_bond_entropies
+using ..SquareIPEPS: SquareIPEPSState, all_bond_entropies, log_norm
 using ..StarSimpleUpdate: StarUpdateInfo, project_star!
 
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!
@@ -52,7 +52,8 @@ end
 Diagnostics returned by [`evolve!`](@ref). `layer_infos` stores every
 [`StarUpdateInfo`](@ref) grouped by applied Trotter layer, `total_time` is the
 requested applied time, and the entropy fields summarize the final simple-
-update link weights.
+update link weights. `log_norm_before`, `log_norm_after`, and
+`log_norm_delta` record the normalization ledger around the evolution call.
 """
 struct EvolutionLog
     total_time::Float64
@@ -62,6 +63,9 @@ struct EvolutionLog
     max_truncerr::Float64
     max_bond_entropy::Float64
     mean_bond_entropy::Float64
+    log_norm_before::Float64
+    log_norm_after::Float64
+    log_norm_delta::Float64
 end
 
 """
@@ -112,6 +116,12 @@ function _assert_finite_diagnostics(max_truncerr, max_bond_entropy, mean_bond_en
     return nothing
 end
 
+function _assert_finite_log_norms(log_norm_before, log_norm_after, log_norm_delta)
+    all(isfinite, (log_norm_before, log_norm_after, log_norm_delta)) ||
+        throw(ArgumentError("log-norm diagnostics must be finite"))
+    return nothing
+end
+
 function _assert_finite_star_update_info(info::StarUpdateInfo)
     isfinite(info.max_truncerr) && info.max_truncerr >= 0 ||
         throw(ArgumentError("star update max_truncerr must be finite and nonnegative"))
@@ -145,6 +155,7 @@ function _finish_evolution_log(
     params::TrotterParams,
     nsteps::Int,
     layer_infos,
+    log_norm_before::Float64,
 )
     max_truncerr =
         isempty(layer_infos) ? 0.0 :
@@ -154,6 +165,9 @@ function _finish_evolution_log(
     max_bond_entropy = maximum(entropy_values)
     mean_bond_entropy = sum(entropy_values) / length(entropy_values)
     _assert_finite_diagnostics(max_truncerr, max_bond_entropy, mean_bond_entropy)
+    log_norm_after = log_norm(psi)
+    log_norm_delta = log_norm_after - log_norm_before
+    _assert_finite_log_norms(log_norm_before, log_norm_after, log_norm_delta)
 
     return EvolutionLog(
         total_time,
@@ -163,6 +177,9 @@ function _finish_evolution_log(
         max_truncerr,
         max_bond_entropy,
         mean_bond_entropy,
+        log_norm_before,
+        log_norm_after,
+        log_norm_delta,
     )
 end
 
@@ -172,8 +189,10 @@ function _evolve_with_params!(
     params::TrotterParams,
 )::EvolutionLog
     nsteps, total = _nsteps_for_total_time(total_time, params)
+    log_norm_before = log_norm(psi)
     layer_infos = Vector{Vector{StarUpdateInfo}}()
-    nsteps == 0 && return _finish_evolution_log(psi, total, params, nsteps, layer_infos)
+    nsteps == 0 &&
+        return _finish_evolution_log(psi, total, params, nsteps, layer_infos, log_norm_before)
 
     assert_five_color_compatible(psi.unitcell)
     sequence = trotter_sequence(params)
@@ -201,7 +220,7 @@ function _evolve_with_params!(
         end
     end
 
-    return _finish_evolution_log(psi, total, params, nsteps, layer_infos)
+    return _finish_evolution_log(psi, total, params, nsteps, layer_infos, log_norm_before)
 end
 
 """

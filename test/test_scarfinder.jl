@@ -129,6 +129,8 @@ end
     @test all(score -> score isa ScarFinderCandidateScore, ranked)
     @test all(score -> score.diagnostics === :simple, ranked)
     @test all(score -> isfinite(score.score), ranked)
+    @test all(score -> isfinite(score.log_norm_after), ranked)
+    @test all(score -> score.log_norm_delta ≈ score.log_norm_after - score.log_norm_before, ranked)
     @test all(iteration -> iteration.simple_score.diagnostics === :simple, result.iterations)
     @test all(iteration -> iteration.ctm_score === nothing, result.iterations)
 end
@@ -184,6 +186,7 @@ end
     @test ctm_score.ctm_residual == 1e-9
     @test ctm_score.ctm_converged === true
     @test ctm_score.ctm_accepted === true
+    @test isfinite(ctm_score.log_norm_after)
     @test only(rank_scarfinder_candidates(result; diagnostics = :ctm, require_ctm_accepted = true)) ===
           ctm_score
 
@@ -194,9 +197,11 @@ end
     csv = read(csv_path, String)
     json = read(json_path, String)
     @test occursin("ctm_chi", csv)
+    @test occursin("log_norm_delta", csv)
     ctm_row = split(split(chomp(csv), '\n')[3], ',')
     @test ctm_row[4] == "ctm"
-    @test ctm_row[14:20] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
+    @test ctm_row[17:23] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
+    @test occursin("\"log_norm_delta\"", json)
     @test occursin("\"ctm_accepted\":true", json)
 
     untrusted = CTMObservableSummary(
@@ -220,6 +225,44 @@ end
             require_ctm_accepted = true,
         ),
     )
+end
+
+@testset "ScarFinder nullable CTM sort keys put missing values last" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = ScarFinderParams(0.0, trotter, 2, Inf, Inf, Inf, false)
+    summaries = Dict(
+        1 => CTMObservableSummary(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            CTMRGDiagnostics(4, 1e-8, 10, 10, nothing, true, true),
+        ),
+        2 => CTMObservableSummary(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            CTMRGDiagnostics(4, 1e-8, 10, 7, 1e-9, true, true),
+        ),
+    )
+
+    result = scarfinder!(
+        psi,
+        params;
+        ctm_every = 1,
+        ctm_callback = (state, iteration, simple_score) -> summaries[iteration],
+    )
+
+    ranked_residual = rank_scarfinder_candidates(result; diagnostics = :ctm, by = :ctm_residual)
+    @test [score.iteration for score in ranked_residual] == [2, 1]
+
+    ranked_iterations = rank_scarfinder_candidates(result; diagnostics = :ctm, by = :ctm_iterations, rev = true)
+    @test [score.iteration for score in ranked_iterations] == [1, 2]
 end
 
 @testset "ScarFinder iteration logs write CSV and JSON" begin
@@ -246,9 +289,11 @@ end
     csv = read(csv_path, String)
     json = read(json_path, String)
     @test occursin("iteration,accepted,reject_reason", csv)
+    @test occursin("log_norm_before,log_norm_after,log_norm_delta", csv)
     @test occursin(",simple,", csv)
     @test occursin("\"iterations\"", json)
     @test occursin("\"diagnostics\":\"simple\"", json)
+    @test occursin("\"log_norm_after\"", json)
     @test length(csv_result.iterations) == 1
     @test length(json_result.iterations) == 1
 end

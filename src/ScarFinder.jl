@@ -73,7 +73,8 @@ One ranked ScarFinder candidate diagnostic record. `diagnostics` is `:simple`
 for the default local/simple measurements or `:ctm` for records supplied by an
 optional CTM measurement callback. The scalar `score` is an operational sorting
 key built from existing diagnostics only; it is not an energy correction or a
-physics claim.
+physics claim. The `log_norm_*` fields mirror the [`EvolutionLog`](@ref)
+normalization ledger for the candidate-producing evolution call.
 """
 struct ScarFinderCandidateScore
     iteration::Int
@@ -89,6 +90,9 @@ struct ScarFinderCandidateScore
     max_bond_entropy::Union{Nothing,Float64}
     max_truncerr::Float64
     score::Float64
+    log_norm_before::Float64
+    log_norm_after::Float64
+    log_norm_delta::Float64
     ctm_chi::Union{Nothing,Int}
     ctm_tol::Union{Nothing,Float64}
     ctm_maxiter::Union{Nothing,Int}
@@ -221,6 +225,9 @@ function _candidate_score(
         obs.max_bond_entropy,
         log.max_truncerr,
         _score_value(obs, log, obs.mean_bond_entropy, obs.max_bond_entropy),
+        log.log_norm_before,
+        log.log_norm_after,
+        log.log_norm_delta,
         nothing,
         nothing,
         nothing,
@@ -270,6 +277,9 @@ function _candidate_score(
         nothing,
         log.max_truncerr,
         _score_value(obs, log, nothing, nothing),
+        log.log_norm_before,
+        log.log_norm_after,
+        log.log_norm_delta,
         ctm_fields...,
     )
 end
@@ -346,7 +356,8 @@ Return candidate scores sorted by a field of [`ScarFinderCandidateScore`](@ref).
 Simple ranking is available for every iteration. CTM ranking includes only
 iterations where an optional CTM callback supplied diagnostics. Set
 `require_ctm_accepted = true` with `diagnostics = :ctm` to exclude CTM records
-whose diagnostics are missing or flagged as unaccepted.
+whose diagnostics are missing or flagged as unaccepted. Nullable sort fields,
+such as CTM residuals, are sorted with missing values last.
 """
 function rank_scarfinder_candidates(
     result::ScarFinderResult;
@@ -369,7 +380,9 @@ function rank_scarfinder_candidates(
     if !hasfield(ScarFinderCandidateScore, by)
         throw(ArgumentError("unknown ScarFinderCandidateScore field: $by"))
     end
-    return sort(scores; by = score -> getfield(score, by), rev)
+    present = filter(score -> getfield(score, by) !== nothing, scores)
+    missing = filter(score -> getfield(score, by) === nothing, scores)
+    return vcat(sort(present; by = score -> getfield(score, by), rev), missing)
 end
 
 """
@@ -526,6 +539,9 @@ function _write_csv_log(io, result::ScarFinderResult)
         "max_bond_entropy",
         "max_truncerr",
         "score",
+        "log_norm_before",
+        "log_norm_after",
+        "log_norm_delta",
         "ctm_chi",
         "ctm_tol",
         "ctm_maxiter",
@@ -550,6 +566,9 @@ function _write_csv_log(io, result::ScarFinderResult)
             score.max_bond_entropy,
             score.max_truncerr,
             score.score,
+            score.log_norm_before,
+            score.log_norm_after,
+            score.log_norm_delta,
             score.ctm_chi,
             score.ctm_tol,
             score.ctm_maxiter,
@@ -591,6 +610,9 @@ function _score_json(score::ScarFinderCandidateScore)
         :max_bond_entropy,
         :max_truncerr,
         :score,
+        :log_norm_before,
+        :log_norm_after,
+        :log_norm_delta,
         :ctm_chi,
         :ctm_tol,
         :ctm_maxiter,

@@ -43,7 +43,7 @@ measurement surface is present.
 - Periodic link-weight helpers and bond-entropy diagnostics (`src/SquareIPEPS.jl`).
 - ITensor wrappers for dense square-star PXP gates (`src/SquareIPEPS.jl`).
 - QR-reduced five-site star update via `project_star!` (`src/StarSimpleUpdate.jl`).
-- Deterministic five-color Trotter evolution via `evolve!` (`src/IPEPSEvolution.jl`).
+- Deterministic five-color Trotter evolution with log-normalization ledger diagnostics via `evolve!` (`src/IPEPSEvolution.jl`).
 - Simple/local density, blockade, energy-density, and entropy observables via `measure_simple` (`src/Observables.jl`).
 - Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
 - S6-lite `scarfinder!` orchestration, candidate ranking, and CSV/JSON diagnostic logging using simple/local diagnostics by default (`src/ScarFinder.jl`).
@@ -90,7 +90,12 @@ measurements at multiple `chi` values before trusting energy comparisons. A
 `PEPSKitMeasurementContext` belongs to the exact state used at creation; if
 `psi` is mutated by `evolve!`, `project_star!`, or link-weight setters, the old
 context is stale and measurement calls throw. `ScarFinderCandidateScore.score`
-is a diagnostic sorting key, not a physics-quality energy target.
+is a diagnostic sorting key, not a physics-quality energy target. ScarFinder
+CSV/JSON logs include `log_norm_before`, `log_norm_after`, and
+`log_norm_delta` so long projection sweeps can be screened for normalization
+drift. The public mutators update the state version; direct edits to
+`psi.tensors`, `psi.link_weights`, or `psi.link_indices` are internal mutable
+implementation details and can bypass cache-staleness bookkeeping.
 
 ## Development
 
@@ -111,6 +116,15 @@ Run the package tests:
 ```bash
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
+
+Run the slower extended CTM tests locally:
+
+```bash
+SQUAREPXP_EXTENDED_TESTS=1 julia --project=. -e 'using Pkg; Pkg.test()'
+```
+
+The same extended CTM suite is available in GitHub Actions through the
+`Extended CTM` manual workflow and its weekly scheduled run.
 
 The test suite includes API docstring coverage for exported names and Aqua.jl
 package-quality checks.

@@ -42,6 +42,9 @@ end
 
     @test log.nsteps == 0
     @test isempty(log.layer_infos)
+    @test log.log_norm_before == 0.0
+    @test log.log_norm_after == 0.0
+    @test log.log_norm_delta == 0.0
     @test density_simple(psi) ≈ density_before
     @test blockade_violation_simple(psi) ≈ blockade_before
     @test psi.link_weights == weights_before
@@ -74,6 +77,9 @@ end
 
     @test log.nsteps == 1
     @test length(log.layer_infos) == 5
+    @test log.log_norm_before == 0.0
+    @test log.log_norm_after ≈ log_norm(psi) atol = 1e-12
+    @test log.log_norm_delta ≈ log.log_norm_after - log.log_norm_before atol = 1e-12
     @test all(
         length(layer) == length(update_centers(cell, color)) for
         (layer, color) in zip(log.layer_infos, 1:5)

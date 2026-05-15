@@ -62,6 +62,43 @@ function _assert_finite_star_update_state_test(psi, infos = StarUpdateInfo[])
     end
 end
 
+function _seeded_nontrivial_d2_ipeps_test(cell)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    for c in cell.reps
+        p = physical_index(psi, c)
+        left = link_index(psi, c, :left)
+        right = link_index(psi, c, :right)
+        up = link_index(psi, c, :up)
+        down = link_index(psi, c, :down)
+        T = ITensor(ComplexF64, p, left, right, up, down)
+        for pv = 1:dim(p), lv = 1:dim(left), rv = 1:dim(right), uv = 1:dim(up), dv = 1:dim(down)
+            re = 0.01 * (11c.x + 7c.y + 5pv + 3lv + 2rv + uv + dv)
+            T[p=>pv, left=>lv, right=>rv, up=>uv, down=>dv] = complex(re, 0.0)
+        end
+        psi.tensors[c] = T
+        set_link_weight!(psi, c, :right, [0.8, 0.6])
+        set_link_weight!(psi, c, :up, [0.6, 0.8])
+    end
+    return psi
+end
+
+function _has_active_second_virtual_sector_test(psi)
+    for (c, T) in psi.tensors
+        p = physical_index(psi, c)
+        left = link_index(psi, c, :left)
+        right = link_index(psi, c, :right)
+        up = link_index(psi, c, :up)
+        down = link_index(psi, c, :down)
+        for pv = 1:dim(p), lv = 1:dim(left), rv = 1:dim(right), uv = 1:dim(up), dv = 1:dim(down)
+            if (lv == 2 || rv == 2 || uv == 2 || dv == 2) &&
+               abs(T[p=>pv, left=>lv, right=>rv, up=>uv, down=>dv]) > 0
+                return true
+            end
+        end
+    end
+    return false
+end
+
 function _normalized_dense_star_state_d1_testhelper(psi, center)
     state = _dense_star_state_d1_testhelper(psi, center)
     return state ./ norm(state)
@@ -363,6 +400,46 @@ end
         1e-8
     @test star_expectation_simple(psi_reordered, center, Hstar) ≈
           star_expectation_simple(psi_default, center, Hstar) atol = 1e-10 rtol = 1e-8
+end
+
+@testset "nontrivial D=2 fixture exercises active virtual sectors" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    center = SquareCoord(5, 5)
+    Hstar = square_pxp_star_hamiltonian()
+    psi_zero = _seeded_nontrivial_d2_ipeps_test(cell)
+
+    project_star!(psi_zero, center, 0.0; projected = false, maxdim = 2)
+
+    @test _has_active_second_virtual_sector_test(psi_zero)
+    _assert_finite_star_update_state_test(psi_zero)
+    @test isfinite(local_density_simple(psi_zero, center))
+    @test isfinite(real(star_expectation_simple(psi_zero, center, Hstar)))
+
+    psi_default = _seeded_nontrivial_d2_ipeps_test(cell)
+    psi_reordered = _seeded_nontrivial_d2_ipeps_test(cell)
+    project_star!(psi_default, center, 0.01; evolution = :imaginary, projected = true, maxdim = 2)
+    project_star!(
+        psi_reordered,
+        center,
+        0.01;
+        evolution = :imaginary,
+        projected = true,
+        maxdim = 2,
+        split_order = (:up, :right, :down, :left),
+    )
+
+    @test local_density_simple(psi_reordered, center) ≈
+          local_density_simple(psi_default, center) atol = 1e-4 rtol = 1e-3
+    @test nearest_neighbor_density_simple(psi_reordered, center, :right) ≈
+          nearest_neighbor_density_simple(psi_default, center, :right) atol = 1e-8 rtol =
+        2e-2
+    @test star_expectation_simple(psi_reordered, center, Hstar) ≈
+          star_expectation_simple(psi_default, center, Hstar) atol = 2e-5 rtol = 1e-1
+
+    psi_step = _seeded_nontrivial_d2_ipeps_test(cell)
+    info = project_star!(psi_step, center, 0.01; evolution = :real, projected = true, maxdim = 2)
+    _assert_finite_star_update_state_test(psi_step, [info])
+    @test isfinite(log_norm(psi_step))
 end
 
 @testset "D=2 update tracks normalization scale ledger" begin
