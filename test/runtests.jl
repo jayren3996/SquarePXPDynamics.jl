@@ -13,6 +13,7 @@ const TEST_FILES = [
     "test_star_simple_update.jl",
     "test_ipeps_evolution.jl",
     "test_observables_evolved.jl",
+    "test_tfim_observables.jl",
     "test_pepskit_measurements.jl",
     "test_scarfinder.jl",
     "test_public_docs.jl",

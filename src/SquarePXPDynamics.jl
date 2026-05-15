@@ -83,6 +83,10 @@ using .Observables: nearest_neighbor_density_simple, blockade_violation_simple
 using .Observables: star_expectation_simple, pxp_energy_density_simple
 using .Observables: mean_bond_entropy, max_bond_entropy
 using .Observables: SimpleObservableSummary, measure_simple
+using .Observables: local_x_simple, local_y_simple, local_z_simple
+using .Observables: nearest_neighbor_zz_simple
+using .Observables: tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
+using .Observables: TFIMObservableSummary, measure_tfim_simple
 using .PEPSKitMeasurements: PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
 using .PEPSKitMeasurements: CTMObservableSummary, CTMValidationPoint
 using .PEPSKitMeasurements: to_pepskit_infinitepeps
@@ -128,6 +132,10 @@ export nearest_neighbor_density_simple, blockade_violation_simple
 export star_expectation_simple, pxp_energy_density_simple
 export mean_bond_entropy, max_bond_entropy
 export SimpleObservableSummary, measure_simple
+export local_x_simple, local_y_simple, local_z_simple
+export nearest_neighbor_zz_simple
+export tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
+export TFIMObservableSummary, measure_tfim_simple
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics, CTMObservableSummary
 export CTMValidationPoint
 export to_pepskit_infinitepeps, pepskit_ctmrg_context

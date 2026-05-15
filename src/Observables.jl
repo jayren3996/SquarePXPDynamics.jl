@@ -1,17 +1,21 @@
 module Observables
 
 using ITensors
-using ..SpinOps: projector_up
+using ..SpinOps: pauli_x, pauli_y, pauli_z, projector_up
 using ..SquareGeometry
 using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
 using ..SquareUnitCells
 using ..SquareIPEPS
+using ..StarModels: TFIMStarModel, star_hamiltonian
 
 export local_density_simple, density_simple, sublattice_densities
 export nearest_neighbor_density_simple, blockade_violation_simple
 export star_expectation_simple, pxp_energy_density_simple
 export mean_bond_entropy, max_bond_entropy
 export SimpleObservableSummary, measure_simple
+export local_x_simple, local_y_simple, local_z_simple, nearest_neighbor_zz_simple
+export tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
+export TFIMObservableSummary, measure_tfim_simple
 
 const _DIRECTIONS = (:right, :up, :left, :down)
 
@@ -35,6 +39,12 @@ function _external_dirs_for_leaf(dir::Symbol)
     dir === :left && return (:left, :up, :down)
     dir === :down && return (:left, :right, :down)
     throw(ArgumentError("direction must be :right, :up, :left, or :down"))
+end
+
+function _validate_canonical_bond_dir(dir::Symbol)
+    (dir === :right || dir === :up) ||
+        throw(ArgumentError("TFIM canonical bond direction must be :right or :up"))
+    return dir
 end
 
 function _real_expectation(value; atol = 1e-10)
@@ -113,6 +123,38 @@ function _expectation_from_patch(theta::ITensor, O::AbstractMatrix, phys)
     return ComplexF64(numerator / _positive_norm(denominator))
 end
 
+function _one_site_expectation_simple(psi::SquareIPEPSState, c::SquareCoord, O::AbstractMatrix)
+    size(O) == (2, 2) || throw(ArgumentError("one-site operator must be 2x2"))
+    site = wrap(psi.unitcell, c)
+    A = _site_tensor_with_weights(psi, site)
+    p = physical_index(psi, site)
+    return _expectation_from_patch(A, O, (p,))
+end
+
+function _nearest_neighbor_expectation_simple(
+    psi::SquareIPEPSState,
+    c::SquareCoord,
+    dir::Symbol,
+    O::AbstractMatrix,
+)
+    _validate_direction(dir)
+    size(O) == (4, 4) || throw(ArgumentError("two-site operator must be 4x4"))
+    site = wrap(psi.unitcell, c)
+    other = neighbor(psi.unitcell, site, dir)
+    opposite = _opposite_dir(dir)
+
+    left_dirs = Tuple(d for d in _DIRECTIONS if d !== dir)
+    right_dirs = Tuple(d for d in _DIRECTIONS if d !== opposite)
+    A = _site_tensor_with_weights(psi, site; dirs = left_dirs)
+    A = absorb_link_weight(A, psi, site, dir)
+    B = _site_tensor_with_weights(psi, other; dirs = right_dirs)
+    theta = A * B
+
+    p1 = physical_index(psi, site)
+    p2 = physical_index(psi, other)
+    return _expectation_from_patch(theta, O, (p1, p2))
+end
+
 function _selected_reps(cell::PeriodicSquareUnitCell, sublattice)
     if sublattice === nothing
         return cell.reps
@@ -181,11 +223,37 @@ into its virtual legs, and the one-site bra-ket expectation is normalized by
 the same local patch norm. Basis index `1` is `:up`/Rydberg.
 """
 function local_density_simple(psi::SquareIPEPSState, c::SquareCoord)::Float64
-    site = wrap(psi.unitcell, c)
-    A = _site_tensor_with_weights(psi, site)
-    p = physical_index(psi, site)
-    value = _expectation_from_patch(A, projector_up(), (p,))
-    return _real_expectation(value)
+    return _real_expectation(_one_site_expectation_simple(psi, c, projector_up()))
+end
+
+"""
+    local_x_simple(psi, c)::Float64
+
+Return the simple-update local-environment Pauli-X expectation at site `c`.
+All four incident link weights are absorbed into the one-site local patch.
+"""
+function local_x_simple(psi::SquareIPEPSState, c::SquareCoord)::Float64
+    return _real_expectation(_one_site_expectation_simple(psi, c, pauli_x()))
+end
+
+"""
+    local_y_simple(psi, c)::Float64
+
+Return the simple-update local-environment Pauli-Y expectation at site `c`.
+All four incident link weights are absorbed into the one-site local patch.
+"""
+function local_y_simple(psi::SquareIPEPSState, c::SquareCoord)::Float64
+    return _real_expectation(_one_site_expectation_simple(psi, c, pauli_y()))
+end
+
+"""
+    local_z_simple(psi, c)::Float64
+
+Return the simple-update local-environment Pauli-Z expectation at site `c`.
+The TFIM convention is `Z |up> = +|up>` and `Z |down> = -|down>`.
+"""
+function local_z_simple(psi::SquareIPEPSState, c::SquareCoord)::Float64
+    return _real_expectation(_one_site_expectation_simple(psi, c, pauli_z()))
 end
 
 """
@@ -228,21 +296,25 @@ function nearest_neighbor_density_simple(
     c::SquareCoord,
     dir::Symbol,
 )::Float64
-    _validate_direction(dir)
-    site = wrap(psi.unitcell, c)
-    other = neighbor(psi.unitcell, site, dir)
-    opposite = _opposite_dir(dir)
+    value =
+        _nearest_neighbor_expectation_simple(psi, c, dir, kron(projector_up(), projector_up()))
+    return _real_expectation(value)
+end
 
-    left_dirs = Tuple(d for d in _DIRECTIONS if d !== dir)
-    right_dirs = Tuple(d for d in _DIRECTIONS if d !== opposite)
-    A = _site_tensor_with_weights(psi, site; dirs = left_dirs)
-    A = absorb_link_weight(A, psi, site, dir)
-    B = _site_tensor_with_weights(psi, other; dirs = right_dirs)
-    theta = A * B
+"""
+    nearest_neighbor_zz_simple(psi, c, dir)::Float64
 
-    p1 = physical_index(psi, site)
-    p2 = physical_index(psi, other)
-    value = _expectation_from_patch(theta, kron(projector_up(), projector_up()), (p1, p2))
+Return the simple-update two-site Pauli-ZZ expectation for the canonical TFIM
+bond from `c` in `dir`. Only `:right` and `:up` are accepted, so each periodic
+nearest-neighbor bond appears once in unit-cell averages.
+"""
+function nearest_neighbor_zz_simple(
+    psi::SquareIPEPSState,
+    c::SquareCoord,
+    dir::Symbol,
+)::Float64
+    _validate_canonical_bond_dir(dir)
+    value = _nearest_neighbor_expectation_simple(psi, c, dir, kron(pauli_z(), pauli_z()))
     return _real_expectation(value)
 end
 
@@ -300,6 +372,66 @@ function pxp_energy_density_simple(psi::SquareIPEPSState)::Float64
     return _real_expectation(value)
 end
 
+function _mean_one_site_expectation_simple(
+    psi::SquareIPEPSState,
+    O::AbstractMatrix;
+    sublattice = nothing,
+)
+    reps = _selected_reps(psi.unitcell, sublattice)
+    isempty(reps) && throw(ArgumentError("selected sublattice is empty"))
+    return sum(_one_site_expectation_simple(psi, c, O) for c in reps) / length(reps)
+end
+
+function _mean_nearest_neighbor_zz_simple(psi::SquareIPEPSState, dir::Symbol)
+    _validate_canonical_bond_dir(dir)
+    reps = psi.unitcell.reps
+    isempty(reps) && throw(ArgumentError("unit cell is empty"))
+    Ozz = kron(pauli_z(), pauli_z())
+    return sum(_nearest_neighbor_expectation_simple(psi, c, dir, Ozz) for c in reps) /
+           length(reps)
+end
+
+function _tfim_energy_density_star_simple(psi::SquareIPEPSState, model::TFIMStarModel)
+    Hstar = star_hamiltonian(model)
+    reps = psi.unitcell.reps
+    isempty(reps) && throw(ArgumentError("unit cell is empty"))
+    return sum(star_expectation_simple(psi, c, Hstar) for c in reps) / length(reps)
+end
+
+function _tfim_energy_density_decomposed_simple(psi::SquareIPEPSState, model::TFIMStarModel)
+    mean_x = _mean_one_site_expectation_simple(psi, pauli_x())
+    zz_right = _mean_nearest_neighbor_zz_simple(psi, :right)
+    zz_up = _mean_nearest_neighbor_zz_simple(psi, :up)
+    return -model.h * mean_x - model.J * (zz_right + zz_up)
+end
+
+"""
+    tfim_energy_density_star_simple(psi, model)::Float64
+
+Return the unit-cell average of `star_hamiltonian(model)` using
+[`star_expectation_simple`](@ref) over every unit-cell representative.
+"""
+function tfim_energy_density_star_simple(
+    psi::SquareIPEPSState,
+    model::TFIMStarModel,
+)::Float64
+    return _real_expectation(_tfim_energy_density_star_simple(psi, model))
+end
+
+"""
+    tfim_energy_density_decomposed_simple(psi, model)::Float64
+
+Return the decomposed TFIM energy density
+`-h * mean_x - J * (zz_right + zz_up)`, where all terms are unit-cell averages
+of simple-update local observables over canonical `:right` and `:up` bonds.
+"""
+function tfim_energy_density_decomposed_simple(
+    psi::SquareIPEPSState,
+    model::TFIMStarModel,
+)::Float64
+    return _real_expectation(_tfim_energy_density_decomposed_simple(psi, model))
+end
+
 """
     mean_bond_entropy(psi)::Float64
 
@@ -346,6 +478,43 @@ struct SimpleObservableSummary
 end
 
 """
+    TFIMObservableSummary
+
+Deterministic TFIM diagnostics from simple-update/local-environment
+observables, including Pauli means, canonical ZZ bonds, star and decomposed
+energy densities, Hermitian-observable imaginary residuals, and link-entropy
+summaries.
+"""
+struct TFIMObservableSummary
+    mean_x::Float64
+    mean_y::Float64
+    mean_z::Float64
+    z_even::Float64
+    z_odd::Float64
+    zz_right::Float64
+    zz_up::Float64
+    energy_density_star::Float64
+    energy_density_decomposed::Float64
+    energy_density_discrepancy::Float64
+    x_imag_abs::Float64
+    y_imag_abs::Float64
+    z_imag_abs::Float64
+    zz_imag_abs::Float64
+    energy_imag_abs::Float64
+    max_imag_abs::Float64
+    mean_bond_entropy::Float64
+    max_bond_entropy::Float64
+end
+
+function _validate_finite_summary(summary::TFIMObservableSummary)
+    for name in fieldnames(TFIMObservableSummary)
+        value = getfield(summary, name)
+        isfinite(value) || throw(ArgumentError("TFIM summary field $name must be finite"))
+    end
+    return summary
+end
+
+"""
     measure_simple(psi)::SimpleObservableSummary
 
 Compute cheap deterministic simple-update diagnostics for a custom ITensors
@@ -362,6 +531,59 @@ function measure_simple(psi::SquareIPEPSState)::SimpleObservableSummary
         mean_bond_entropy(psi),
         max_bond_entropy(psi),
     )
+end
+
+"""
+    measure_tfim_simple(psi, model)::TFIMObservableSummary
+
+Compute cheap deterministic TFIM diagnostics for a square iPEPS state using
+simple-update local environments. This does not run CTMRG or refresh any
+environment. The reported discrepancy is
+`abs(energy_density_star - energy_density_decomposed)`.
+"""
+function measure_tfim_simple(
+    psi::SquareIPEPSState,
+    model::TFIMStarModel,
+)::TFIMObservableSummary
+    x = _mean_one_site_expectation_simple(psi, pauli_x())
+    y = _mean_one_site_expectation_simple(psi, pauli_y())
+    z = _mean_one_site_expectation_simple(psi, pauli_z())
+    z_even = _mean_one_site_expectation_simple(psi, pauli_z(); sublattice = :even)
+    z_odd = _mean_one_site_expectation_simple(psi, pauli_z(); sublattice = :odd)
+    zz_right = _mean_nearest_neighbor_zz_simple(psi, :right)
+    zz_up = _mean_nearest_neighbor_zz_simple(psi, :up)
+    energy_star = _tfim_energy_density_star_simple(psi, model)
+    energy_decomposed = -model.h * x - model.J * (zz_right + zz_up)
+
+    x_imag_abs = abs(imag(x))
+    y_imag_abs = abs(imag(y))
+    z_imag_abs = maximum(abs, imag.((z, z_even, z_odd)))
+    zz_imag_abs = maximum(abs, imag.((zz_right, zz_up)))
+    energy_imag_abs = maximum(abs, imag.((energy_star, energy_decomposed)))
+    max_imag_abs =
+        maximum((x_imag_abs, y_imag_abs, z_imag_abs, zz_imag_abs, energy_imag_abs))
+
+    summary = TFIMObservableSummary(
+        _real_expectation(x),
+        _real_expectation(y),
+        _real_expectation(z),
+        _real_expectation(z_even),
+        _real_expectation(z_odd),
+        _real_expectation(zz_right),
+        _real_expectation(zz_up),
+        _real_expectation(energy_star),
+        _real_expectation(energy_decomposed),
+        abs(_real_expectation(energy_star) - _real_expectation(energy_decomposed)),
+        Float64(x_imag_abs),
+        Float64(y_imag_abs),
+        Float64(z_imag_abs),
+        Float64(zz_imag_abs),
+        Float64(energy_imag_abs),
+        Float64(max_imag_abs),
+        mean_bond_entropy(psi),
+        max_bond_entropy(psi),
+    )
+    return _validate_finite_summary(summary)
 end
 
 end
