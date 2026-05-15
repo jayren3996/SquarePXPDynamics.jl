@@ -14,6 +14,7 @@ include("SquarePXP.jl")
 include("SquarePEPS.jl")
 include("SquareUnitCells.jl")
 include("SquareIPEPS.jl")
+include("StarModels.jl")
 include("Observables.jl")
 include("PEPSKitMeasurements.jl")
 include("StarSimpleUpdate.jl")
@@ -47,6 +48,19 @@ using .SquarePXP:
     square_pxp_gate,
     projected_square_pxp_gate,
     square_star_basis_allowed
+using .StarModels:
+    AbstractStarModel,
+    PXPStarModel,
+    TFIMStarModel,
+    AbstractModelProtocol,
+    StaticModel,
+    model_at,
+    star_site_order,
+    tfim_pauli_convention,
+    star_hamiltonian,
+    star_gate,
+    star_gate_itensor,
+    tfim_product_basis_energy
 using .SquarePEPS:
     SquarePEPSState, product_square_peps, site_tensor, physical_index, link_index
 using .SquareUnitCells:
@@ -94,6 +108,10 @@ export square_neighbor, square_star_sites, square_star_color, disjoint_square_st
 export unit_cell_representatives, wrap_square_coord
 export SQUARE_STAR_SITES, square_pxp_star_hamiltonian, square_star_blockade_projector
 export square_pxp_gate, projected_square_pxp_gate, square_star_basis_allowed
+export AbstractStarModel, PXPStarModel, TFIMStarModel
+export AbstractModelProtocol, StaticModel, model_at
+export star_site_order, tfim_pauli_convention
+export star_hamiltonian, star_gate, star_gate_itensor, tfim_product_basis_energy
 export SquarePEPSState, product_square_peps, site_tensor, physical_index, link_index
 export PeriodicSquareUnitCell
 export wrap, neighbor, update_centers, assert_five_color_compatible
