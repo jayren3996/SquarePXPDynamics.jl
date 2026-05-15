@@ -531,3 +531,23 @@ end
     @test star_expectation_simple(psi_reordered, center, Hstar) ≈
           star_expectation_simple(psi_default, center, Hstar) atol = 1e-10 rtol = 1e-8
 end
+
+@testset "project_star accepts explicit star models" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    center = SquareCoord(5, 5)
+    dt = 0.01
+
+    legacy = product_square_ipeps(cell; state = :down, maxdim = 1)
+    explicit = product_square_ipeps(cell; state = :down, maxdim = 1)
+    project_star!(legacy, center, dt; projected = true, maxdim = 1)
+    project_star!(explicit, center, dt; model = PXPStarModel(true), maxdim = 1)
+
+    @test local_density_simple(explicit, center) ≈ local_density_simple(legacy, center) atol =
+        1e-12
+    @test log_norm(explicit) ≈ log_norm(legacy) atol = 1e-12
+
+    tfim = product_square_ipeps(cell; state = :up, maxdim = 1)
+    info = project_star!(tfim, center, 0.0; model = TFIMStarModel(1.0, 0.0), maxdim = 1)
+    @test info.max_truncerr ≥ 0
+    @test isfinite(log_norm(tfim))
+end

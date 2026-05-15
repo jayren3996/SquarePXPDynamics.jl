@@ -4,32 +4,36 @@ using ..SquareUnitCells:
     assert_five_color_compatible, update_centers, stars_are_disjoint_mod_unitcell
 using ..SquareIPEPS: SquareIPEPSState, all_bond_entropies, log_norm
 using ..StarSimpleUpdate: StarUpdateInfo, project_star!
+using ..StarModels:
+    AbstractModelProtocol, PXPStarModel, StaticModel, model_at
 
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!
 
+const _TROTTER_SPLIT_DIRECTIONS = (:right, :up, :left, :down)
+
 """
-    TrotterParams(dt, order, evolution, projected, maxdim, cutoff)
+    TrotterParams(dt, order, evolution, maxdim, cutoff, split_order = (:right, :up, :left, :down))
 
 Parameters for deterministic five-color iPEPS Trotter evolution. `dt` is the
 positive full time-step size, `order` must be `1` or `2`, `evolution` must be
-`:real` or `:imaginary`, `projected` selects the projected square-star gate,
-and `maxdim`/`cutoff` are forwarded to [`project_star!`](@ref).
+`:real` or `:imaginary`, and `maxdim`/`cutoff`/`split_order` are forwarded to
+[`project_star!`](@ref).
 """
 struct TrotterParams
     dt::Float64
     order::Int
     evolution::Symbol
-    projected::Bool
     maxdim::Int
     cutoff::Float64
+    split_order::NTuple{4,Symbol}
 
     function TrotterParams(
         dt::Real,
         order::Integer,
         evolution::Symbol,
-        projected::Bool,
         maxdim::Integer,
         cutoff::Real,
+        split_order = _TROTTER_SPLIT_DIRECTIONS,
     )
         step = Float64(dt)
         isfinite(step) && step > 0 || throw(ArgumentError("dt must be finite and positive"))
@@ -42,8 +46,53 @@ struct TrotterParams
         trunc_cutoff = Float64(cutoff)
         isfinite(trunc_cutoff) && trunc_cutoff >= 0 ||
             throw(ArgumentError("cutoff must be finite and nonnegative"))
-        return new(step, ord, evolution, projected, dim, trunc_cutoff)
+        order_values = _validate_trotter_split_order(split_order)
+        return new(step, ord, evolution, dim, trunc_cutoff, order_values)
     end
+end
+
+struct LegacyPXPParams
+    trotter::TrotterParams
+    protocol::StaticModel{PXPStarModel}
+end
+
+function TrotterParams(
+    dt::Real,
+    order::Integer,
+    evolution::Symbol,
+    projected::Bool,
+    maxdim::Integer,
+    cutoff::Real,
+)
+    return LegacyPXPParams(
+        TrotterParams(dt, order, evolution, maxdim, cutoff),
+        StaticModel(PXPStarModel(projected)),
+    )
+end
+
+function _validate_trotter_split_order(split_order)
+    order_values = try
+        collect(split_order)
+    catch
+        throw(
+            ArgumentError(
+                "split_order must be a permutation of (:right, :up, :left, :down)",
+            ),
+        )
+    end
+    all(dir -> dir isa Symbol, order_values) || throw(
+        ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"),
+    )
+    order = Tuple(order_values)
+    length(order) == length(_TROTTER_SPLIT_DIRECTIONS) ||
+        throw(ArgumentError("split_order must contain four directions"))
+    all(dir -> dir in _TROTTER_SPLIT_DIRECTIONS, order) || throw(
+        ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"),
+    )
+    Set(order) == Set(_TROTTER_SPLIT_DIRECTIONS) || throw(
+        ArgumentError("split_order must be a permutation of (:right, :up, :left, :down)"),
+    )
+    return order::NTuple{4,Symbol}
 end
 
 """
@@ -187,6 +236,7 @@ function _evolve_with_params!(
     psi::SquareIPEPSState,
     total_time::Real,
     params::TrotterParams,
+    protocol::AbstractModelProtocol,
 )::EvolutionLog
     nsteps, total = _nsteps_for_total_time(total_time, params)
     log_norm_before = log_norm(psi)
@@ -196,7 +246,9 @@ function _evolve_with_params!(
 
     assert_five_color_compatible(psi.unitcell)
     sequence = trotter_sequence(params)
-    for _ = 1:nsteps
+    for step_index = 1:nsteps
+        time_before_step = (step_index - 1) * params.dt
+        model = model_at(protocol, time_before_step, step_index)
         for (color, layer_dt) in sequence
             centers = update_centers(psi.unitcell, color)
             stars_are_disjoint_mod_unitcell(psi.unitcell, centers) ||
@@ -209,10 +261,11 @@ function _evolve_with_params!(
                         psi,
                         center,
                         layer_dt;
+                        model = model,
                         evolution = params.evolution,
-                        projected = params.projected,
                         maxdim = params.maxdim,
                         cutoff = params.cutoff,
+                        split_order = params.split_order,
                     ),
                 )
             end
@@ -228,6 +281,7 @@ end
         psi::SquareIPEPSState,
         total_time::Real;
         params::TrotterParams,
+        protocol = nothing,
     )::EvolutionLog
 
     evolve!(
@@ -239,6 +293,7 @@ end
         projected::Bool = true,
         maxdim::Integer = psi.maxdim,
         cutoff::Real = 1e-12,
+        protocol = nothing,
     )::EvolutionLog
 
 Apply deterministic five-color iPEPS Trotter evolution by orchestrating
@@ -250,7 +305,8 @@ form constructs [`TrotterParams`](@ref) and then uses the same evolution path.
 function evolve!(
     psi::SquareIPEPSState,
     total_time::Real;
-    params::Union{TrotterParams,Nothing} = nothing,
+    params::Union{TrotterParams,LegacyPXPParams,Nothing} = nothing,
+    protocol::Union{AbstractModelProtocol,Nothing} = nothing,
     dt = nothing,
     order::Integer = 2,
     evolution::Symbol = :real,
@@ -258,13 +314,24 @@ function evolve!(
     maxdim::Integer = psi.maxdim,
     cutoff::Real = 1e-12,
 )::EvolutionLog
-    actual_params = if params === nothing
+    actual_params, actual_protocol = if params === nothing
         dt === nothing && throw(UndefKeywordError(:dt))
-        TrotterParams(dt, order, evolution, projected, maxdim, cutoff)
+        (
+            TrotterParams(dt, order, evolution, maxdim, cutoff),
+            protocol === nothing ? StaticModel(PXPStarModel(projected)) : protocol,
+        )
+    elseif params isa LegacyPXPParams
+        protocol === nothing || throw(
+            ArgumentError("cannot pass an explicit protocol with legacy PXP TrotterParams"),
+        )
+        (params.trotter, params.protocol)
     else
-        params
+        (
+            params,
+            protocol === nothing ? StaticModel(PXPStarModel(projected)) : protocol,
+        )
     end
-    return _evolve_with_params!(psi, total_time, actual_params)
+    return _evolve_with_params!(psi, total_time, actual_params, actual_protocol)
 end
 
 end
