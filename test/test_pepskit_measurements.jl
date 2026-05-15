@@ -149,7 +149,7 @@ const RUN_EXTENDED_CTM_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
         dt = 0.05
         Hstar = square_pxp_star_hamiltonian()
 
-        project_star!(psi, c, dt; evolution = :real, projected = true, maxdim = 1)
+        project_star!(psi, c, dt; evolution = :imaginary, projected = true, maxdim = 1)
         @test abs(star_expectation_simple(psi, c, Hstar)) > 0
 
         # Keep default CI to one minimal CTMRG solve. PEPSKit's first CTMRG
