@@ -1,7 +1,9 @@
 module ScarFinder
 
 using ..SquareIPEPS: SquareIPEPSState
-using ..IPEPSEvolution: TrotterParams, EvolutionLog, legacy_trotter_params, evolve!
+using ..IPEPSEvolution:
+    TrotterParams, EvolutionLog, legacy_trotter_params, legacy_trotter_protocol, evolve!
+using ..StarModels: AbstractModelProtocol
 using ..Observables: SimpleObservableSummary, measure_simple
 using ..PEPSKitMeasurements: CTMObservableSummary, CTMRGDiagnostics
 
@@ -29,6 +31,7 @@ computed from recorded diagnostics by the orchestration layer.
 struct ScarFinderParams
     projection_time::Float64
     trotter::TrotterParams
+    protocol::Union{Nothing,AbstractModelProtocol}
     iterations::Int
     max_truncerr::Float64
     max_blockade_violation::Float64
@@ -57,6 +60,7 @@ struct ScarFinderParams
         return new(
             time,
             legacy_trotter_params(trotter),
+            legacy_trotter_protocol(trotter),
             niterations,
             truncerr_limit,
             blockade_limit,
@@ -411,7 +415,12 @@ function scarfinder!(
     iterations = ScarFinderIteration[]
 
     for n = 1:params.iterations
-        log = evolve!(psi, params.projection_time; params = params.trotter)
+        log = evolve!(
+            psi,
+            params.projection_time;
+            params = params.trotter,
+            protocol = params.protocol,
+        )
         obs = measure_simple(psi)
         accepted, reason = _evaluate_scarfinder_iteration(log, obs, params)
         simple_score = _candidate_score(n, :simple, accepted, reason, log, obs)

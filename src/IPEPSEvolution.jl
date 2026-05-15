@@ -73,6 +73,9 @@ legacy_trotter_params(params::LegacyPXPParams) = params.trotter
 legacy_trotter_params(params) = throw(
     ArgumentError("trotter must be a TrotterParams or legacy PXP TrotterParams"),
 )
+legacy_trotter_protocol(params::TrotterParams) = nothing
+legacy_trotter_protocol(params::LegacyPXPParams) = params.protocol
+legacy_trotter_protocol(params) = legacy_trotter_params(params)
 
 function Base.getproperty(params::LegacyPXPParams, name::Symbol)
     if name === :projected
