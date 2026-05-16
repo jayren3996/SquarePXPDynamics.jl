@@ -151,13 +151,15 @@ end
 
 Diagnostics returned by [`evolve!`](@ref). `layer_infos` stores every
 [`StarUpdateInfo`](@ref) grouped by applied Trotter layer, `total_time` is the
-requested applied time, and the entropy fields summarize the final simple-
-update link weights. `log_norm_before`, `log_norm_after`, and
-`log_norm_delta` record the normalization ledger around the evolution call.
+requested applied time, `model_metadata` records the protocol/model identity
+used for the call, and the entropy fields summarize the final simple-update
+link weights. `log_norm_before`, `log_norm_after`, and `log_norm_delta` record
+the normalization ledger around the evolution call.
 """
 struct EvolutionLog
     total_time::Float64
     params::TrotterParams
+    model_metadata::NamedTuple
     nsteps::Int
     layer_infos::Vector{Vector{StarUpdateInfo}}
     max_truncerr::Float64
@@ -238,6 +240,10 @@ function _assert_finite_star_update_info(info::StarUpdateInfo)
         throw(ArgumentError("star update minimum link weights must be finite"))
     all(>=(0), values(info.min_lambda)) ||
         throw(ArgumentError("star update minimum link weights must be nonnegative"))
+    all(isfinite, values(info.touched_min_lambda)) ||
+        throw(ArgumentError("star update touched minimum link weights must be finite"))
+    all(>=(0), values(info.touched_min_lambda)) ||
+        throw(ArgumentError("star update touched minimum link weights must be nonnegative"))
     all(isfinite, values(info.norm_factors)) ||
         throw(ArgumentError("star update norm factors must be finite"))
     all(>(0), values(info.norm_factors)) ||
@@ -250,6 +256,15 @@ function _assert_finite_star_update_infos(layer_infos)
         _assert_finite_star_update_info(info)
     end
     return nothing
+end
+
+function _model_metadata(protocol::AbstractModelProtocol)
+    model = model_at(protocol, 0.0, 1)
+    return (
+        protocol_type = string(nameof(typeof(protocol))),
+        model_type = string(nameof(typeof(model))),
+        pxp_projected = model isa PXPStarModel ? model.projected : nothing,
+    )
 end
 
 function _apply_star_layer!(
@@ -275,6 +290,7 @@ function _finish_evolution_log(
     psi::SquareIPEPSState,
     total_time::Float64,
     params::TrotterParams,
+    model_metadata::NamedTuple,
     nsteps::Int,
     layer_infos,
     log_norm_before::Float64,
@@ -294,6 +310,7 @@ function _finish_evolution_log(
     return EvolutionLog(
         total_time,
         params,
+        model_metadata,
         nsteps,
         layer_infos,
         max_truncerr,
@@ -361,9 +378,18 @@ function _evolve_with_params!(
 )::EvolutionLog
     nsteps, total = _nsteps_for_total_time(total_time, params)
     log_norm_before = log_norm(psi)
+    metadata = _model_metadata(protocol)
     layer_infos = Vector{Vector{StarUpdateInfo}}()
     nsteps == 0 &&
-        return _finish_evolution_log(psi, total, params, nsteps, layer_infos, log_norm_before)
+        return _finish_evolution_log(
+            psi,
+            total,
+            params,
+            metadata,
+            nsteps,
+            layer_infos,
+            log_norm_before,
+        )
 
     params.schedule === :five_color && assert_five_color_compatible(psi.unitcell)
     for step_index = 1:nsteps
@@ -378,7 +404,15 @@ function _evolve_with_params!(
         end
     end
 
-    return _finish_evolution_log(psi, total, params, nsteps, layer_infos, log_norm_before)
+    return _finish_evolution_log(
+        psi,
+        total,
+        params,
+        metadata,
+        nsteps,
+        layer_infos,
+        log_norm_before,
+    )
 end
 
 """

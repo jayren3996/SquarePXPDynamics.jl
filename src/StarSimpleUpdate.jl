@@ -5,7 +5,7 @@ using LinearAlgebra
 
 using ..SquareGeometry: SquareCoord
 using ..SquarePXP: SQUARE_STAR_SITES
-using ..SquareUnitCells: PeriodicSquareUnitCell, wrap, neighbor, bondkey
+using ..SquareUnitCells: PeriodicSquareUnitCell, BondKey, wrap, neighbor, bondkey
 using ..SquareIPEPS:
     SquareIPEPSState,
     physical_index,
@@ -27,7 +27,8 @@ const _STAR_DIRECTIONS = (:right, :up, :left, :down)
 Diagnostics returned by [`project_star!`](@ref) for one QR-reduced five-site
 square-star simple update. `truncerrs`, `keptdims`, `min_lambda`, and
 `norm_factors` are keyed by the center-to-leaf directions `:right`, `:up`,
-`:left`, and `:down`.
+`:left`, and `:down`. `touched_min_lambda` records the pre-update minimum
+stored link weight for every canonical bond touched by the star patch.
 """
 struct StarUpdateInfo
     center::SquareCoord
@@ -35,6 +36,7 @@ struct StarUpdateInfo
     truncerrs::Dict{Symbol,Float64}
     keptdims::Dict{Symbol,Int}
     min_lambda::Dict{Symbol,Float64}
+    touched_min_lambda::Dict{BondKey,Float64}
     norm_factors::Dict{Symbol,Float64}
 end
 
@@ -125,6 +127,26 @@ function _external_dirs_for_leaf(dir::Symbol)
     dir === :left && return (:left, :up, :down)
     dir === :down && return (:left, :right, :down)
     throw(ArgumentError("leaf direction must be :right, :up, :left, or :down"))
+end
+
+function _pre_update_touched_min_lambda(psi::SquareIPEPSState, coords)
+    keys = Set{BondKey}()
+    for dir in _STAR_DIRECTIONS
+        push!(keys, bondkey(psi.unitcell, coords.center, dir))
+        leaf = getproperty(coords, dir)
+        for ext in _external_dirs_for_leaf(dir)
+            push!(keys, bondkey(psi.unitcell, leaf, ext))
+        end
+    end
+    values = Dict{BondKey,Float64}()
+    for key in keys
+        lambda = link_weight(psi, key.site, key.dir)
+        minimum_lambda = minimum(lambda)
+        isfinite(minimum_lambda) && minimum_lambda >= 0 ||
+            throw(ArgumentError("touched link weights must be finite and nonnegative"))
+        values[key] = minimum_lambda
+    end
+    return values
 end
 
 function _star_physical_indices(psi::SquareIPEPSState, coords)
@@ -260,6 +282,7 @@ function _split_reduced_theta(
     split_order,
     maxdim,
     cutoff,
+    touched_min_lambda,
 )
     leaf_active = Dict{Symbol,ITensor}()
     new_links = Dict{Symbol,Index}()
@@ -300,6 +323,7 @@ function _split_reduced_theta(
         truncerrs,
         keptdims,
         min_lambda,
+        touched_min_lambda,
         norm_factors,
     )
     return core, leaf_active, new_links, new_weights, info
@@ -395,6 +419,7 @@ function project_star!(
     trunc_cutoff = _validate_cutoff(cutoff)
     order = _validate_split_order(split_order)
     coords = _validate_distinct_star!(psi, center)
+    touched_min_lambda = _pre_update_touched_min_lambda(psi, coords)
     phys = _star_physical_indices(psi, coords)
 
     actual_model = model === nothing ? PXPStarModel(projected) : model
@@ -414,7 +439,16 @@ function project_star!(
     _assert_reduced_theta(theta, psi, coords, phys, qinds)
 
     center_core, leaf_active, new_links, new_weights, info =
-        _split_reduced_theta(theta, psi, coords, qinds, order, kept_maxdim, trunc_cutoff)
+        _split_reduced_theta(
+            theta,
+            psi,
+            coords,
+            qinds,
+            order,
+            kept_maxdim,
+            trunc_cutoff,
+            touched_min_lambda,
+        )
 
     new_tensors = Dict{SquareCoord,ITensor}()
     new_tensors[coords.center] = _reconstruct_center(psi, coords, center_core, new_links)

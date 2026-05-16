@@ -231,6 +231,31 @@ end
     @test all(isfinite, values(info.min_lambda))
 end
 
+@testset "star update records pre-update touched link minima" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    center = SquareCoord(5, 5)
+    right_leaf = neighbor(cell, center, :right)
+    up_leaf = neighbor(cell, center, :up)
+
+    set_link_weight!(psi, center, :right, [0.3, 0.9])
+    set_link_weight!(psi, right_leaf, :right, [0.2, 0.8])
+    set_link_weight!(psi, up_leaf, :up, [0.4, 0.7])
+
+    info = project_star!(psi, center, 0.01; evolution = :real, projected = true, maxdim = 2)
+
+    internal = bondkey(cell, center, :right)
+    external_right = bondkey(cell, right_leaf, :right)
+    external_up = bondkey(cell, up_leaf, :up)
+    @test info.touched_min_lambda[internal] ≈ 0.3
+    @test info.touched_min_lambda[external_right] ≈ 0.2
+    @test info.touched_min_lambda[external_up] ≈ 0.4
+    @test length(info.touched_min_lambda) == 16
+    @test all(key -> key isa BondKey, keys(info.touched_min_lambda))
+    @test all(isfinite, values(info.touched_min_lambda))
+    @test all(>=(0), values(info.touched_min_lambda))
+end
+
 @testset "repeated D=1 all-down star updates stay finite and normalized" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)

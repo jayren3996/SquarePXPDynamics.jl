@@ -51,8 +51,8 @@ transactional gauge conditioning.
 - Periodic square iPEPS product and checkerboard states in Gamma-lambda simple-update form (`src/SquareIPEPS.jl`).
 - Periodic iPEPS helper APIs, link-weight normalization, and bond-entropy diagnostics (`src/SquareIPEPS.jl`).
 - ITensor wrappers for dense square-star PXP gates (`src/SquareIPEPS.jl`).
-- QR-reduced five-site star update via `project_star!` (`src/StarSimpleUpdate.jl`).
-- Deterministic five-color Trotter evolution with log-normalization ledger diagnostics via `evolve!` (`src/IPEPSEvolution.jl`).
+- QR-reduced five-site star update with pre-update touched-link minima diagnostics via `project_star!` (`src/StarSimpleUpdate.jl`).
+- Deterministic five-color Trotter evolution with model metadata and log-normalization ledger diagnostics via `evolve!` (`src/IPEPSEvolution.jl`).
 - Simple/local density, blockade, energy-density, and entropy observables via `measure_simple` (`src/Observables.jl`).
 - Simple/local TFIM observables and reproducible JSON/CSV benchmark records via `run_benchmark` (`src/Benchmarks.jl`).
 - Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).

@@ -27,6 +27,15 @@
 - Source: `test/test_square_ipeps_s2.jl`
 - Source: `test/test_observables_evolved.jl`
 
+- Confirmed: S0-S7 Slice 2 strengthens S3/S4 auditability by recording
+  pre-update touched-link minima in `StarUpdateInfo` and model/protocol
+  metadata in `EvolutionLog`.
+- Source: `docs/superpowers/plans/2026-05-16-s0-s7-slice2-diagnostics.md`
+- Source: `src/StarSimpleUpdate.jl`
+- Source: `src/IPEPSEvolution.jl`
+- Source: `test/test_star_simple_update.jl`
+- Source: `test/test_ipeps_evolution.jl`
+
 ## Completed And Merged Locally
 
 - Confirmed: `codex/infinite-tfim-benchmark` implemented the v1 TFIM benchmark

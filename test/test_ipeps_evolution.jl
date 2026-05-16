@@ -282,6 +282,8 @@ end
 
     @test explicit_log.nsteps == legacy_log.nsteps
     @test explicit_log.max_truncerr ≈ legacy_log.max_truncerr atol = 1e-12
+    @test explicit_log.model_metadata.model_type == "PXPStarModel"
+    @test explicit_log.model_metadata.pxp_projected === true
     @test log_norm(explicit) ≈ log_norm(legacy) atol = 1e-12
 end
 
@@ -322,5 +324,8 @@ end
     )
     @test legacy_unprojected_log.max_truncerr ≈ explicit_unprojected_log.max_truncerr atol =
         1e-12
+    @test legacy_unprojected_log.model_metadata.model_type == "PXPStarModel"
+    @test legacy_unprojected_log.model_metadata.pxp_projected === false
+    @test explicit_unprojected_log.model_metadata.pxp_projected === false
     @test log_norm(legacy_unprojected) ≈ log_norm(explicit_unprojected) atol = 1e-12
 end
