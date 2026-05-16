@@ -4,12 +4,13 @@
 
 ## Status
 
-The package now contains the S0-S6 prototype pipeline for square-lattice PXP
+The package now contains the S0-S7 prototype pipeline for square-lattice PXP
 dynamics plus a v1 infinite TFIM benchmark runner: dense local model
 definitions, finite and periodic PEPS/iPEPS state containers, QR-reduced
 five-site star updates, deterministic Trotter evolution, simple/local
 observables, reproducible TFIM benchmark records, and ScarFinder
-orchestration with optional guarded simple-energy correction.
+orchestration with optional guarded simple-energy correction, CTM trust and
+readiness diagnostics, and transactional CTM gauge conditioning.
 
 Simple/local observables are useful diagnostics for development and regression
 tests, but they are not final CTMRG-quality measurements. ScarFinder-lite
