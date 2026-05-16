@@ -28,6 +28,36 @@ Source:
 
 Status: active
 
+## 2026-05-16 - Sequence Remaining GPT Review Work Around Trusted ScarFinder
+
+Decision:
+
+Plan the remaining GPT review work as a sequenced ScarFinder/validation
+roadmap: measurement backends and physics objectives first, then trusted CTM
+ranking, scar observables, CTMRG reproducibility, convergence reports,
+candidate persistence, reverse-evolution validation, projection semantics, and
+CTM-aware update compatibility boundaries.
+
+Reason:
+
+The repository already has the CTM-trusted validation report and ED-vs-iPEPS
+harness. The next limiting factor is that ScarFinder still needs to consume
+trusted CTM measurements and physics objectives by default before broader
+algorithmic work can produce auditable candidates.
+
+Consequences:
+
+The next implementation branch should follow
+`docs/superpowers/plans/2026-05-16-complete-gpt-pxp-roadmap.md`, preferably
+with subagent-driven task slices and review checkpoints after each commit.
+
+Source:
+
+Current user request; `docs/superpowers/plans/2026-05-16-complete-gpt-pxp-roadmap.md`;
+`src/ScarFinder.jl`; `src/PXPValidation.jl`
+
+Status: active
+
 ## 2026-05-16 - Separate S7b Readiness From D>1 Gauge Mutation
 
 Decision:
