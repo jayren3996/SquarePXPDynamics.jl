@@ -182,6 +182,9 @@ using .ScarFinder:
     SimpleBackend,
     TrustedCTMBackend,
     measure_scarfinder,
+    CandidateStore,
+    NoCandidateStore,
+    JSONCandidateStore,
     ScarFinderObjective,
     RevivalObjective,
     TargetEnergyObjective,
@@ -260,6 +263,7 @@ export PXPConvergenceConfig, PXPConvergenceReport, validate_pxp_convergence
 export write_pxp_convergence_json
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
+export CandidateStore, NoCandidateStore, JSONCandidateStore
 export ScarFinderObjective, RevivalObjective, TargetEnergyObjective
 export LowVarianceObjective, CompositeObjective
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!

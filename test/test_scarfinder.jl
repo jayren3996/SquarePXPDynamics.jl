@@ -1,3 +1,5 @@
+using JSON3
+
 @testset "ScarFinder parameter validation" begin
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
     params = ScarFinderParams(0.01, trotter, 1, Inf, Inf, Inf, false)
@@ -657,6 +659,103 @@ end
     @test occursin("\"correction_energy_after\"", json)
     @test length(csv_result.iterations) == 1
     @test length(json_result.iterations) == 1
+end
+
+@testset "ScarFinder candidate store writes auditable metadata" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    dir = mktempdir()
+    store = JSONCandidateStore(dir)
+
+    result = scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        candidate_store = store,
+    )
+
+    files = readdir(dir)
+    @test "candidate_000001.json" in files
+    data = JSON3.read(read(joinpath(dir, "candidate_000001.json"), String))
+    @test data.iteration == 1
+    @test data.accepted == true
+    @test data.state_version isa Integer
+    @test data.log_norm isa Number
+    @test data.score.diagnostics == "simple"
+    @test data.simple_score.diagnostics == "simple"
+    @test data.ctm_score === nothing
+    @test length(result.iterations) == 1
+end
+
+@testset "ScarFinder candidate store keeps simple and CTM scores explicit" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    dir = mktempdir()
+    diag = CTMRGDiagnostics(4, 1e-8, 10, 10, 1e-9, true, true)
+    ctm_summary = CTMObservableSummary(0.0, 0.0, 0.0, 0.0, 0.0, diag)
+
+    scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        ctm_every = 1,
+        ctm_callback = (state, iteration, simple_score) -> ctm_summary,
+        candidate_store = JSONCandidateStore(dir),
+    )
+
+    data = JSON3.read(read(joinpath(dir, "candidate_000001.json"), String))
+    @test data.score.diagnostics == "simple"
+    @test data.simple_score.diagnostics == "simple"
+    @test data.ctm_score.diagnostics == "ctm"
+end
+
+@testset "ScarFinder candidate store persists rejection metadata" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, 0.5, Inf, false)
+    dir = mktempdir()
+
+    scarfinder!(
+        product_square_ipeps(cell; state = :up, maxdim = 1),
+        params;
+        candidate_store = JSONCandidateStore(dir),
+    )
+
+    data = JSON3.read(read(joinpath(dir, "candidate_000001.json"), String))
+    @test data.accepted == false
+    @test occursin("blockade", data.reject_reason)
+    @test data.score.accepted == false
+    @test occursin("blockade", data.score.reject_reason)
+end
+
+@testset "NoCandidateStore writes no candidate files" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    dir = mktempdir()
+
+    scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        candidate_store = NoCandidateStore(),
+    )
+
+    @test isempty(readdir(dir))
+end
+
+@testset "ScarFinder candidate store writes one file per iteration" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 2, Inf, Inf, Inf, false)
+    dir = mktempdir()
+
+    scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        candidate_store = JSONCandidateStore(dir),
+    )
+
+    @test sort(readdir(dir)) == ["candidate_000001.json", "candidate_000002.json"]
 end
 
 @testset "ScarFinder source stays above star projection layer" begin

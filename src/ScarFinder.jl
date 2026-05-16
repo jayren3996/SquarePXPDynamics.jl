@@ -1,5 +1,7 @@
 module ScarFinder
 
+using JSON3
+
 using ..SquareIPEPS: SquareIPEPSState, copy_state, state_version, log_norm
 using ..IPEPSEvolution:
     TrotterParams, EvolutionLog, legacy_trotter_params, legacy_trotter_protocol, evolve!
@@ -12,6 +14,7 @@ using ..PEPSKitMeasurements: PEPSKitCTMRGParams, measure_ctm
 
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
+export CandidateStore, NoCandidateStore, JSONCandidateStore
 export ScarFinderObjective, RevivalObjective, TargetEnergyObjective
 export LowVarianceObjective, CompositeObjective
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
@@ -134,6 +137,39 @@ function measure_scarfinder(psi::SquareIPEPSState, backend::TrustedCTMBackend)
         policy = backend.policy,
         measure = backend.measure,
     )
+end
+
+"""
+    CandidateStore
+
+Abstract ScarFinder candidate metadata persistence target. Candidate stores
+record audit metadata for completed iterations; they do not save tensor-state
+snapshots.
+"""
+abstract type CandidateStore end
+
+"""
+    NoCandidateStore()
+
+Default ScarFinder candidate store that writes no metadata and saves no tensor
+snapshots.
+"""
+struct NoCandidateStore <: CandidateStore end
+
+"""
+    JSONCandidateStore(directory)
+
+Write one JSON metadata file per ScarFinder candidate iteration under
+`directory`. Files contain auditable iteration, state-version, normalization,
+observable, and score metadata only; candidate tensor snapshots are not saved.
+"""
+struct JSONCandidateStore <: CandidateStore
+    directory::String
+
+    function JSONCandidateStore(directory::AbstractString)
+        mkpath(directory)
+        return new(String(directory))
+    end
 end
 
 """
@@ -323,6 +359,32 @@ ScarFinderIteration(
     nothing,
     nothing,
 )
+
+store_candidate!(::NoCandidateStore, psi::SquareIPEPSState, iteration::ScarFinderIteration) = nothing
+
+function store_candidate!(
+    store::JSONCandidateStore,
+    psi::SquareIPEPSState,
+    iteration::ScarFinderIteration,
+)
+    path = joinpath(store.directory, "candidate_$(lpad(iteration.iteration, 6, '0')).json")
+    payload = (;
+        iteration = iteration.iteration,
+        accepted = iteration.accepted,
+        reject_reason = iteration.reject_reason,
+        state_version = state_version(psi),
+        log_norm = log_norm(psi),
+        simple = iteration.observables,
+        score = iteration.simple_score,
+        simple_score = iteration.simple_score,
+        ctm_score = iteration.ctm_score,
+    )
+    open(path, "w") do io
+        JSON3.write(io, payload)
+        write(io, '\n')
+    end
+    return path
+end
 
 """
     ScarFinderResult
@@ -912,6 +974,7 @@ function scarfinder!(
     ctm_at_end::Bool = false,
     log_path::Union{Nothing,AbstractString} = nothing,
     log_format::Symbol = :csv,
+    candidate_store::CandidateStore = NoCandidateStore(),
 )::ScarFinderResult
     ctm_period = _nonnegative_int(ctm_every, "ctm_every")
     _validate_trusted_ctm_schedule(require_trusted_ctm, ctm_period, ctm_at_end)
@@ -999,6 +1062,7 @@ function scarfinder!(
                 correction_energy_after,
             ),
         )
+        store_candidate!(candidate_store, psi, iterations[end])
 
         if !accepted && params.stop_on_reject
             break
@@ -1032,6 +1096,7 @@ end
         measurement = SimpleBackend(),
         require_trusted_ctm = false,
         objective = CompositeObjective(),
+        candidate_store = NoCandidateStore(),
     )::ScarFinderResult
 
 Convenience keyword constructor for [`ScarFinderParams`](@ref), then delegates
@@ -1058,6 +1123,7 @@ function scarfinder!(
     ctm_at_end::Bool = false,
     log_path::Union{Nothing,AbstractString} = nothing,
     log_format::Symbol = :csv,
+    candidate_store::CandidateStore = NoCandidateStore(),
     objective::ScarFinderObjective = CompositeObjective(),
 )::ScarFinderResult
     params = ScarFinderParams(
@@ -1083,6 +1149,7 @@ function scarfinder!(
         ctm_at_end,
         log_path,
         log_format,
+        candidate_store,
     )
 end
 
