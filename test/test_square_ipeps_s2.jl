@@ -166,6 +166,31 @@ end
     @test entropies[bondkey(cell, c, :up)] ≈ log(2)
 end
 
+@testset "normalize all iPEPS link weights" begin
+    cell = PeriodicSquareUnitCell(4, 4)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    c = SquareCoord(1, 1)
+
+    set_link_weight!(psi, c, :right, [3.0, 4.0])
+    set_link_weight!(psi, c, :up, [1.0, 1.0])
+    version_before = state_version(psi)
+
+    normalized = normalize_link_weights!(psi)
+
+    @test normalized === psi
+    @test state_version(psi) == version_before + 1
+    @test link_weight(psi, c, :right) ≈ [0.6, 0.8]
+    @test link_weight(psi, c, :up) ≈ [1 / sqrt(2), 1 / sqrt(2)]
+    @test all(lambda -> isapprox(norm(lambda), 1; atol = 1e-12), values(psi.link_weights))
+
+    stable_version = state_version(psi)
+    normalize_link_weights!(psi)
+    @test state_version(psi) == stable_version
+
+    psi.link_weights[bondkey(cell, c, :right)] = [0.0, 0.0]
+    @test_throws ArgumentError normalize_link_weights!(psi)
+end
+
 @testset "ITensor square-star PXP gates match dense gates" begin
     sites = [Index(2, tag) for tag in ("center", "right", "up", "left", "down")]
     t = 0.17

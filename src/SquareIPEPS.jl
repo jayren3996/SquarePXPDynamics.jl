@@ -13,7 +13,7 @@ export physical_index, link_index
 export link_weight, set_link_weight!, link_weight_tensor
 export state_version, log_norm
 export absorb_link_weight, deabsorb_link_weight
-export weight_entropy, bond_entropy, all_bond_entropies
+export weight_entropy, bond_entropy, all_bond_entropies, normalize_link_weights!
 export square_pxp_gate_itensor, projected_square_pxp_gate_itensor
 
 """
@@ -441,6 +441,36 @@ of its stored simple-update link-weight vector.
 """
 function all_bond_entropies(psi::SquareIPEPSState)
     return Dict(key => weight_entropy(lambda) for (key, lambda) in psi.link_weights)
+end
+
+"""
+    normalize_link_weights!(psi)
+
+Normalize every stored simple-update link-weight vector in `psi` to unit
+Euclidean norm. The state version is incremented only when at least one stored
+vector changes. Invalid spectra, including all-zero vectors, throw
+`ArgumentError`.
+"""
+function normalize_link_weights!(psi::SquareIPEPSState)::SquareIPEPSState
+    changed = false
+    normalized = Dict{BondKey,Vector{Float64}}()
+    for (key, lambda) in psi.link_weights
+        values = _validate_link_weight_values(link_index(psi, key.site, key.dir), lambda)
+        scale = sqrt(sum(abs2, values))
+        isfinite(scale) && scale > 0 ||
+            throw(ArgumentError("link weights must not all be zero"))
+        next_values = values ./ scale
+        normalized[key] = next_values
+        changed |= !isapprox(values, next_values; atol = 1e-14, rtol = 1e-14)
+    end
+    if changed
+        empty!(psi.link_weights)
+        for (key, values) in normalized
+            psi.link_weights[key] = values
+        end
+        _mark_mutated!(psi)
+    end
+    return psi
 end
 
 function _square_star_dense_index(values)

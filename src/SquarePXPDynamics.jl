@@ -86,6 +86,7 @@ using .SquareIPEPS: link_weight, set_link_weight!, link_weight_tensor
 using .SquareIPEPS: state_version, log_norm
 using .SquareIPEPS: absorb_link_weight, deabsorb_link_weight
 using .SquareIPEPS: weight_entropy, bond_entropy, all_bond_entropies
+using .SquareIPEPS: normalize_link_weights!
 using .SquareIPEPS: square_pxp_gate_itensor, projected_square_pxp_gate_itensor
 using .GaugeDiagnostics: SimpleGaugeDiagnostic
 using .GaugeDiagnostics: gauge_diagnostic_simple, gauge_deviation_simple
@@ -174,7 +175,7 @@ export unitcell_reps, physical_dim, simple_weight_dim, copy_state
 export link_weight, set_link_weight!, link_weight_tensor
 export state_version, log_norm
 export absorb_link_weight, deabsorb_link_weight
-export weight_entropy, bond_entropy, all_bond_entropies
+export weight_entropy, bond_entropy, all_bond_entropies, normalize_link_weights!
 export square_pxp_gate_itensor, projected_square_pxp_gate_itensor
 export SimpleGaugeDiagnostic
 export gauge_diagnostic_simple, gauge_deviation_simple, all_gauge_deviations_simple
