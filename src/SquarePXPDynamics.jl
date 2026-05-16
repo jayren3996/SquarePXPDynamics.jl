@@ -168,7 +168,11 @@ using .PXPValidation:
     PXPEDComparisonSample,
     PXPValidationReport,
     validate_pxp_ed_ipeps,
-    write_pxp_validation_json
+    write_pxp_validation_json,
+    PXPConvergenceConfig,
+    PXPConvergenceReport,
+    validate_pxp_convergence,
+    write_pxp_convergence_json
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -252,6 +256,8 @@ export TrustedCTMMeasurement, measure_ctm_trusted
 export PXPValidationConfig, PXPValidationMetadata, PXPIPEPSSample
 export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
 export write_pxp_validation_json
+export PXPConvergenceConfig, PXPConvergenceReport, validate_pxp_convergence
+export write_pxp_convergence_json
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
 export ScarFinderObjective, RevivalObjective, TargetEnergyObjective

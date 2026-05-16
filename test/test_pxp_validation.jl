@@ -220,3 +220,93 @@ end
     @test trust.policy.max_density_delta == policy.max_density_delta
     @test trust.policy.max_residual == policy.max_residual
 end
+
+@testset "PXP convergence report aggregates validation grid" begin
+    base = PXPValidationConfig(3; total_time = 0.01, dt = 0.01, measure_every = 1)
+    @test_throws ArgumentError PXPConvergenceConfig(
+        base;
+        dt_values = [0.01],
+        D_values = [1],
+        chi_values = Int[],
+        cutoff_values = [0.0],
+    )
+    @test_throws ArgumentError PXPConvergenceConfig(
+        base;
+        dt_values = [0.01],
+        D_values = [1],
+        chi_values = [0],
+        cutoff_values = [1e-12],
+    )
+    sweep = PXPConvergenceConfig(
+        base;
+        dt_values = [0.01, 0.005],
+        D_values = [1],
+        chi_values = Int[],
+        cutoff_values = [1e-12],
+    )
+
+    report = validate_pxp_convergence(
+        sweep;
+        ctm_measure = (state; params) -> CTMObservableSummary(0.0, 0.0, 0.0, 0.0, 0.0),
+    )
+
+    @test length(report.runs) == 2
+    @test report.runs[1].config.dt == 0.01
+    @test report.runs[2].config.dt == 0.005
+    @test isfinite(report.max_abs_density_error_simple)
+end
+
+@testset "PXP convergence report aggregates CTM chi sweep" begin
+    base = PXPValidationConfig(3; total_time = 0.01, dt = 0.01, measure_every = 1)
+    sweep = PXPConvergenceConfig(
+        base;
+        dt_values = [0.01],
+        D_values = [1],
+        chi_values = [2, 4],
+        cutoff_values = [1e-12],
+    )
+
+    report = validate_pxp_convergence(
+        sweep;
+        ctm_measure = (state; params) -> _validation_fake_ctm_summary(
+            params;
+            density = measure_simple(state).density + (params.chi == 2 ? 0.5 : 0.0),
+            blockade = 0.0,
+            energy = -0.1 - params.chi * 1e-5,
+        ),
+    )
+
+    @test report.max_abs_density_error_ctm !== nothing
+    @test report.all_ctm_trusted !== nothing
+    @test all(comparison -> comparison.density_error_ctm !== nothing, report.runs[1].comparisons)
+    final_chi_max = maximum(abs(c.density_error_ctm) for c in report.runs[1].comparisons)
+    @test report.max_abs_density_error_ctm > final_chi_max + 0.1
+end
+
+@testset "PXP convergence report writes JSON artifact" begin
+    base = PXPValidationConfig(3; total_time = 0.01, dt = 0.01, measure_every = 1)
+    sweep = PXPConvergenceConfig(
+        base;
+        dt_values = [0.01, 0.005],
+        D_values = [1],
+        chi_values = Int[],
+        cutoff_values = [1e-12],
+    )
+    report = validate_pxp_convergence(sweep)
+    path = tempname() * ".json"
+
+    written = write_pxp_convergence_json(report, path)
+    parsed = JSON3.read(read(path, String))
+
+    @test written == path
+    @test parsed.config.base.dt == 0.01
+    @test collect(parsed.config.dt_values) == [0.01, 0.005]
+    @test collect(parsed.config.D_values) == [1]
+    @test collect(parsed.config.chi_values) == Int[]
+    @test collect(parsed.config.cutoff_values) == [1e-12]
+    @test haskey(parsed.summary, :max_abs_density_error_simple)
+    @test parsed.summary.max_abs_density_error_ctm === nothing
+    @test parsed.summary.all_ctm_trusted === nothing
+    @test length(parsed.runs) == 2
+    @test parsed.runs[1].config.dt == 0.01
+end
