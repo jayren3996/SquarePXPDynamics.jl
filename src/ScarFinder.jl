@@ -5,9 +5,13 @@ using ..IPEPSEvolution:
     TrotterParams, EvolutionLog, legacy_trotter_params, legacy_trotter_protocol, evolve!
 using ..StarModels: AbstractModelProtocol
 using ..Observables: SimpleObservableSummary, measure_simple
+using ..PXPValidation: TrustedCTMMeasurement, measure_ctm_trusted
+using ..CTMTrust: CTMTrustPolicy
 using ..PEPSKitMeasurements: CTMObservableSummary, CTMRGDiagnostics
+using ..PEPSKitMeasurements: PEPSKitCTMRGParams, measure_ctm
 
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
+export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
 """
@@ -86,6 +90,48 @@ struct ScarFinderParams
             correction_count,
         )
     end
+end
+
+"""
+    MeasurementBackend
+
+Abstract ScarFinder measurement backend interface.
+"""
+abstract type MeasurementBackend end
+
+"""Development backend using local/simple-update observables only."""
+struct SimpleBackend <: MeasurementBackend end
+
+"""Trusted finite-chi CTM backend for production ScarFinder diagnostics."""
+struct TrustedCTMBackend <: MeasurementBackend
+    params::Tuple
+    policy::CTMTrustPolicy
+    measure::Any
+
+    function TrustedCTMBackend(
+        params,
+        policy::CTMTrustPolicy = CTMTrustPolicy();
+        measure = measure_ctm,
+    )
+        collected = Tuple(params)
+        isempty(collected) &&
+            throw(ArgumentError("TrustedCTMBackend requires at least one CTMRG parameter point"))
+        all(p -> p isa PEPSKitCTMRGParams, collected) ||
+            throw(ArgumentError("TrustedCTMBackend params must be PEPSKitCTMRGParams"))
+        return new(collected, policy, measure)
+    end
+end
+
+"""Measure `psi` with a ScarFinder measurement backend."""
+measure_scarfinder(psi::SquareIPEPSState, ::SimpleBackend) = measure_simple(psi)
+
+function measure_scarfinder(psi::SquareIPEPSState, backend::TrustedCTMBackend)
+    return measure_ctm_trusted(
+        psi;
+        params = backend.params,
+        policy = backend.policy,
+        measure = backend.measure,
+    )
 end
 
 """
@@ -235,6 +281,9 @@ function _finite_summary(obs::CTMObservableSummary)
         ),
     )
 end
+
+_scarfinder_observable(obs) = obs
+_scarfinder_observable(obs::TrustedCTMMeasurement) = obs.measurement
 
 function _score_value(
     obs,
@@ -573,7 +622,7 @@ function scarfinder!(
         ctm_score = nothing
         if ctm_callback !== nothing &&
            _should_measure_ctm(n, params.iterations, ctm_period, ctm_at_end)
-            ctm_obs = ctm_callback(psi, n, simple_score)
+            ctm_obs = _scarfinder_observable(ctm_callback(psi, n, simple_score))
             _finite_summary(ctm_obs) || throw(ArgumentError("non-finite CTM diagnostic"))
             ctm_score = _candidate_score(
                 n,

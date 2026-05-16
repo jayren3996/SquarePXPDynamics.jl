@@ -173,6 +173,10 @@ using .ScarFinder:
     ScarFinderCandidateScore,
     ScarFinderIteration,
     ScarFinderResult,
+    MeasurementBackend,
+    SimpleBackend,
+    TrustedCTMBackend,
+    measure_scarfinder,
     rank_scarfinder_candidates,
     write_scarfinder_log,
     scarfinder!
@@ -242,6 +246,7 @@ export PXPValidationConfig, PXPValidationMetadata, PXPIPEPSSample
 export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
 export write_pxp_validation_json
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
+export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
 end

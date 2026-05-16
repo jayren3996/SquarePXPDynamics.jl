@@ -289,6 +289,82 @@ end
     @test result.iterations[1].simple_score.ctm_accepted === nothing
 end
 
+@testset "ScarFinder measurement backends construct and validate" begin
+    simple = SimpleBackend()
+    @test simple isa MeasurementBackend
+
+    params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+    policy = CTMTrustPolicy(2, true, 1e-2, 1e-3, 1e-2, 1e-4)
+    trusted = TrustedCTMBackend(params, policy)
+
+    @test trusted isa MeasurementBackend
+    @test trusted.params === params
+    @test trusted.policy === policy
+    @test_throws ArgumentError TrustedCTMBackend((), policy)
+end
+
+@testset "ScarFinder measurement backends measure and integrate with CTM callbacks" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+
+    simple_measurement = measure_scarfinder(psi, SimpleBackend())
+    @test simple_measurement isa SimpleObservableSummary
+    @test simple_measurement == measure_simple(psi)
+
+    params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+    policy = CTMTrustPolicy(2, true, 1e-2, 1e-3, 1e-2, 1e-4)
+    calls = PEPSKitCTMRGParams[]
+    fake_measure = (state; params) -> begin
+        push!(calls, params)
+        return CTMObservableSummary(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            CTMRGDiagnostics(
+                params.chi,
+                params.tol,
+                params.maxiter,
+                params.maxiter,
+                params.tol / 10,
+                true,
+                true,
+            ),
+        )
+    end
+    backend = TrustedCTMBackend(params, policy; measure = fake_measure)
+
+    trusted_measurement = measure_scarfinder(psi, backend)
+    @test trusted_measurement isa TrustedCTMMeasurement
+    @test calls == collect(params)
+    @test trusted_measurement.measurement isa CTMObservableSummary
+    @test trusted_measurement.measurement.diagnostics.chi == 4
+    @test trusted_measurement.trust.trusted
+
+    empty!(calls)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    scar_params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    result = scarfinder!(
+        psi,
+        scar_params;
+        ctm_every = 1,
+        ctm_callback = (state, iteration, simple_score) -> measure_scarfinder(state, backend),
+    )
+    ctm_score = only(rank_scarfinder_candidates(result; diagnostics = :ctm))
+
+    @test calls == collect(params)
+    @test ctm_score.ctm_chi == 4
+    @test ctm_score.ctm_residual == 1e-7
+    @test ctm_score.ctm_accepted === true
+end
+
 @testset "ScarFinder CTM diagnostics are logged and can require trust" begin
     cell = PeriodicSquareUnitCell(10, 10)
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
