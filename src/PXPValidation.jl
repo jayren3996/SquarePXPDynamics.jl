@@ -1,5 +1,7 @@
 module PXPValidation
 
+using JSON3
+
 using ..SquareIPEPS: SquareIPEPSState, log_norm, product_square_ipeps
 using ..SquareUnitCells: PeriodicSquareUnitCell
 using ..Observables: SimpleObservableSummary, measure_simple
@@ -19,6 +21,7 @@ using ..FinitePXPEEDBenchmark:
 export TrustedCTMMeasurement, measure_ctm_trusted
 export PXPValidationConfig, PXPValidationMetadata, PXPIPEPSSample
 export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
+export write_pxp_validation_json
 
 """
     TrustedCTMMeasurement(measurement, points, trust)
@@ -427,6 +430,220 @@ function validate_pxp_ed_ipeps(
         comparisons,
         _validation_metadata(),
     )
+end
+
+function _json_value(value::Nothing)
+    return nothing
+end
+
+function _json_value(value::Symbol)
+    return String(value)
+end
+
+function _config_data(config::PXPValidationConfig)
+    return (;
+        n = config.n,
+        total_time = config.total_time,
+        dt = config.dt,
+        measure_every = config.measure_every,
+        initial_state = String(config.initial_state),
+        point_group = config.point_group,
+        use_sparse = config.use_sparse,
+        ed_tol = config.ed_tol,
+        ed_m_init = config.ed_m_init,
+        ed_m_max = config.ed_m_max,
+        ed_extend_step = config.ed_extend_step,
+        order = config.order,
+        maxdim = config.maxdim,
+        cutoff = config.cutoff,
+        schedule = String(config.schedule),
+    )
+end
+
+function _metadata_data(metadata::PXPValidationMetadata)
+    return (;
+        git_commit = metadata.git_commit,
+        julia_version = metadata.julia_version,
+        project_path = metadata.project_path,
+    )
+end
+
+function _simple_data(summary::SimpleObservableSummary)
+    return (;
+        density = summary.density,
+        density_even = summary.density_even,
+        density_odd = summary.density_odd,
+        blockade_violation = summary.blockade_violation,
+        pxp_energy_density = summary.pxp_energy_density,
+        mean_bond_entropy = summary.mean_bond_entropy,
+        max_bond_entropy = summary.max_bond_entropy,
+    )
+end
+
+function _ctm_diagnostics_data(diagnostics::Nothing)
+    return nothing
+end
+
+function _ctm_diagnostics_data(diagnostics)
+    return (;
+        chi = diagnostics.chi,
+        tol = diagnostics.tol,
+        maxiter = diagnostics.maxiter,
+        iterations = diagnostics.iterations,
+        residual = diagnostics.residual,
+        converged = diagnostics.converged,
+        accepted = diagnostics.accepted,
+    )
+end
+
+function _ctm_summary_data(summary::CTMObservableSummary)
+    return (;
+        density = summary.density,
+        density_even = summary.density_even,
+        density_odd = summary.density_odd,
+        blockade_violation = summary.blockade_violation,
+        pxp_energy_density = summary.pxp_energy_density,
+        diagnostics = _ctm_diagnostics_data(summary.diagnostics),
+    )
+end
+
+function _ctm_point_data(point::CTMValidationPoint)
+    return (;
+        chi = point.params.chi,
+        tol = point.params.tol,
+        maxiter = point.params.maxiter,
+        verbosity = point.params.verbosity,
+        measurement = _ctm_summary_data(point.measurement),
+        delta_density = point.delta_density,
+        delta_density_even = point.delta_density_even,
+        delta_density_odd = point.delta_density_odd,
+        delta_blockade_violation = point.delta_blockade_violation,
+        delta_pxp_energy_density = point.delta_pxp_energy_density,
+    )
+end
+
+function _trust_data(trust::CTMTrustAssessment)
+    return (;
+        trusted = trust.trusted,
+        reason = String(trust.reason),
+        message = trust.message,
+        compared_points = trust.compared_points,
+        finite_chi_density_delta = trust.finite_chi_density_delta,
+        finite_chi_blockade_delta = trust.finite_chi_blockade_delta,
+        finite_chi_energy_delta = trust.finite_chi_energy_delta,
+        observed_max_residual = trust.observed_max_residual,
+    )
+end
+
+function _trusted_ctm_data(ctm::Nothing)
+    return nothing
+end
+
+function _trusted_ctm_data(ctm::TrustedCTMMeasurement)
+    return (;
+        measurement = _ctm_summary_data(ctm.measurement),
+        points = _ctm_point_data.(ctm.points),
+        trust = _trust_data(ctm.trust),
+    )
+end
+
+function _evolution_data(evolution::Nothing)
+    return nothing
+end
+
+function _evolution_data(evolution::EvolutionLog)
+    return (;
+        total_time = evolution.total_time,
+        nsteps = evolution.nsteps,
+        dt = evolution.params.dt,
+        order = evolution.params.order,
+        evolution = String(evolution.params.evolution),
+        maxdim = evolution.params.maxdim,
+        cutoff = evolution.params.cutoff,
+        schedule = String(evolution.params.schedule),
+        max_truncerr = evolution.max_truncerr,
+        max_bond_entropy = evolution.max_bond_entropy,
+        mean_bond_entropy = evolution.mean_bond_entropy,
+        log_norm_before = evolution.log_norm_before,
+        log_norm_after = evolution.log_norm_after,
+        log_norm_delta = evolution.log_norm_delta,
+        model_metadata = evolution.model_metadata,
+    )
+end
+
+function _ed_sample_data(sample::PXPEEDSample)
+    return (;
+        step = sample.step,
+        time = sample.time,
+        norm = sample.norm,
+        return_probability = sample.return_probability,
+        excitation_density = sample.excitation_density,
+    )
+end
+
+function _ed_result_data(result::PXPEEDBenchmarkResult)
+    return (;
+        lattice_size = result.lattice_size,
+        basis_dimension = result.basis_dimension,
+        constrained_dimension = result.constrained_dimension,
+        group_order = result.group_order,
+        point_group = result.point_group,
+        hamiltonian_nnz = result.hamiltonian_nnz,
+        samples = _ed_sample_data.(result.samples),
+    )
+end
+
+function _ipeps_sample_data(sample::PXPIPEPSSample)
+    return (;
+        step = sample.step,
+        time = sample.time,
+        simple = _simple_data(sample.simple),
+        evolution = _evolution_data(sample.evolution),
+        ctm = _trusted_ctm_data(sample.ctm),
+        log_norm = sample.log_norm,
+    )
+end
+
+function _comparison_data(sample::PXPEDComparisonSample)
+    return (;
+        step = sample.step,
+        time = sample.time,
+        ed_return_probability = sample.ed_return_probability,
+        ed_excitation_density = sample.ed_excitation_density,
+        ipeps_simple_density = sample.ipeps_simple_density,
+        ipeps_ctm_density = sample.ipeps_ctm_density,
+        density_error_simple = sample.density_error_simple,
+        density_error_ctm = sample.density_error_ctm,
+        simple_blockade_violation = sample.simple_blockade_violation,
+        ctm_blockade_violation = sample.ctm_blockade_violation,
+        ctm_trusted = sample.ctm_trusted,
+        ctm_reason = _json_value(sample.ctm_reason),
+    )
+end
+
+function _report_data(report::PXPValidationReport)
+    return (;
+        config = _config_data(report.config),
+        metadata = _metadata_data(report.metadata),
+        ed_result = _ed_result_data(report.ed_result),
+        ipeps_samples = _ipeps_sample_data.(report.ipeps_samples),
+        comparisons = _comparison_data.(report.comparisons),
+    )
+end
+
+"""
+    write_pxp_validation_json(report, path)
+
+Write a [`PXPValidationReport`](@ref) to `path` as a JSON artifact containing
+configuration, metadata, ED samples, iPEPS samples, CTM trust data when present,
+and matched observable comparisons.
+"""
+function write_pxp_validation_json(report::PXPValidationReport, path::AbstractString)
+    open(path, "w") do io
+        JSON3.write(io, _report_data(report))
+        write(io, '\n')
+    end
+    return path
 end
 
 end

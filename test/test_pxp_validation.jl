@@ -156,3 +156,18 @@ end
         @test comparison.ctm_blockade_violation ≈ expected_blockade atol = 1e-12
     end
 end
+
+@testset "PXP validation report writes JSON artifact" begin
+    config = PXPValidationConfig(3; total_time = 0.01, dt = 0.01, measure_every = 1)
+    report = validate_pxp_ed_ipeps(config; ctm_params = nothing)
+    path = tempname() * ".json"
+
+    written = write_pxp_validation_json(report, path)
+    data = read(path, String)
+
+    @test written == path
+    @test occursin("\"config\"", data)
+    @test occursin("\"comparisons\"", data)
+    @test occursin("\"density_error_simple\"", data)
+    @test occursin("\"metadata\"", data)
+end

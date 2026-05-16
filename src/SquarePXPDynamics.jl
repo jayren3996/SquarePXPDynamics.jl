@@ -166,7 +166,8 @@ using .PXPValidation:
     PXPIPEPSSample,
     PXPEDComparisonSample,
     PXPValidationReport,
-    validate_pxp_ed_ipeps
+    validate_pxp_ed_ipeps,
+    write_pxp_validation_json
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -239,6 +240,7 @@ export run_pxp_ed_benchmark, write_pxp_ed_benchmark_json
 export TrustedCTMMeasurement, measure_ctm_trusted
 export PXPValidationConfig, PXPValidationMetadata, PXPIPEPSSample
 export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
+export write_pxp_validation_json
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
