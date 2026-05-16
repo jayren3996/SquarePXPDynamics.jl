@@ -190,7 +190,33 @@ end
     @test abs(points[end].delta_pxp_energy_density) > 100
 end
 
+@testset "CTM trust uses maximum adjacent drift across custom final chi window" begin
+    points = [
+        _trust_point_test(chi = 2, tol = 1e-5, density = 9.0, blockade = 3.0, energy = -4.0),
+        _trust_point_test(chi = 4, tol = 1e-6, density = 1.0, blockade = 0.01, energy = -0.3),
+        _trust_point_test(chi = 8, tol = 1e-7, density = 1.0009, blockade = 0.01007, energy = -0.3008),
+        _trust_point_test(chi = 16, tol = 1e-8, density = 1.0004, blockade = 0.01002, energy = -0.3003),
+    ]
+    policy = CTMTrustPolicy(3, true, 1e-3, 1e-4, 1e-3, nothing)
+
+    assessment = assess_ctm_trust(points; policy)
+
+    @test assessment.trusted === true
+    @test assessment.reason === :trusted
+    @test assessment.compared_points == 3
+    @test assessment.finite_chi_density_delta ≈ 9e-4 atol = 1e-12
+    @test assessment.finite_chi_blockade_delta ≈ 7e-5 atol = 1e-12
+    @test assessment.finite_chi_energy_delta ≈ 8e-4 atol = 1e-12
+    @test assessment.finite_chi_density_delta != abs(points[end].measurement.density - points[end - 2].measurement.density)
+    @test assessment.finite_chi_density_delta != abs(points[end].measurement.density - points[end - 1].measurement.density)
+end
+
 @testset "CTM trust rejects expected trust failures" begin
+    empty = assess_ctm_trust(CTMValidationPoint[])
+    @test empty.trusted === false
+    @test empty.reason === :too_few_points
+    @test empty.compared_points == 0
+
     stable4 = _trust_point_test(chi = 4, tol = 1e-6, density = 0.1, blockade = 0.01, energy = -0.2)
     stable8 =
         _trust_point_test(chi = 8, tol = 1e-8, density = 0.1001, blockade = 0.01001, energy = -0.2001)
@@ -304,17 +330,41 @@ end
         _trust_point_test(chi = 4, tol = 1e-6, density = 0.2, blockade = 0.01, energy = -0.3),
         _trust_point_test(chi = 8, tol = 1e-8, density = 0.2001, blockade = 0.01001, energy = -0.3001),
     ]
+    policy = CTMTrustPolicy(2, true, 5e-5, 5e-6, 5e-5, nothing)
     path = tempname() * ".csv"
 
-    write_ctm_trust_csv(points, path)
+    write_ctm_trust_csv(points, path; policy)
     csv = read(path, String)
     lines = split(chomp(csv), '\n')
+    rows = [split(line, ',') for line in lines[2:end]]
+    header = split(lines[1], ',')
+
+    policy_min_points_idx = findfirst(==("trust_policy_min_points"), header)
+    policy_density_idx = findfirst(==("trust_policy_max_density_delta"), header)
+    policy_blockade_idx = findfirst(==("trust_policy_max_blockade_delta"), header)
+    policy_energy_idx = findfirst(==("trust_policy_max_energy_delta"), header)
+    trusted_idx = findfirst(==("trust_trusted"), header)
+    reason_idx = findfirst(==("trust_reason"), header)
+    compared_points_idx = findfirst(==("trust_compared_points"), header)
+    density_delta_idx = findfirst(==("trust_finite_chi_density_delta"), header)
+    blockade_delta_idx = findfirst(==("trust_finite_chi_blockade_delta"), header)
+    energy_delta_idx = findfirst(==("trust_finite_chi_energy_delta"), header)
 
     @test lines[1] == TRUST_CSV_HEADER
     @test length(lines) == 3
     @test occursin("8,1.0e-8,100", csv)
-    @test occursin(",true,trusted,2,", csv)
     @test !occursin("message", lowercase(csv))
+    @test all(length(row) == length(header) for row in rows)
+    @test all(row[policy_min_points_idx] == "2" for row in rows)
+    @test all(row[policy_density_idx] == "5.0e-5" for row in rows)
+    @test all(row[policy_blockade_idx] == "5.0e-6" for row in rows)
+    @test all(row[policy_energy_idx] == "5.0e-5" for row in rows)
+    @test all(row[trusted_idx] == "false" for row in rows)
+    @test all(row[reason_idx] == "density_delta_too_large" for row in rows)
+    @test all(row[compared_points_idx] == "2" for row in rows)
+    @test all(!isempty(row[density_delta_idx]) for row in rows)
+    @test all(!isempty(row[blockade_delta_idx]) for row in rows)
+    @test all(!isempty(row[energy_delta_idx]) for row in rows)
 end
 
 @testset "CTM trust malformed inputs throw" begin
