@@ -166,6 +166,30 @@ end
     end
 end
 
+@testset "PXP reversibility report measures forward and reverse drift" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.01, 1, :real, 1, 1e-12; schedule = :serial)
+
+    report = validate_pxp_reversibility(psi, 0.01; params)
+
+    @test report isa PXPReversibilityReport
+    @test report.before isa SimpleObservableSummary
+    @test report.after_forward isa SimpleObservableSummary
+    @test report.after_reverse isa SimpleObservableSummary
+    @test report.forward_log isa EvolutionLog
+    @test report.reverse_log isa EvolutionLog
+    @test isfinite(report.density_drift)
+    @test isfinite(report.blockade_drift)
+    @test isfinite(report.energy_drift)
+    @test report.density_drift >= 0
+    @test report.blockade_drift >= 0
+    @test report.energy_drift >= 0
+    @test report.density_drift <= 1e-10
+    @test report.blockade_drift <= 1e-10
+    @test report.energy_drift <= 1e-10
+end
+
 @testset "PXP validation report writes JSON artifact" begin
     config = PXPValidationConfig(3; total_time = 0.01, dt = 0.01, measure_every = 1)
     report = validate_pxp_ed_ipeps(config; ctm_params = nothing)

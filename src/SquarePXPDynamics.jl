@@ -123,7 +123,7 @@ using .CTMGaugeReadinessModule:
     ctm_ready_for_gauge_updates,
     fix_bond_gauge!
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
-using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!
+using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 using .Benchmarks:
     BenchmarkSpec,
     BenchmarkMetadata,
@@ -172,7 +172,9 @@ using .PXPValidation:
     PXPConvergenceConfig,
     PXPConvergenceReport,
     validate_pxp_convergence,
-    write_pxp_convergence_json
+    write_pxp_convergence_json,
+    PXPReversibilityReport,
+    validate_pxp_reversibility
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -241,7 +243,7 @@ export CTMGaugePolicy, CTMBondNormDiagnostic, CTMGaugeReadiness, BondGaugeFixInf
 export ctm_bond_norm_matrix, ctm_bond_norm_diagnostic
 export all_ctm_bond_norm_diagnostics, ctm_ready_for_gauge_updates, fix_bond_gauge!
 export StarUpdateInfo, project_star!
-export TrotterParams, EvolutionLog, trotter_sequence, evolve!
+export TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 export BenchmarkSpec, BenchmarkMetadata, EvolutionDiagnostics, BenchmarkSample, BenchmarkResult
 export run_benchmark, write_benchmark_json, write_benchmark_csv
 export FiniteTFIMReferenceSample
@@ -261,6 +263,7 @@ export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
 export write_pxp_validation_json
 export PXPConvergenceConfig, PXPConvergenceReport, validate_pxp_convergence
 export write_pxp_convergence_json
+export PXPReversibilityReport, validate_pxp_reversibility
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
 export CandidateStore, NoCandidateStore, JSONCandidateStore

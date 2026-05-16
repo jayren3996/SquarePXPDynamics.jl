@@ -2,7 +2,7 @@ module PXPValidation
 
 using JSON3
 
-using ..SquareIPEPS: SquareIPEPSState, log_norm, product_square_ipeps
+using ..SquareIPEPS: SquareIPEPSState, copy_state, log_norm, product_square_ipeps
 using ..SquareUnitCells: PeriodicSquareUnitCell
 using ..Observables: SimpleObservableSummary, measure_simple
 using ..PEPSKitMeasurements:
@@ -12,7 +12,7 @@ using ..PEPSKitMeasurements:
     measure_ctm,
     validate_ctm_sweep
 using ..CTMTrust: CTMTrustAssessment, CTMTrustPolicy, assess_ctm_trust
-using ..IPEPSEvolution: EvolutionLog, TrotterParams, evolve!
+using ..IPEPSEvolution: EvolutionLog, TrotterParams, evolve!, reverse_evolve!
 using ..FinitePXPEEDBenchmark:
     PXPEEDBenchmarkConfig,
     PXPEEDBenchmarkResult,
@@ -25,6 +25,7 @@ export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
 export write_pxp_validation_json
 export PXPConvergenceConfig, PXPConvergenceReport, validate_pxp_convergence
 export write_pxp_convergence_json
+export PXPReversibilityReport, validate_pxp_reversibility
 
 """
     TrustedCTMMeasurement(measurement, points, trust, policy = CTMTrustPolicy())
@@ -318,6 +319,26 @@ struct PXPConvergenceReport
     all_ctm_trusted::Union{Nothing,Bool}
 end
 
+"""
+    PXPReversibilityReport
+
+Simple-observable reversibility diagnostics for a forward real-time PXP
+evolution followed by [`reverse_evolve!`](@ref). `before`, `after_forward`, and
+`after_reverse` store the simple measurements around the protocol, the log
+fields store both evolution calls, and the drift fields are absolute differences
+between `before` and `after_reverse`.
+"""
+struct PXPReversibilityReport
+    before::SimpleObservableSummary
+    after_forward::SimpleObservableSummary
+    after_reverse::SimpleObservableSummary
+    forward_log::EvolutionLog
+    reverse_log::EvolutionLog
+    density_drift::Float64
+    blockade_drift::Float64
+    energy_drift::Float64
+end
+
 function _validation_ed_config(config::PXPValidationConfig)
     return PXPEEDBenchmarkConfig(
         config.n;
@@ -367,6 +388,40 @@ function _validation_trotter(config::PXPValidationConfig)
         config.maxdim,
         config.cutoff;
         schedule = config.schedule,
+    )
+end
+
+"""
+    validate_pxp_reversibility(psi, total_time; params, protocol = nothing)
+
+Measure simple PXP observables before evolution, after forward real-time
+evolution, and after applying [`reverse_evolve!`](@ref) for the same duration.
+The supplied state is copied before mutation, so the returned
+[`PXPReversibilityReport`](@ref) is a validation artifact and does not change
+the caller's `psi`.
+"""
+function validate_pxp_reversibility(
+    psi::SquareIPEPSState,
+    total_time::Real;
+    params::TrotterParams,
+    protocol = nothing,
+)::PXPReversibilityReport
+    work = copy_state(psi)
+    before = measure_simple(work)
+    forward_log = evolve!(work, total_time; params, protocol)
+    after_forward = measure_simple(work)
+    reverse_log = reverse_evolve!(work, total_time; params, protocol)
+    after_reverse = measure_simple(work)
+
+    return PXPReversibilityReport(
+        before,
+        after_forward,
+        after_reverse,
+        forward_log,
+        reverse_log,
+        abs(after_reverse.density - before.density),
+        abs(after_reverse.blockade_violation - before.blockade_violation),
+        abs(after_reverse.pxp_energy_density - before.pxp_energy_density),
     )
 end
 
