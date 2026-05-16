@@ -581,6 +581,18 @@ function _ed_sample_data(sample::PXPEEDSample)
     )
 end
 
+function _ed_diagnostics_data(diagnostics)
+    return (;
+        basis_builds = diagnostics.basis_builds,
+        basis_extensions = diagnostics.basis_extensions,
+        restarts = diagnostics.restarts,
+        matvecs = diagnostics.matvecs,
+        total_times_served = diagnostics.total_times_served,
+        max_dim_used = diagnostics.max_dim_used,
+        accepted_intervals = diagnostics.accepted_intervals,
+    )
+end
+
 function _ed_result_data(result::PXPEEDBenchmarkResult)
     return (;
         lattice_size = result.lattice_size,
@@ -590,6 +602,7 @@ function _ed_result_data(result::PXPEEDBenchmarkResult)
         point_group = result.point_group,
         hamiltonian_nnz = result.hamiltonian_nnz,
         samples = _ed_sample_data.(result.samples),
+        diagnostics = _ed_diagnostics_data(result.diagnostics),
     )
 end
 

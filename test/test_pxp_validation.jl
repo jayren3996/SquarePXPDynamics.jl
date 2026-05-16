@@ -1,4 +1,5 @@
 using Test
+using JSON3
 using SquarePXPDynamics
 
 function _validation_fake_ctm_summary(params; density, blockade, energy, accepted = true)
@@ -164,10 +165,14 @@ end
 
     written = write_pxp_validation_json(report, path)
     data = read(path, String)
+    parsed = JSON3.read(data)
 
     @test written == path
-    @test occursin("\"config\"", data)
-    @test occursin("\"comparisons\"", data)
-    @test occursin("\"density_error_simple\"", data)
-    @test occursin("\"metadata\"", data)
+    @test endswith(data, '\n')
+    @test parsed.config.initial_state == "down"
+    @test parsed.config.schedule == "serial"
+    @test parsed.ed_result.diagnostics.matvecs > 0
+    @test length(parsed.ed_result.diagnostics.accepted_intervals) >= 0
+    @test parsed.ipeps_samples[1].ctm === nothing
+    @test parsed.comparisons[1].ctm_reason === nothing
 end
