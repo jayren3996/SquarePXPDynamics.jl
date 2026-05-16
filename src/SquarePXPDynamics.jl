@@ -81,6 +81,7 @@ using .SquareUnitCells:
     BondKey,
     bondkey
 using .SquareIPEPS: SquareIPEPSState, product_square_ipeps, checkerboard_square_ipeps
+using .SquareIPEPS: unitcell_reps, physical_dim, simple_weight_dim, copy_state
 using .SquareIPEPS: link_weight, set_link_weight!, link_weight_tensor
 using .SquareIPEPS: state_version, log_norm
 using .SquareIPEPS: absorb_link_weight, deabsorb_link_weight
@@ -169,6 +170,7 @@ export wrap, neighbor, update_centers, assert_five_color_compatible
 export stars_are_disjoint_mod_unitcell
 export BondKey, bondkey
 export SquareIPEPSState, product_square_ipeps, checkerboard_square_ipeps
+export unitcell_reps, physical_dim, simple_weight_dim, copy_state
 export link_weight, set_link_weight!, link_weight_tensor
 export state_version, log_norm
 export absorb_link_weight, deabsorb_link_weight

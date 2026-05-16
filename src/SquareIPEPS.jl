@@ -8,6 +8,7 @@ import ..SquarePEPS: physical_index, link_index
 
 export SquareIPEPSState
 export product_square_ipeps, checkerboard_square_ipeps
+export unitcell_reps, physical_dim, simple_weight_dim, copy_state
 export physical_index, link_index
 export link_weight, set_link_weight!, link_weight_tensor
 export state_version, log_norm
@@ -139,6 +140,52 @@ simple-update star splits. This is diagnostic bookkeeping for normalized link
 spectra; it is not a physical observable.
 """
 log_norm(psi::SquareIPEPSState)::Float64 = psi.log_norm_value[]
+
+"""
+    unitcell_reps(psi)
+
+Return a copy of the periodic unit-cell representatives used by `psi`.
+"""
+unitcell_reps(psi::SquareIPEPSState)::Vector{SquareCoord} = copy(psi.unitcell.reps)
+
+"""
+    physical_dim(psi, c)
+
+Return the physical Hilbert-space dimension at coordinate `c`, after periodic
+wrapping into the unit cell.
+"""
+physical_dim(psi::SquareIPEPSState, c::SquareCoord)::Int = dim(physical_index(psi, c))
+
+"""
+    simple_weight_dim(psi, c, dir)
+
+Return the length of the simple-update link-weight vector on the nearest
+neighbor bond from `c` in direction `dir`.
+"""
+function simple_weight_dim(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol)::Int
+    _validate_link_direction(dir)
+    return length(_validated_link_weight(psi, c, dir))
+end
+
+"""
+    copy_state(psi)
+
+Return a deep mutable copy of `psi` with independent tensors, link-weight
+vectors, mutation counter, and log-normalization ledger.
+"""
+function copy_state(psi::SquareIPEPSState)::SquareIPEPSState
+    return SquareIPEPSState(
+        psi.unitcell,
+        Dict(c => copy(T) for (c, T) in psi.tensors),
+        copy(psi.physical_indices),
+        copy(psi.link_indices),
+        Dict(key => copy(lambda) for (key, lambda) in psi.link_weights),
+        psi.maxdim,
+        psi.gauge,
+        Ref(state_version(psi)),
+        Ref(log_norm(psi)),
+    )
+end
 
 function _mark_mutated!(psi::SquareIPEPSState)
     psi.mutation_version[] += 1
