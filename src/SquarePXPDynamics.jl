@@ -28,6 +28,7 @@ include("Benchmarks.jl")
 include("FiniteTFIMReference.jl")
 include("FiniteMPSTFIMReference.jl")
 include("FinitePXPEEDBenchmark.jl")
+include("PXPValidation.jl")
 include("ScarFinder.jl")
 
 using .SpinOps:
@@ -157,6 +158,9 @@ using .FinitePXPEEDBenchmark:
     sparse_pxp_ed_hamiltonian,
     run_pxp_ed_benchmark,
     write_pxp_ed_benchmark_json
+using .PXPValidation:
+    TrustedCTMMeasurement,
+    measure_ctm_trusted
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -226,6 +230,7 @@ export PXPEEDBenchmarkConfig, PXPEEDSample, PXPEEDBenchmarkResult
 export pxp_ed_space_group_basis, pxp_ed_constrained_count, pxp_ed_group_order
 export pxp_ed_initial_state, pxp_ed_hamiltonian_operator, sparse_pxp_ed_hamiltonian
 export run_pxp_ed_benchmark, write_pxp_ed_benchmark_json
+export TrustedCTMMeasurement, measure_ctm_trusted
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
