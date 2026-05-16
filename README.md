@@ -8,20 +8,24 @@ The package now contains the S0-S7 prototype pipeline for square-lattice PXP
 dynamics plus a v1 infinite TFIM benchmark runner: dense local model
 definitions, finite and periodic PEPS/iPEPS state containers, QR-reduced
 five-site star updates, deterministic Trotter evolution, simple/local
-observables, reproducible TFIM benchmark records, and ScarFinder
-orchestration with optional guarded simple-energy correction, CTM trust and
-readiness diagnostics, and transactional CTM gauge conditioning.
+observables, reproducible TFIM/PXP validation records, and ScarFinder
+orchestration with explicit objectives, optional trusted finite-`chi` CTM
+measurement backends, candidate metadata persistence, CTM trust/readiness
+diagnostics, and transactional CTM gauge conditioning.
 
 Simple/local observables are useful diagnostics for development and regression
-tests, but they are not final CTMRG-quality measurements. ScarFinder-lite
-uses these simple/local diagnostics by default, with optional scheduled CTM
-diagnostics supplied by caller callbacks. Do not make physics claims from
-simple diagnostics alone.
+tests, but they are not final CTMRG-quality measurements. ScarFinder still
+defaults to this fast simple/local path for development. Physics-facing
+candidate ranking should instead use `TrustedCTMBackend`, an explicit
+objective such as `RevivalObjective` or `CompositeObjective`, and
+`require_trusted_ctm = true`. Do not make physics claims from simple
+diagnostics alone.
 
 This checkout also contains PEPSKit/TensorKit-facing measurement code in
 `src/PEPSKitMeasurements.jl` and S7a CTM trust helpers in `src/CTMTrust.jl`.
 The PEPSKit CTMRG measurement adapter is shipped as an experimental S5c-facing
-API, not production ScarFinder validation. Within that adapter, density,
+API and can now be selected as ScarFinder's trusted measurement backend.
+Within that adapter, density,
 blockade diagnostics, and five-site square-star PXP energy density use PEPSKit
 CTMRG. The dense square-star Hamiltonian remains the source of truth for the
 PXP energy operator, with site order `(center, right, up, left, down)` and
@@ -59,17 +63,26 @@ bond-environment gauge conditioning.
 - Simple/local TFIM observables and reproducible JSON/CSV benchmark records via `run_benchmark` (`src/Benchmarks.jl`).
 - Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
 - CTM finite-`chi` trust assessment and audit CSV output via `assess_ctm_trust` and `write_ctm_trust_csv` (`src/CTMTrust.jl`).
-- PXP validation reports that compare finite ED all-down trajectories against
+- PXP validation and convergence reports that compare finite ED all-down trajectories against
   matched iPEPS trajectories and optionally attach trusted finite-`chi` CTM
   measurement sweeps via `validate_pxp_ed_ipeps` and
-  `write_pxp_validation_json` (`src/PXPValidation.jl`).
+  `write_pxp_validation_json`, or sweep `dt`, `D`, cutoff, and CTM finite-`chi`
+  settings via `validate_pxp_convergence` and
+  `write_pxp_convergence_json` (`src/PXPValidation.jl`).
 - Read-only local simple-gauge diagnostics via `gauge_diagnostic_simple` (`src/GaugeDiagnostics.jl`).
-- CTM local bond norm diagnostics, `ctm_ready_for_gauge_updates`, and transactional `fix_bond_gauge!` gauge conditioning (`src/CTMGaugeReadiness.jl`).
-- `scarfinder!` orchestration, guarded simple-energy correction, candidate ranking, and CSV/JSON diagnostic logging using simple/local diagnostics by default (`src/ScarFinder.jl`).
+- CTM local bond norm diagnostics, `ctm_ready_for_gauge_updates`,
+  `pepskit_private_full_update_available`, and transactional `fix_bond_gauge!`
+  gauge conditioning (`src/CTMGaugeReadiness.jl`).
+- `scarfinder!` orchestration, guarded simple-energy correction,
+  objective-based candidate ranking, optional trusted CTM measurement backends,
+  JSON candidate metadata persistence, and CSV/JSON diagnostic logging
+  (`src/ScarFinder.jl`).
 
 ## Not Yet Shipped
 
-- Production ScarFinder validation.
+- CTM-aware/full-update evolution.
+- Full physics audit reports across `dt`, `D`, `chi`, cutoff, unit cell, and
+  update scheme before publication-quality ScarFinder claims.
 
 ## Minimal Example
 
@@ -129,13 +142,13 @@ are environment variables, for example
 `PXP_ED_TOTAL_TIME=0.05 PXP_ED_M_MAX=40 julia --project=. scripts/pxp_ed_7x7_benchmark.jl`.
 
 An experimental PEPSKit CTMRG measurement adapter is present as `measure_ctm`,
-with CTMRG density, blockade, and five-site PXP energy diagnostics. Check the
-raw CTMRG convergence information and finite-chi sensitivity before treating
-these measurements as physics-quality observables.
-ScarFinder is currently an orchestration layer over `evolve!` and
-`measure_simple`, with optional guarded simple-energy correction and
-callback-supplied CTM diagnostics for selected iterations. Production
-CTMRG-quality ScarFinder validation is not yet shipped.
+with CTMRG density, blockade, sublattice imbalance, checkerboard structure
+factor, and five-site PXP energy diagnostics. Check the raw CTMRG convergence
+information and finite-chi sensitivity before treating these measurements as
+physics-quality observables. `measure_ctm_trusted` and
+`TrustedCTMBackend` package that finite-`chi` sweep, the final CTM summary,
+and the `assess_ctm_trust` result for downstream validation and ScarFinder
+ranking.
 
 ```julia
 params_ctm = PEPSKitCTMRGParams(8, 1e-8, 100, 0)
@@ -149,9 +162,10 @@ measurements at multiple `chi` values before trusting energy comparisons. A
 `PEPSKitMeasurementContext` belongs to the exact state used at creation; if
 `psi` is mutated by `evolve!`, `project_star!`, or link-weight setters, the old
 context is stale and measurement calls throw. `ScarFinderCandidateScore.score`
-is a diagnostic sorting key, not a physics-quality energy target. ScarFinder
-CSV/JSON logs include `log_norm_before`, `log_norm_after`, `log_norm_delta`,
-`correction_accepted`, `correction_energy_before`, and
+is the selected objective score. For simple/local default runs it is still only
+a diagnostic sorting key. ScarFinder CSV/JSON logs include objective metadata,
+CTM trust fields when available, `log_norm_before`, `log_norm_after`,
+`log_norm_delta`, `correction_accepted`, `correction_energy_before`, and
 `correction_energy_after` so long projection sweeps and guarded correction
 attempts can be screened. The public mutators update the state version; direct
 edits to `psi.tensors`, `psi.link_weights`, or `psi.link_indices` are internal
@@ -208,8 +222,62 @@ julia --project=. scripts/validate_pxp_ed_ipeps.jl
 ```
 
 This is a validation harness, not a ScarFinder ranking change. ScarFinder still
-uses its existing simple/local default until a later slice wires validation
-reports into candidate objectives.
+uses its existing simple/local default for fast development runs. Use the
+trusted backend path below for CTM-gated ranking.
+
+### ScarFinder trusted ranking
+
+ScarFinder now accepts explicit objectives and measurement backends. The simple
+default remains useful for smoke tests:
+
+```julia
+result = scarfinder!(
+    psi;
+    iterations = 3,
+    params = params,
+    objective = CompositeObjective(; revival = RevivalObjective()),
+)
+```
+
+For physics-facing candidate ranking, use trusted finite-`chi` CTM measurement
+and a hard trust gate:
+
+```julia
+backend = TrustedCTMBackend(
+    [
+        PEPSKitCTMRGParams(8, 1e-7, 100, 0; seed = 11),
+        PEPSKitCTMRGParams(12, 1e-8, 150, 0; seed = 11),
+    ],
+    CTMTrustPolicy(),
+)
+
+result = scarfinder!(
+    psi;
+    iterations = 5,
+    params = params,
+    measurement = backend,
+    objective = CompositeObjective(; revival = RevivalObjective()),
+    require_trusted_ctm = true,
+    candidate_store = JSONCandidateStore("artifacts/scarfinder-candidates"),
+)
+```
+
+`JSONCandidateStore` writes metadata and score records for auditability. It
+does not yet persist full tensor snapshots.
+
+For coarse error-budget artifacts, run:
+
+```julia
+config = PXPConvergenceConfig(
+    PXPValidationConfig(3; total_time = 0.02, dt = 0.01);
+    dt_values = [0.02, 0.01],
+    D_values = [1, 2],
+    cutoff_values = [1e-10],
+    chi_values = [8, 12],
+)
+report = validate_pxp_convergence(config)
+write_pxp_convergence_json(report, "artifacts/pxp_convergence_report.json")
+```
 
 ## Development
 

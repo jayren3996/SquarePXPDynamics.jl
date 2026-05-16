@@ -28,6 +28,39 @@ Source:
 
 Status: active
 
+## 2026-05-16 - ScarFinder Uses Trusted Measurement Backends
+
+Decision:
+
+Make ScarFinder's production-facing control flow depend on explicit objective
+objects and measurement backends. Keep `SimpleBackend` as the development
+default, but support `TrustedCTMBackend` with finite-`chi` trust assessment,
+`require_trusted_ctm`, objective-aware scoring, and JSON candidate metadata
+persistence.
+
+Reason:
+
+The GPT review correctly identified that simple/local diagnostics cannot be the
+basis for physics claims. The repo already had CTM measurement, CTM trust, and
+ED validation scaffolding; the missing step was wiring those pieces into the
+candidate-ranking path without removing the fast smoke-test workflow.
+
+Consequences:
+
+ScarFinder candidates now carry objective metadata, CTM trust fields when
+available, scar-oriented derived observables, and optional persisted metadata.
+Trusted CTM ranking is available as a first-class API, while publication-grade
+claims still require convergence reports across `dt`, `D`, `chi`, cutoff, unit
+cell, and update scheme. Full tensor snapshot persistence and CTM-aware/full
+updates remain future work.
+
+Source:
+
+`src/ScarFinder.jl`; `src/PEPSKitMeasurements.jl`; `src/CTMTrust.jl`;
+`src/PXPValidation.jl`; `README.md`
+
+Status: active
+
 ## 2026-05-16 - Sequence Remaining GPT Review Work Around Trusted ScarFinder
 
 Decision:
