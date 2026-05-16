@@ -173,3 +173,31 @@ Source:
 User request on 2026-05-15; `/Users/ren/.codex/skills/project-memory-curator/SKILL.md`
 
 Status: active
+
+## 2026-05-16 - S7a Uses Separate CTM Trust And Gauge Diagnostics Modules
+
+Decision:
+
+Keep CTM finite-chi trust policy in `src/CTMTrust.jl` and read-only
+simple-gauge diagnostics in `src/GaugeDiagnostics.jl`, with no mutating
+gauge-fixing API in S7a.
+
+Reason:
+
+CTM measurement trust and gauge-update readiness have different correctness
+requirements. S7a validates measurement stability and local simple-gauge
+diagnostics, while S7b must separately validate environment norm matrices
+before mutating tensors.
+
+Consequences:
+
+S7a exports `assess_ctm_trust`, `write_ctm_trust_csv`, and read-only
+`gauge_diagnostic_simple` helpers. Mutating `fix_bond_gauge!` or
+full-update-style conditioning remains deferred until S7b.
+
+Source:
+
+`docs/superpowers/specs/2026-05-16-s7-ctm-trust-gauge-readiness-design.md`;
+`src/CTMTrust.jl`; `src/GaugeDiagnostics.jl`
+
+Status: active
