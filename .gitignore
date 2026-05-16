@@ -5,3 +5,4 @@ Manifest.toml
 # Local/editor metadata
 .DS_Store
 .claude/
+.worktrees/
