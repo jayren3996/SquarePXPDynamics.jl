@@ -546,3 +546,31 @@ User confirmation in current thread; `notes/2026-05-15-chatgpt-pro-ipeps-review-
 `memory/long_term/literature_context.md`
 
 Status: active
+
+## 2026-05-16 - Promote CTM-Trusted PXP Validation Reports
+
+Decision:
+
+Add a focused `PXPValidation` layer that composes existing CTM sweep, CTM
+trust, iPEPS evolution, and finite PXP ED APIs into a machine-readable
+validation report.
+
+Reason:
+
+The next reliability step is to make trusted measurement and ED comparison a
+normal workflow before changing ScarFinder ranking. A narrow report layer
+preserves the existing explicit `measure_simple` / `measure_ctm` boundary and
+avoids a broad measurement facade before a second production backend exists.
+
+Consequences:
+
+Short-time PXP runs can now produce reproducible JSON artifacts with ED
+density references, iPEPS diagnostics, optional finite-`chi` CTM trust, and
+run metadata. ScarFinder can consume this report shape in a follow-on slice.
+
+Source:
+
+`src/PXPValidation.jl`; `test/test_pxp_validation.jl`;
+`scripts/validate_pxp_ed_ipeps.jl`
+
+Status: active

@@ -59,6 +59,10 @@ bond-environment gauge conditioning.
 - Simple/local TFIM observables and reproducible JSON/CSV benchmark records via `run_benchmark` (`src/Benchmarks.jl`).
 - Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
 - CTM finite-`chi` trust assessment and audit CSV output via `assess_ctm_trust` and `write_ctm_trust_csv` (`src/CTMTrust.jl`).
+- PXP validation reports that compare finite ED all-down trajectories against
+  matched iPEPS trajectories and optionally attach trusted finite-`chi` CTM
+  measurement sweeps via `validate_pxp_ed_ipeps` and
+  `write_pxp_validation_json` (`src/PXPValidation.jl`).
 - Read-only local simple-gauge diagnostics via `gauge_diagnostic_simple` (`src/GaugeDiagnostics.jl`).
 - CTM local bond norm diagnostics, `ctm_ready_for_gauge_updates`, and transactional `fix_bond_gauge!` gauge conditioning (`src/CTMGaugeReadiness.jl`).
 - `scarfinder!` orchestration, guarded simple-energy correction, candidate ranking, and CSV/JSON diagnostic logging using simple/local diagnostics by default (`src/ScarFinder.jl`).
@@ -178,6 +182,34 @@ adds the separate S7b checks for fresh contexts and local CTM bond norm
 diagnostics. `fix_bond_gauge!` is transactional: D=1 product bonds are a no-op,
 and D>1 bonds are conditioned with PEPSKit bond-environment factorization before
 the updated tensors are written back to the Gamma-lambda iPEPS state.
+
+### PXP validation reports
+
+The first production-facing validation path is
+`validate_pxp_ed_ipeps(PXPValidationConfig(...))`. It runs a finite periodic
+PXP ED trajectory, evolves a matched all-down iPEPS trajectory on the same
+unit cell, and reports density differences at shared sample times. Passing
+`ctm_params = (...)` attaches `measure_ctm_trusted` output at every sample:
+the final CTM measurement, the finite-`chi` sweep points, and the
+`assess_ctm_trust` result.
+
+For a fast JSON artifact without CTMRG:
+
+```julia
+config = PXPValidationConfig(3; total_time = 0.02, dt = 0.01)
+report = validate_pxp_ed_ipeps(config; ctm_params = nothing)
+write_pxp_validation_json(report, "artifacts/pxp_validation_report.json")
+```
+
+or from the shell:
+
+```bash
+julia --project=. scripts/validate_pxp_ed_ipeps.jl
+```
+
+This is a validation harness, not a ScarFinder ranking change. ScarFinder still
+uses its existing simple/local default until a later slice wires validation
+reports into candidate objectives.
 
 ## Development
 
