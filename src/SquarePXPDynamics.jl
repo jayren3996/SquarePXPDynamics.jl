@@ -14,6 +14,7 @@ include("SquarePXP.jl")
 include("SquarePEPS.jl")
 include("SquareUnitCells.jl")
 include("SquareIPEPS.jl")
+include("GaugeDiagnostics.jl")
 include("StarModels.jl")
 include("Observables.jl")
 include("PEPSKitMeasurements.jl")
@@ -80,6 +81,9 @@ using .SquareIPEPS: state_version, log_norm
 using .SquareIPEPS: absorb_link_weight, deabsorb_link_weight
 using .SquareIPEPS: weight_entropy, bond_entropy, all_bond_entropies
 using .SquareIPEPS: square_pxp_gate_itensor, projected_square_pxp_gate_itensor
+using .GaugeDiagnostics: SimpleGaugeDiagnostic
+using .GaugeDiagnostics: gauge_diagnostic_simple, gauge_deviation_simple
+using .GaugeDiagnostics: all_gauge_deviations_simple
 using .Observables: local_density_simple, density_simple, sublattice_densities
 using .Observables: nearest_neighbor_density_simple, blockade_violation_simple
 using .Observables: star_expectation_simple, pxp_energy_density_simple
@@ -139,6 +143,8 @@ export state_version, log_norm
 export absorb_link_weight, deabsorb_link_weight
 export weight_entropy, bond_entropy, all_bond_entropies
 export square_pxp_gate_itensor, projected_square_pxp_gate_itensor
+export SimpleGaugeDiagnostic
+export gauge_diagnostic_simple, gauge_deviation_simple, all_gauge_deviations_simple
 export local_density_simple, density_simple, sublattice_densities
 export nearest_neighbor_density_simple, blockade_violation_simple
 export star_expectation_simple, pxp_energy_density_simple
