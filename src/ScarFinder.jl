@@ -274,6 +274,8 @@ struct ScarFinderCandidateScore
     ctm_residual::Union{Nothing,Float64}
     ctm_converged::Union{Nothing,Bool}
     ctm_accepted::Union{Nothing,Bool}
+    ctm_trusted::Union{Nothing,Bool}
+    ctm_trust_reason::Union{Nothing,String}
     correction_accepted::Union{Nothing,Bool}
     correction_energy_before::Union{Nothing,Float64}
     correction_energy_after::Union{Nothing,Float64}
@@ -500,6 +502,33 @@ function _candidate_score(
     accepted::Bool,
     reject_reason::Union{Nothing,String},
     log::EvolutionLog,
+    trusted::TrustedCTMMeasurement,
+    correction_accepted::Union{Nothing,Bool} = nothing,
+    correction_energy_before::Union{Nothing,Float64} = nothing,
+    correction_energy_after::Union{Nothing,Float64} = nothing,
+    objective::ScarFinderObjective = CompositeObjective(),
+)
+    return _candidate_score(
+        iteration,
+        diagnostics,
+        accepted,
+        reject_reason,
+        log,
+        trusted.measurement,
+        correction_accepted,
+        correction_energy_before,
+        correction_energy_after,
+        objective,
+        trusted,
+    )
+end
+
+function _candidate_score(
+    iteration::Int,
+    diagnostics::Symbol,
+    accepted::Bool,
+    reject_reason::Union{Nothing,String},
+    log::EvolutionLog,
     obs::SimpleObservableSummary,
     correction_accepted::Union{Nothing,Bool} = nothing,
     correction_energy_before::Union{Nothing,Float64} = nothing,
@@ -545,6 +574,8 @@ function _candidate_score(
         nothing,
         nothing,
         nothing,
+        nothing,
+        nothing,
         correction_accepted,
         correction_energy_before,
         correction_energy_after,
@@ -567,6 +598,14 @@ function _ctm_score_fields(diagnostics::CTMRGDiagnostics)
     )
 end
 
+function _ctm_trust_score_fields(::Nothing)
+    return (nothing, nothing)
+end
+
+function _ctm_trust_score_fields(trusted::TrustedCTMMeasurement)
+    return (trusted.trust.trusted, String(trusted.trust.reason))
+end
+
 function _candidate_score(
     iteration::Int,
     diagnostics::Symbol,
@@ -581,6 +620,7 @@ function _candidate_score(
     trusted_ctm = nothing,
 )
     ctm_fields = _ctm_score_fields(obs.diagnostics)
+    trust_fields = _ctm_trust_score_fields(trusted_ctm)
     composite = _composite_objective(objective)
     score, revival, finite_chi =
         _score_value(obs, log, nothing, nothing, composite; trusted_ctm)
@@ -607,6 +647,7 @@ function _candidate_score(
         log.log_norm_after,
         log.log_norm_delta,
         ctm_fields...,
+        trust_fields...,
         correction_accepted,
         correction_energy_before,
         correction_energy_after,
@@ -743,6 +784,45 @@ function _should_measure_ctm(iteration::Int, total::Int, ctm_every::Int, ctm_at_
            (ctm_at_end && iteration == total)
 end
 
+function _scheduled_ctm_observation(
+    psi::SquareIPEPSState,
+    measurement::MeasurementBackend,
+    ctm_callback,
+    iteration::Int,
+    simple_score::ScarFinderCandidateScore,
+    require_trusted_ctm::Bool,
+)
+    if ctm_callback !== nothing
+        return ctm_callback(psi, iteration, simple_score)
+    elseif measurement isa SimpleBackend
+        require_trusted_ctm &&
+            throw(ArgumentError("require_trusted_ctm requires a TrustedCTMMeasurement"))
+        return nothing
+    else
+        return measure_scarfinder(psi, measurement)
+    end
+end
+
+function _validate_trusted_ctm_schedule(require_trusted_ctm::Bool, ctm_every::Int, ctm_at_end::Bool)
+    require_trusted_ctm && ctm_every == 0 && !ctm_at_end &&
+        throw(ArgumentError("require_trusted_ctm requires ctm_every > 0 or ctm_at_end = true"))
+    return nothing
+end
+
+function _apply_trusted_ctm_gate(
+    accepted::Bool,
+    reason::Union{Nothing,String},
+    raw_ctm,
+    require_trusted_ctm::Bool,
+)
+    trusted = _scarfinder_trusted_ctm(raw_ctm)
+    require_trusted_ctm || return accepted, reason, trusted
+    trusted === nothing &&
+        throw(ArgumentError("require_trusted_ctm requires a TrustedCTMMeasurement"))
+    trusted.trust.trusted || return false, "trusted CTM policy rejected iteration", trusted
+    return accepted, reason, trusted
+end
+
 function _iteration_score(iteration::ScarFinderIteration, diagnostics::Symbol)
     if diagnostics === :simple
         return iteration.simple_score
@@ -759,6 +839,7 @@ end
         diagnostics = :simple,
         accepted_only = false,
         require_ctm_accepted = false,
+        require_ctm_trusted = false,
         by = :score,
     )
 
@@ -766,25 +847,31 @@ Return candidate scores sorted by a field of [`ScarFinderCandidateScore`](@ref).
 Simple ranking is available for every iteration. CTM ranking includes only
 iterations where an optional CTM callback supplied diagnostics. Set
 `require_ctm_accepted = true` with `diagnostics = :ctm` to exclude CTM records
-whose diagnostics are missing or flagged as unaccepted. Nullable sort fields,
-such as CTM residuals, are sorted with missing values last.
+whose diagnostics are missing or flagged as unaccepted. Set
+`require_ctm_trusted = true` with `diagnostics = :ctm` to rank only trusted CTM
+measurements. Nullable sort fields, such as CTM residuals, are sorted with
+missing values last.
 """
 function rank_scarfinder_candidates(
     result::ScarFinderResult;
     diagnostics::Symbol = :simple,
     accepted_only::Bool = false,
     require_ctm_accepted::Bool = false,
+    require_ctm_trusted::Bool = false,
     by::Symbol = :score,
     rev::Bool = false,
 )
     require_ctm_accepted && diagnostics !== :ctm &&
         throw(ArgumentError("require_ctm_accepted is only valid with diagnostics = :ctm"))
+    require_ctm_trusted && diagnostics !== :ctm &&
+        throw(ArgumentError("require_ctm_trusted is only valid with diagnostics = :ctm"))
     scores = ScarFinderCandidateScore[]
     for iteration in result.iterations
         accepted_only && !iteration.accepted && continue
         score = _iteration_score(iteration, diagnostics)
         score === nothing && continue
         require_ctm_accepted && score.ctm_accepted !== true && continue
+        require_ctm_trusted && score.ctm_trusted !== true && continue
         push!(scores, score)
     end
     if !hasfield(ScarFinderCandidateScore, by)
@@ -805,14 +892,19 @@ and accepts or rejects the iteration by truncation error, simple blockade
 violation, simple bond entropy, and finite-diagnostic checks. `psi` is mutated
 like [`evolve!`](@ref). If `params.target_energy` is supplied, the loop may
 apply guarded simple/local imaginary-time correction attempts and records their
-diagnostic outcome. CTM diagnostics are recorded only when a caller supplies
-`ctm_callback` and schedules it with `ctm_every` or `ctm_at_end`. No new CTMRG
-algorithm or direct star-projection logic is performed here.
+diagnostic outcome. CTM diagnostics are recorded when a caller supplies
+`ctm_callback` or a non-default `measurement` backend and schedules it with
+`ctm_every` or `ctm_at_end`. The default [`SimpleBackend`](@ref) is not used to
+create scheduled `:ctm` scores without a callback. Set `require_trusted_ctm =
+true` to reject iterations whose scheduled CTM measurement fails the trust
+policy. No direct star-projection logic is performed here.
 """
 function scarfinder!(
     psi::SquareIPEPSState,
     params::ScarFinderParams;
     objective::ScarFinderObjective = CompositeObjective(),
+    measurement::MeasurementBackend = SimpleBackend(),
+    require_trusted_ctm::Bool = false,
     ctm_callback = nothing,
     ctm_every::Integer = 0,
     ctm_at_end::Bool = false,
@@ -820,6 +912,7 @@ function scarfinder!(
     log_format::Symbol = :csv,
 )::ScarFinderResult
     ctm_period = _nonnegative_int(ctm_every, "ctm_every")
+    _validate_trusted_ctm_schedule(require_trusted_ctm, ctm_period, ctm_at_end)
     iterations = ScarFinderIteration[]
 
     for n = 1:params.iterations
@@ -846,24 +939,48 @@ function scarfinder!(
             objective,
         )
         ctm_score = nothing
-        if ctm_callback !== nothing &&
-           _should_measure_ctm(n, params.iterations, ctm_period, ctm_at_end)
-            raw_ctm = ctm_callback(psi, n, simple_score)
-            ctm_obs = _scarfinder_observable(raw_ctm)
-            _finite_summary(ctm_obs) || throw(ArgumentError("non-finite CTM diagnostic"))
-            ctm_score = _candidate_score(
+        if _should_measure_ctm(n, params.iterations, ctm_period, ctm_at_end)
+            raw_ctm = _scheduled_ctm_observation(
+                psi,
+                measurement,
+                ctm_callback,
                 n,
-                :ctm,
-                accepted,
-                reason,
-                log,
-                ctm_obs,
-                correction_accepted,
-                correction_energy_before,
-                correction_energy_after,
-                objective,
-                _scarfinder_trusted_ctm(raw_ctm),
+                simple_score,
+                require_trusted_ctm,
             )
+            raw_ctm === nothing && require_trusted_ctm &&
+                throw(ArgumentError("require_trusted_ctm requires a scheduled trusted CTM measurement"))
+            if raw_ctm !== nothing
+                accepted, reason, trusted_ctm =
+                    _apply_trusted_ctm_gate(accepted, reason, raw_ctm, require_trusted_ctm)
+                simple_score = _candidate_score(
+                    n,
+                    :simple,
+                    accepted,
+                    reason,
+                    log,
+                    obs,
+                    correction_accepted,
+                    correction_energy_before,
+                    correction_energy_after,
+                    objective,
+                )
+                ctm_obs = _scarfinder_observable(raw_ctm)
+                _finite_summary(ctm_obs) || throw(ArgumentError("non-finite CTM diagnostic"))
+                ctm_score = _candidate_score(
+                    n,
+                    :ctm,
+                    accepted,
+                    reason,
+                    log,
+                    ctm_obs,
+                    correction_accepted,
+                    correction_energy_before,
+                    correction_energy_after,
+                    objective,
+                    trusted_ctm,
+                )
+            end
         end
         push!(
             iterations,
@@ -910,6 +1027,8 @@ end
         target_energy = nothing,
         correction_time = 0,
         correction_attempts = 0,
+        measurement = SimpleBackend(),
+        require_trusted_ctm = false,
         objective = CompositeObjective(),
     )::ScarFinderResult
 
@@ -931,6 +1050,8 @@ function scarfinder!(
     correction_time::Real = 0,
     correction_attempts::Integer = 0,
     ctm_callback = nothing,
+    measurement::MeasurementBackend = SimpleBackend(),
+    require_trusted_ctm::Bool = false,
     ctm_every::Integer = 0,
     ctm_at_end::Bool = false,
     log_path::Union{Nothing,AbstractString} = nothing,
@@ -953,6 +1074,8 @@ function scarfinder!(
         psi,
         params;
         objective,
+        measurement,
+        require_trusted_ctm,
         ctm_callback,
         ctm_every,
         ctm_at_end,
@@ -1021,6 +1144,8 @@ function _write_csv_log(io, result::ScarFinderResult)
         "ctm_residual",
         "ctm_converged",
         "ctm_accepted",
+        "ctm_trusted",
+        "ctm_trust_reason",
         "correction_accepted",
         "correction_energy_before",
         "correction_energy_after",
@@ -1056,6 +1181,8 @@ function _write_csv_log(io, result::ScarFinderResult)
             score.ctm_residual,
             score.ctm_converged,
             score.ctm_accepted,
+            score.ctm_trusted,
+            score.ctm_trust_reason,
             score.correction_accepted,
             score.correction_energy_before,
             score.correction_energy_after,
@@ -1108,6 +1235,8 @@ function _score_json(score::ScarFinderCandidateScore)
         :ctm_residual,
         :ctm_converged,
         :ctm_accepted,
+        :ctm_trusted,
+        :ctm_trust_reason,
         :correction_accepted,
         :correction_energy_before,
         :correction_energy_after,

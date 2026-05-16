@@ -412,6 +412,114 @@ end
     @test ctm_score.ctm_accepted === true
 end
 
+@testset "ScarFinder trusted CTM backend gates ranking" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    ctm_params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+    backend = TrustedCTMBackend(
+        ctm_params,
+        CTMTrustPolicy(2, true, 1e-2, 1e-3, 1e-2, 1e-4);
+        measure = (state; params) -> CTMObservableSummary(
+            0.1 + params.chi * 1e-5,
+            0.12,
+            0.08,
+            params.chi * 1e-6,
+            -0.01,
+            CTMRGDiagnostics(params.chi, params.tol, params.maxiter, 3, params.tol / 10, true, true),
+        ),
+    )
+
+    result = scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        measurement = backend,
+        ctm_every = 1,
+        require_trusted_ctm = true,
+    )
+
+    ranked = rank_scarfinder_candidates(result; diagnostics = :ctm, require_ctm_trusted = true)
+    @test length(ranked) == 1
+    @test ranked[1].ctm_trusted === true
+    @test ranked[1].ctm_trust_reason == "trusted"
+    @test ranked[1].finite_chi_drift !== nothing
+
+    csv_path = tempname() * ".csv"
+    json_path = tempname() * ".json"
+    write_scarfinder_log(result, csv_path; format = :csv)
+    write_scarfinder_log(result, json_path; format = :json)
+    csv = read(csv_path, String)
+    json = read(json_path, String)
+    @test occursin("ctm_trusted", csv)
+    @test occursin("ctm_trust_reason", csv)
+    @test occursin(",ctm,", csv)
+    @test occursin(",true,trusted,", csv)
+    @test occursin("\"ctm_trusted\":true", json)
+    @test occursin("\"ctm_trust_reason\":\"trusted\"", json)
+end
+
+@testset "ScarFinder require trusted CTM validates scheduled observations" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+
+    @test_throws ArgumentError scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        require_trusted_ctm = true,
+    )
+
+    @test_throws ArgumentError scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        ctm_every = 1,
+        require_trusted_ctm = true,
+        ctm_callback = (state, iteration, simple_score) -> nothing,
+    )
+end
+
+@testset "ScarFinder untrusted CTM policy rejects iteration" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    ctm_params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+    backend = TrustedCTMBackend(
+        ctm_params,
+        CTMTrustPolicy(2, true, 1e-6, 1e-6, 1e-6, 1e-4);
+        measure = (state; params) -> CTMObservableSummary(
+            0.1 + params.chi * 1e-3,
+            0.12,
+            0.08,
+            params.chi * 1e-6,
+            -0.01,
+            CTMRGDiagnostics(params.chi, params.tol, params.maxiter, 3, params.tol / 10, true, true),
+        ),
+    )
+
+    result = scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        measurement = backend,
+        ctm_every = 1,
+        require_trusted_ctm = true,
+    )
+    ctm_score = only(rank_scarfinder_candidates(result; diagnostics = :ctm))
+
+    @test result.accepted_iterations == 0
+    @test result.rejected_iterations == 1
+    @test result.iterations[1].reject_reason == "trusted CTM policy rejected iteration"
+    @test ctm_score.accepted === false
+    @test ctm_score.ctm_trusted === false
+    @test ctm_score.ctm_trust_reason == "density_delta_too_large"
+    @test isempty(rank_scarfinder_candidates(result; diagnostics = :ctm, require_ctm_trusted = true))
+end
+
 @testset "ScarFinder CTM diagnostics are logged and can require trust" begin
     cell = PeriodicSquareUnitCell(10, 10)
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
