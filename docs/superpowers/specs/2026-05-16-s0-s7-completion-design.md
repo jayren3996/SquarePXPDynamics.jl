@@ -199,9 +199,10 @@ Supersede:
 
 ### S6: ScarFinder Orchestration
 
-Status: S6-lite complete; full S6 requires guarded energy correction.
+Status: complete after Slice 3. Defaults preserve S6-lite behavior; guarded
+simple-energy correction is opt-in and diagnostic-only.
 
-Complete now:
+Completed in Slice 3:
 
 - Add opt-in energy-correction parameters and result fields without changing
   the default S6-lite behavior:
@@ -279,7 +280,9 @@ Deliver:
 - logs for accepted/rejected correction decisions.
 
 This slice completes the non-CTM ScarFinder plan while preserving S6-lite
-defaults.
+defaults. Slice 3 was completed with guarded simple-energy correction fields
+and CSV/JSON logging; the optional thin `measure` wrapper was not added because
+the explicit `measure_simple`/`measure_ctm` boundary remains clearer.
 
 ### Slice 4: S7b Feasibility And Readiness
 
@@ -322,4 +325,3 @@ SQUAREPXP_EXTENDED_TESTS=1 julia --project=. test/runtests.jl test_pepskit_measu
 Before claiming full S0-S7 completion, run a completion audit that maps every
 original S0-S7 item and every supersession/defer decision to source, tests, or
 documentation evidence.
-

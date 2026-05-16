@@ -1,6 +1,6 @@
 module ScarFinder
 
-using ..SquareIPEPS: SquareIPEPSState
+using ..SquareIPEPS: SquareIPEPSState, copy_state, state_version, log_norm
 using ..IPEPSEvolution:
     TrotterParams, EvolutionLog, legacy_trotter_params, legacy_trotter_protocol, evolve!
 using ..StarModels: AbstractModelProtocol
@@ -19,14 +19,19 @@ export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
         max_blockade_violation,
         max_bond_entropy,
         stop_on_reject,
+        target_energy = nothing,
+        correction_time = 0,
+        correction_attempts = 0,
     )
 
 Parameters for the S6-lite ScarFinder orchestration loop. Each iteration
 evolves the supplied iPEPS state with [`evolve!`](@ref), records
 [`measure_simple`](@ref) diagnostics, and accepts or rejects the iteration
-using simple-update/local observables only. This does not run CTMRG, perform
-energy targeting, or apply any imaginary-time correction. Candidate scores are
-computed from recorded diagnostics by the orchestration layer.
+using simple-update/local observables only. If `target_energy` is supplied,
+short imaginary-time correction attempts may be applied using simple/local PXP
+energy as the diagnostic objective. This does not run CTMRG or make
+physics-quality energy claims. Candidate scores are computed from recorded
+diagnostics by the orchestration layer.
 """
 struct ScarFinderParams
     projection_time::Float64
@@ -37,6 +42,9 @@ struct ScarFinderParams
     max_blockade_violation::Float64
     max_bond_entropy::Float64
     stop_on_reject::Bool
+    target_energy::Union{Nothing,Float64}
+    correction_time::Float64
+    correction_attempts::Int
 
     function ScarFinderParams(
         projection_time::Real,
@@ -46,6 +54,10 @@ struct ScarFinderParams
         max_blockade_violation::Real,
         max_bond_entropy::Real,
         stop_on_reject::Bool,
+        ;
+        target_energy::Union{Nothing,Real} = nothing,
+        correction_time::Real = 0,
+        correction_attempts::Integer = 0,
     )
         time = Float64(projection_time)
         isfinite(time) || throw(ArgumentError("projection_time must be finite"))
@@ -56,6 +68,9 @@ struct ScarFinderParams
         blockade_limit =
             _nonnegative_float(max_blockade_violation, "max_blockade_violation")
         entropy_limit = _nonnegative_float(max_bond_entropy, "max_bond_entropy")
+        energy_target = _optional_finite_float(target_energy, "target_energy")
+        correction_step = _finite_nonnegative_float(correction_time, "correction_time")
+        correction_count = _nonnegative_int(correction_attempts, "correction_attempts")
 
         return new(
             time,
@@ -66,6 +81,9 @@ struct ScarFinderParams
             blockade_limit,
             entropy_limit,
             stop_on_reject,
+            energy_target,
+            correction_step,
+            correction_count,
         )
     end
 end
@@ -104,6 +122,9 @@ struct ScarFinderCandidateScore
     ctm_residual::Union{Nothing,Float64}
     ctm_converged::Union{Nothing,Bool}
     ctm_accepted::Union{Nothing,Bool}
+    correction_accepted::Union{Nothing,Bool}
+    correction_energy_before::Union{Nothing,Float64}
+    correction_energy_after::Union{Nothing,Float64}
 end
 
 """
@@ -125,6 +146,9 @@ struct ScarFinderIteration
     observables::SimpleObservableSummary
     simple_score::ScarFinderCandidateScore
     ctm_score::Union{Nothing,ScarFinderCandidateScore}
+    correction_accepted::Union{Nothing,Bool}
+    correction_energy_before::Union{Nothing,Float64}
+    correction_energy_after::Union{Nothing,Float64}
 end
 
 ScarFinderIteration(
@@ -140,6 +164,9 @@ ScarFinderIteration(
     evolution,
     observables,
     _candidate_score(iteration, :simple, accepted, reject_reason, evolution, observables),
+    nothing,
+    nothing,
+    nothing,
     nothing,
 )
 
@@ -163,6 +190,21 @@ end
 function _nonnegative_float(value::Real, name::String)
     converted = Float64(value)
     converted >= 0 || throw(ArgumentError("$name must be nonnegative"))
+    return converted
+end
+
+function _finite_nonnegative_float(value::Real, name::String)
+    converted = Float64(value)
+    isfinite(converted) || throw(ArgumentError("$name must be finite"))
+    converted >= 0 || throw(ArgumentError("$name must be nonnegative"))
+    return converted
+end
+
+_optional_finite_float(::Nothing, name::String) = nothing
+
+function _optional_finite_float(value::Real, name::String)
+    converted = Float64(value)
+    isfinite(converted) || throw(ArgumentError("$name must be finite"))
     return converted
 end
 
@@ -214,6 +256,9 @@ function _candidate_score(
     reject_reason::Union{Nothing,String},
     log::EvolutionLog,
     obs::SimpleObservableSummary,
+    correction_accepted::Union{Nothing,Bool} = nothing,
+    correction_energy_before::Union{Nothing,Float64} = nothing,
+    correction_energy_after::Union{Nothing,Float64} = nothing,
 )
     return ScarFinderCandidateScore(
         iteration,
@@ -239,6 +284,9 @@ function _candidate_score(
         nothing,
         nothing,
         nothing,
+        correction_accepted,
+        correction_energy_before,
+        correction_energy_after,
     )
 end
 
@@ -265,6 +313,9 @@ function _candidate_score(
     reject_reason::Union{Nothing,String},
     log::EvolutionLog,
     obs::CTMObservableSummary,
+    correction_accepted::Union{Nothing,Bool} = nothing,
+    correction_energy_before::Union{Nothing,Float64} = nothing,
+    correction_energy_after::Union{Nothing,Float64} = nothing,
 )
     ctm_fields = _ctm_score_fields(obs.diagnostics)
     return ScarFinderCandidateScore(
@@ -285,6 +336,9 @@ function _candidate_score(
         log.log_norm_after,
         log.log_norm_delta,
         ctm_fields...,
+        correction_accepted,
+        correction_energy_before,
+        correction_energy_after,
     )
 end
 
@@ -295,12 +349,91 @@ function _candidate_score(
     reject_reason::Union{Nothing,String},
     log::EvolutionLog,
     obs,
+    correction_accepted::Union{Nothing,Bool} = nothing,
+    correction_energy_before::Union{Nothing,Float64} = nothing,
+    correction_energy_after::Union{Nothing,Float64} = nothing,
 )
     throw(
         ArgumentError(
             "CTM callback must return SimpleObservableSummary or CTMObservableSummary",
         ),
     )
+end
+
+function _replace_state!(target::SquareIPEPSState, source::SquareIPEPSState)
+    empty!(target.tensors)
+    for (c, tensor) in source.tensors
+        target.tensors[c] = copy(tensor)
+    end
+    empty!(target.physical_indices)
+    for (c, index) in source.physical_indices
+        target.physical_indices[c] = index
+    end
+    empty!(target.link_indices)
+    for (key, index) in source.link_indices
+        target.link_indices[key] = index
+    end
+    empty!(target.link_weights)
+    for (key, values) in source.link_weights
+        target.link_weights[key] = copy(values)
+    end
+    target.mutation_version[] = state_version(source) + 1
+    target.log_norm_value[] = log_norm(source)
+    return target
+end
+
+function _correction_params(params::ScarFinderParams)
+    return TrotterParams(
+        params.trotter.dt,
+        params.trotter.order,
+        :imaginary,
+        params.trotter.maxdim,
+        params.trotter.cutoff,
+        params.trotter.split_order;
+        schedule = params.trotter.schedule,
+    )
+end
+
+function _maybe_apply_energy_correction!(
+    psi::SquareIPEPSState,
+    obs::SimpleObservableSummary,
+    params::ScarFinderParams,
+)
+    target = params.target_energy
+    target === nothing && return (nothing, nothing, nothing, obs)
+    before_energy = obs.pxp_energy_density
+    best_objective = abs(before_energy - target)
+    best_state = nothing
+    best_obs = obs
+    accepted = false
+
+    if params.correction_time > 0 && params.correction_attempts > 0
+        correction_params = _correction_params(params)
+        trial_base = copy_state(psi)
+        for _ = 1:params.correction_attempts
+            trial = copy_state(trial_base)
+            evolve!(
+                trial,
+                params.correction_time;
+                params = correction_params,
+                protocol = params.protocol,
+            )
+            trial_obs = measure_simple(trial)
+            trial_objective = abs(trial_obs.pxp_energy_density - target)
+            if trial_objective < best_objective
+                best_objective = trial_objective
+                best_state = trial
+                best_obs = trial_obs
+                trial_base = trial
+                accepted = true
+            end
+        end
+    end
+
+    if accepted
+        _replace_state!(psi, best_state)
+    end
+    return (accepted, before_energy, best_obs.pxp_energy_density, best_obs)
 end
 
 function _evaluate_scarfinder_iteration(
@@ -397,10 +530,11 @@ For each requested iteration, this calls [`evolve!`](@ref) for
 `params.projection_time`, calls [`measure_simple`](@ref), records diagnostics,
 and accepts or rejects the iteration by truncation error, simple blockade
 violation, simple bond entropy, and finite-diagnostic checks. `psi` is mutated
-like [`evolve!`](@ref). CTM diagnostics are recorded only when a caller
-supplies `ctm_callback` and schedules it with `ctm_every` or `ctm_at_end`. No
-energy correction, new CTMRG algorithm, or direct star-projection logic is
-performed here.
+like [`evolve!`](@ref). If `params.target_energy` is supplied, the loop may
+apply guarded simple/local imaginary-time correction attempts and records their
+diagnostic outcome. CTM diagnostics are recorded only when a caller supplies
+`ctm_callback` and schedules it with `ctm_every` or `ctm_at_end`. No new CTMRG
+algorithm or direct star-projection logic is performed here.
 """
 function scarfinder!(
     psi::SquareIPEPSState,
@@ -421,19 +555,52 @@ function scarfinder!(
             params = params.trotter,
             protocol = params.protocol,
         )
-        obs = measure_simple(psi)
+        obs_before_correction = measure_simple(psi)
+        correction_accepted, correction_energy_before, correction_energy_after, obs =
+            _maybe_apply_energy_correction!(psi, obs_before_correction, params)
         accepted, reason = _evaluate_scarfinder_iteration(log, obs, params)
-        simple_score = _candidate_score(n, :simple, accepted, reason, log, obs)
+        simple_score = _candidate_score(
+            n,
+            :simple,
+            accepted,
+            reason,
+            log,
+            obs,
+            correction_accepted,
+            correction_energy_before,
+            correction_energy_after,
+        )
         ctm_score = nothing
         if ctm_callback !== nothing &&
            _should_measure_ctm(n, params.iterations, ctm_period, ctm_at_end)
             ctm_obs = ctm_callback(psi, n, simple_score)
             _finite_summary(ctm_obs) || throw(ArgumentError("non-finite CTM diagnostic"))
-            ctm_score = _candidate_score(n, :ctm, accepted, reason, log, ctm_obs)
+            ctm_score = _candidate_score(
+                n,
+                :ctm,
+                accepted,
+                reason,
+                log,
+                ctm_obs,
+                correction_accepted,
+                correction_energy_before,
+                correction_energy_after,
+            )
         end
         push!(
             iterations,
-            ScarFinderIteration(n, accepted, reason, log, obs, simple_score, ctm_score),
+            ScarFinderIteration(
+                n,
+                accepted,
+                reason,
+                log,
+                obs,
+                simple_score,
+                ctm_score,
+                correction_accepted,
+                correction_energy_before,
+                correction_energy_after,
+            ),
         )
 
         if !accepted && params.stop_on_reject
@@ -462,11 +629,15 @@ end
         max_blockade_violation = Inf,
         max_bond_entropy = Inf,
         stop_on_reject = false,
+        target_energy = nothing,
+        correction_time = 0,
+        correction_attempts = 0,
     )::ScarFinderResult
 
 Convenience keyword constructor for [`ScarFinderParams`](@ref), then delegates
-to [`scarfinder!(psi, params)`](@ref). The loop records only simple/local
-diagnostics from [`measure_simple`](@ref).
+to [`scarfinder!(psi, params)`](@ref). The loop records simple/local
+diagnostics from [`measure_simple`](@ref), with optional guarded energy
+correction fields when `target_energy` is supplied.
 """
 function scarfinder!(
     psi::SquareIPEPSState;
@@ -477,6 +648,9 @@ function scarfinder!(
     max_blockade_violation::Real = Inf,
     max_bond_entropy::Real = Inf,
     stop_on_reject::Bool = false,
+    target_energy::Union{Nothing,Real} = nothing,
+    correction_time::Real = 0,
+    correction_attempts::Integer = 0,
     ctm_callback = nothing,
     ctm_every::Integer = 0,
     ctm_at_end::Bool = false,
@@ -490,7 +664,10 @@ function scarfinder!(
         max_truncerr,
         max_blockade_violation,
         max_bond_entropy,
-        stop_on_reject,
+        stop_on_reject;
+        target_energy,
+        correction_time,
+        correction_attempts,
     )
     return scarfinder!(
         psi,
@@ -558,6 +735,9 @@ function _write_csv_log(io, result::ScarFinderResult)
         "ctm_residual",
         "ctm_converged",
         "ctm_accepted",
+        "correction_accepted",
+        "correction_energy_before",
+        "correction_energy_after",
     )
     println(io, join(header, ","))
     for score in _score_rows(result)
@@ -585,6 +765,9 @@ function _write_csv_log(io, result::ScarFinderResult)
             score.ctm_residual,
             score.ctm_converged,
             score.ctm_accepted,
+            score.correction_accepted,
+            score.correction_energy_before,
+            score.correction_energy_after,
         )
         println(io, join(_csv_value.(row), ","))
     end
@@ -629,6 +812,9 @@ function _score_json(score::ScarFinderCandidateScore)
         :ctm_residual,
         :ctm_converged,
         :ctm_accepted,
+        :correction_accepted,
+        :correction_energy_before,
+        :correction_energy_after,
     )
     pairs = ["\"$(field)\":$(_json_value(getfield(score, field)))" for field in fields]
     return "{" * join(pairs, ",") * "}"

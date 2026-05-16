@@ -2,6 +2,25 @@
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
     params = ScarFinderParams(0.01, trotter, 1, Inf, Inf, Inf, false)
     @test params.trotter == TrotterParams(0.01, 1, :real, 1, 1e-12)
+    @test params.target_energy === nothing
+    @test params.correction_time == 0.0
+    @test params.correction_attempts == 0
+
+    corrected = ScarFinderParams(
+        0.01,
+        trotter,
+        1,
+        Inf,
+        Inf,
+        Inf,
+        false;
+        target_energy = -0.1,
+        correction_time = 0.01,
+        correction_attempts = 2,
+    )
+    @test corrected.target_energy == -0.1
+    @test corrected.correction_time == 0.01
+    @test corrected.correction_attempts == 2
 
     @test_throws ArgumentError ScarFinderParams(-0.1, trotter, 1, Inf, Inf, Inf, false)
     @test_throws ArgumentError ScarFinderParams(Inf, trotter, 1, Inf, Inf, Inf, false)
@@ -13,6 +32,38 @@
     @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, NaN, Inf, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, Inf, NaN, Inf, false)
     @test_throws ArgumentError ScarFinderParams(0.01, trotter, 1, Inf, Inf, NaN, false)
+    @test_throws ArgumentError ScarFinderParams(
+        0.01,
+        trotter,
+        1,
+        Inf,
+        Inf,
+        Inf,
+        false;
+        target_energy = NaN,
+    )
+    @test_throws ArgumentError ScarFinderParams(
+        0.01,
+        trotter,
+        1,
+        Inf,
+        Inf,
+        Inf,
+        false;
+        target_energy = 0.0,
+        correction_time = -0.01,
+    )
+    @test_throws ArgumentError ScarFinderParams(
+        0.01,
+        trotter,
+        1,
+        Inf,
+        Inf,
+        Inf,
+        false;
+        target_energy = 0.0,
+        correction_attempts = -1,
+    )
     @test_throws ArgumentError ScarFinderParams(0.01, "bad", 1, Inf, Inf, Inf, false)
 end
 
@@ -49,6 +100,64 @@ end
     @test result.iterations[1].reject_reason === nothing
     @test result.iterations[1].evolution isa EvolutionLog
     @test result.iterations[1].observables isa SimpleObservableSummary
+    @test result.iterations[1].correction_accepted === nothing
+    @test result.iterations[1].correction_energy_before === nothing
+    @test result.iterations[1].correction_energy_after === nothing
+end
+
+@testset "ScarFinder rejects non-improving simple energy correction" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = ScarFinderParams(
+        0.0,
+        trotter,
+        1,
+        Inf,
+        Inf,
+        Inf,
+        false;
+        target_energy = measure_simple(psi).pxp_energy_density,
+        correction_time = 0.01,
+        correction_attempts = 1,
+    )
+
+    result = scarfinder!(psi, params)
+    iteration = only(result.iterations)
+
+    @test iteration.correction_accepted === false
+    @test iteration.correction_energy_before ≈ 0.0 atol = 1e-12
+    @test iteration.correction_energy_after ≈ iteration.correction_energy_before atol = 1e-12
+    @test iteration.simple_score.correction_accepted === false
+end
+
+@testset "ScarFinder simple energy correction never worsens recorded objective" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    target = -0.1
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = ScarFinderParams(
+        0.0,
+        trotter,
+        1,
+        Inf,
+        Inf,
+        Inf,
+        false;
+        target_energy = target,
+        correction_time = 0.01,
+        correction_attempts = 2,
+    )
+
+    result = scarfinder!(psi, params)
+    iteration = only(result.iterations)
+
+    @test iteration.correction_accepted isa Bool
+    @test isfinite(iteration.correction_energy_before)
+    @test isfinite(iteration.correction_energy_after)
+    @test abs(iteration.correction_energy_after - target) <=
+          abs(iteration.correction_energy_before - target) + 1e-12
+    @test iteration.simple_score.correction_energy_after == iteration.correction_energy_after
 end
 
 @testset "ScarFinder multiple accepted iterations" begin
@@ -215,11 +324,13 @@ end
     json = read(json_path, String)
     @test occursin("ctm_chi", csv)
     @test occursin("log_norm_delta", csv)
+    @test occursin("correction_accepted", csv)
     ctm_row = split(split(chomp(csv), '\n')[3], ',')
     @test ctm_row[4] == "ctm"
     @test ctm_row[17:23] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
     @test occursin("\"log_norm_delta\"", json)
     @test occursin("\"ctm_accepted\":true", json)
+    @test occursin("\"correction_accepted\"", json)
 
     untrusted = CTMObservableSummary(
         0.0,
@@ -307,10 +418,12 @@ end
     json = read(json_path, String)
     @test occursin("iteration,accepted,reject_reason", csv)
     @test occursin("log_norm_before,log_norm_after,log_norm_delta", csv)
+    @test occursin("correction_energy_after", csv)
     @test occursin(",simple,", csv)
     @test occursin("\"iterations\"", json)
     @test occursin("\"diagnostics\":\"simple\"", json)
     @test occursin("\"log_norm_after\"", json)
+    @test occursin("\"correction_energy_after\"", json)
     @test length(csv_result.iterations) == 1
     @test length(json_result.iterations) == 1
 end

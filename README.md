@@ -8,8 +8,8 @@ The package now contains the S0-S6 prototype pipeline for square-lattice PXP
 dynamics plus a v1 infinite TFIM benchmark runner: dense local model
 definitions, finite and periodic PEPS/iPEPS state containers, QR-reduced
 five-site star updates, deterministic Trotter evolution, simple/local
-observables, reproducible TFIM benchmark records, and S6-lite ScarFinder
-orchestration.
+observables, reproducible TFIM benchmark records, and ScarFinder
+orchestration with optional guarded simple-energy correction.
 
 Simple/local observables are useful diagnostics for development and regression
 tests, but they are not final CTMRG-quality measurements. ScarFinder-lite
@@ -58,12 +58,11 @@ transactional gauge conditioning.
 - Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
 - CTM finite-`chi` trust assessment and audit CSV output via `assess_ctm_trust` and `write_ctm_trust_csv` (`src/CTMTrust.jl`).
 - Read-only local simple-gauge diagnostics via `gauge_diagnostic_simple` (`src/GaugeDiagnostics.jl`).
-- S6-lite `scarfinder!` orchestration, candidate ranking, and CSV/JSON diagnostic logging using simple/local diagnostics by default (`src/ScarFinder.jl`).
+- `scarfinder!` orchestration, guarded simple-energy correction, candidate ranking, and CSV/JSON diagnostic logging using simple/local diagnostics by default (`src/ScarFinder.jl`).
 
 ## Not Yet Shipped
 
 - Full-update gauge fixing.
-- Energy targeting or correction.
 - Production ScarFinder validation.
 
 ## Minimal Example
@@ -127,9 +126,10 @@ An experimental PEPSKit CTMRG measurement adapter is present as `measure_ctm`,
 with CTMRG density, blockade, and five-site PXP energy diagnostics. Check the
 raw CTMRG convergence information and finite-chi sensitivity before treating
 these measurements as physics-quality observables.
-ScarFinder-lite is currently a scaffold/orchestration layer over `evolve!` and
-`measure_simple`, with optional callback-supplied CTM diagnostics for selected
-iterations; production CTMRG-quality ScarFinder validation is not yet shipped.
+ScarFinder is currently an orchestration layer over `evolve!` and
+`measure_simple`, with optional guarded simple-energy correction and
+callback-supplied CTM diagnostics for selected iterations. Production
+CTMRG-quality ScarFinder validation is not yet shipped.
 
 ```julia
 params_ctm = PEPSKitCTMRGParams(8, 1e-8, 100, 0)
@@ -144,11 +144,12 @@ measurements at multiple `chi` values before trusting energy comparisons. A
 `psi` is mutated by `evolve!`, `project_star!`, or link-weight setters, the old
 context is stale and measurement calls throw. `ScarFinderCandidateScore.score`
 is a diagnostic sorting key, not a physics-quality energy target. ScarFinder
-CSV/JSON logs include `log_norm_before`, `log_norm_after`, and
-`log_norm_delta` so long projection sweeps can be screened for normalization
-drift. The public mutators update the state version; direct edits to
-`psi.tensors`, `psi.link_weights`, or `psi.link_indices` are internal mutable
-implementation details and can bypass cache-staleness bookkeeping.
+CSV/JSON logs include `log_norm_before`, `log_norm_after`, `log_norm_delta`,
+`correction_accepted`, `correction_energy_before`, and
+`correction_energy_after` so long projection sweeps and guarded correction
+attempts can be screened. The public mutators update the state version; direct
+edits to `psi.tensors`, `psi.link_weights`, or `psi.link_indices` are internal
+mutable implementation details and can bypass cache-staleness bookkeeping.
 
 For finite-`chi` validation sweeps, use:
 

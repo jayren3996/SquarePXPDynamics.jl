@@ -36,6 +36,15 @@
 - Source: `test/test_star_simple_update.jl`
 - Source: `test/test_ipeps_evolution.jl`
 
+- Confirmed: S0-S7 Slice 3 completes the non-CTM ScarFinder plan by adding
+  opt-in guarded simple-energy correction, correction outcome fields, and
+  CSV/JSON logging of correction diagnostics while preserving default S6-lite
+  behavior.
+- Source: `docs/superpowers/plans/2026-05-16-s0-s7-slice3-scarfinder-energy-correction.md`
+- Source: `src/ScarFinder.jl`
+- Source: `test/test_scarfinder.jl`
+- Source: `README.md`
+
 ## Completed And Merged Locally
 
 - Confirmed: `codex/infinite-tfim-benchmark` implemented the v1 TFIM benchmark
