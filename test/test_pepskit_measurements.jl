@@ -49,6 +49,21 @@ end
         @test_throws ArgumentError CTMRGDiagnostics(4, 1e-8, 10, nothing, Inf, nothing, false)
     end
 
+    @testset "CTM scar observables are derived from sublattice densities" begin
+        summary = CTMObservableSummary(0.2, 0.25, 0.15, 0.0, -0.1)
+
+        @test summary.sublattice_imbalance ≈ 0.1 atol = 1e-12
+        @test summary.checkerboard_structure_factor ≈ 0.01 atol = 1e-12
+
+        diag = CTMRGDiagnostics(4, 1e-8, 10, 7, 2e-9, true, true)
+        with_diag = CTMObservableSummary(0.2, 0.25, 0.15, 0.0, -0.1, diag)
+
+        @test with_diag.sublattice_imbalance ≈ summary.sublattice_imbalance atol = 1e-12
+        @test with_diag.checkerboard_structure_factor ≈
+              summary.checkerboard_structure_factor atol = 1e-12
+        @test with_diag.diagnostics === diag
+    end
+
     @testset "product-state conversion" begin
         cell = PeriodicSquareUnitCell(10, 10)
         psi = product_square_ipeps(cell; state = :down, maxdim = 1)

@@ -386,6 +386,8 @@ function _finite_summary(obs::CTMObservableSummary)
             obs.density_odd,
             obs.blockade_violation,
             obs.pxp_energy_density,
+            obs.sublattice_imbalance,
+            obs.checkerboard_structure_factor,
         ),
     )
 end

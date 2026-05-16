@@ -9,6 +9,7 @@ using ..SquareIPEPS
 using ..StarModels: TFIMStarModel, star_hamiltonian
 
 export local_density_simple, density_simple, sublattice_densities
+export sublattice_imbalance_simple, checkerboard_structure_factor_simple
 export nearest_neighbor_density_simple, blockade_violation_simple
 export star_expectation_simple, pxp_energy_density_simple
 export mean_bond_entropy, max_bond_entropy
@@ -280,6 +281,27 @@ function sublattice_densities(psi::SquareIPEPSState)
         even = density_simple(psi; sublattice = :even),
         odd = density_simple(psi; sublattice = :odd),
     )
+end
+
+"""
+    sublattice_imbalance_simple(psi)::Float64
+
+Return the even-minus-odd Rydberg density contrast from simple/local
+measurements.
+"""
+function sublattice_imbalance_simple(psi::SquareIPEPSState)::Float64
+    even, odd = sublattice_densities(psi)
+    return even - odd
+end
+
+"""
+    checkerboard_structure_factor_simple(psi)::Float64
+
+Return the squared checkerboard density contrast from simple/local
+measurements.
+"""
+function checkerboard_structure_factor_simple(psi::SquareIPEPSState)::Float64
+    return sublattice_imbalance_simple(psi)^2
 end
 
 """

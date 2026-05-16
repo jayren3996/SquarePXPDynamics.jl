@@ -506,6 +506,8 @@ function _ctm_summary_data(summary::CTMObservableSummary)
         density_odd = summary.density_odd,
         blockade_violation = summary.blockade_violation,
         pxp_energy_density = summary.pxp_energy_density,
+        sublattice_imbalance = summary.sublattice_imbalance,
+        checkerboard_structure_factor = summary.checkerboard_structure_factor,
         diagnostics = _ctm_diagnostics_data(summary.diagnostics),
     )
 end

@@ -141,7 +141,8 @@ PEPSKitMeasurementContext(
 
 Summary of PEPSKit CTMRG observables for a custom ITensors square iPEPS state:
 total density, even/odd sublattice densities, nearest-neighbor blockade
-violation, and the five-site PXP energy density.
+violation, five-site PXP energy density, and derived checkerboard/scar
+observables.
 """
 struct CTMObservableSummary
     density::Float64
@@ -149,6 +150,8 @@ struct CTMObservableSummary
     density_odd::Float64
     blockade_violation::Float64
     pxp_energy_density::Float64
+    sublattice_imbalance::Float64
+    checkerboard_structure_factor::Float64
     diagnostics::Union{CTMRGDiagnostics,Nothing}
 end
 
@@ -158,10 +161,12 @@ CTMObservableSummary(
     density_odd::Float64,
     blockade_violation::Float64,
     pxp_energy_density::Float64,
-    diagnostics::CTMRGDiagnostics,
+    diagnostics::Union{CTMRGDiagnostics,Nothing},
 ) = invoke(
     CTMObservableSummary,
     Tuple{
+        Float64,
+        Float64,
         Float64,
         Float64,
         Float64,
@@ -174,6 +179,8 @@ CTMObservableSummary(
     density_odd,
     blockade_violation,
     pxp_energy_density,
+    density_even - density_odd,
+    (density_even - density_odd)^2,
     diagnostics,
 )
 
@@ -198,7 +205,7 @@ CTMObservableSummary(
     density_odd::Real,
     blockade_violation::Real,
     pxp_energy_density::Real,
-    diagnostics::CTMRGDiagnostics,
+    diagnostics::Union{CTMRGDiagnostics,Nothing},
 ) = CTMObservableSummary(
     Float64(density),
     Float64(density_even),
@@ -231,6 +238,8 @@ function _assert_finite_ctm_summary(obs::CTMObservableSummary, label::String)
             obs.density_odd,
             obs.blockade_violation,
             obs.pxp_energy_density,
+            obs.sublattice_imbalance,
+            obs.checkerboard_structure_factor,
         ),
     ) || throw(ArgumentError("$label CTM validation summary must be finite"))
     return obs

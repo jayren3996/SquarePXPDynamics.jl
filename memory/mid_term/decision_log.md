@@ -150,6 +150,35 @@ Current user discussion; `src/IPEPSEvolution.jl`;
 
 Status: active
 
+## 2026-05-16 - Derive Scar Observables From Sublattice Density Contrast
+
+Decision:
+
+Represent scar-oriented checkerboard observables as derived density-contrast
+diagnostics: sublattice imbalance is `density_even - density_odd`, and the
+checkerboard structure factor is the squared imbalance. CTM summaries carry
+these fields while preserving legacy constructor calls.
+
+Reason:
+
+The current ScarFinder revival objective already uses the even-minus-odd
+density contrast. Storing the same derived quantities in simple and CTM-backed
+measurement summaries makes validation and serialization explicit without
+changing ranking behavior.
+
+Consequences:
+
+Simple/local helpers expose the cheap product-limit diagnostics, and CTM
+serialization includes the same derived fields for downstream reports. CTM
+finite-chi validation density deltas remain unchanged.
+
+Source:
+
+Current Task 4 request; `src/Observables.jl`; `src/PEPSKitMeasurements.jl`;
+`src/PXPValidation.jl`; `src/ScarFinder.jl`
+
+Status: active
+
 ## 2026-05-16 - TFIM Benchmark Uses Serial 3x3 Smoke Scheme
 
 Decision:

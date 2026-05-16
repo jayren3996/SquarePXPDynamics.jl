@@ -212,6 +212,8 @@ end
     @test trust.reason == "trusted"
     @test length(parsed.ipeps_samples[1].ctm.points) == 2
     @test parsed.ipeps_samples[1].ctm.measurement.diagnostics.chi == 4
+    @test parsed.ipeps_samples[1].ctm.measurement.sublattice_imbalance == 0
+    @test parsed.ipeps_samples[1].ctm.measurement.checkerboard_structure_factor == 0
     @test trust.policy.min_points == policy.min_points
     @test trust.policy.max_density_delta == policy.max_density_delta
     @test trust.policy.max_residual == policy.max_residual

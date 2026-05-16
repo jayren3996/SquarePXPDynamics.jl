@@ -17,6 +17,7 @@ const TEST_FILES = [
     "test_square_ipeps_s2.jl",
     "test_star_simple_update.jl",
     "test_ipeps_evolution.jl",
+    "test_observables.jl",
     "test_observables_evolved.jl",
     "test_gauge_diagnostics.jl",
     "test_tfim_observables.jl",
