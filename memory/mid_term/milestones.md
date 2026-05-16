@@ -17,6 +17,16 @@
 - Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 - Source: `src/PEPSKitMeasurements.jl`
 
+- Confirmed: S0-S7 completion has been reconciled against the current
+  architecture. Slice 1 adds public iPEPS helper APIs, link-weight
+  normalization, and PXP `:x_plus` observable regression coverage while
+  preserving the custom ITensors update plus PEPSKit measurement boundary.
+- Source: `docs/superpowers/specs/2026-05-16-s0-s7-completion-design.md`
+- Source: `src/SquareIPEPS.jl`
+- Source: `test/test_square_ipeps.jl`
+- Source: `test/test_square_ipeps_s2.jl`
+- Source: `test/test_observables_evolved.jl`
+
 ## Completed And Merged Locally
 
 - Confirmed: `codex/infinite-tfim-benchmark` implemented the v1 TFIM benchmark

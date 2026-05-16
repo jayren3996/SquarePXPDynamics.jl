@@ -27,6 +27,13 @@ PXP energy operator, with site order `(center, right, up, left, down)` and
 basis order `1 = :up`, `2 = :down`. PEPSKit and TensorKit therefore remain main
 dependencies while this exported measurement surface is present.
 
+The original S0-S7 implementation plan has been reconciled against the current
+architecture in `docs/superpowers/specs/2026-05-16-s0-s7-completion-design.md`.
+The current S0.5/S1 backend-facade items are superseded by the concrete custom
+ITensors iPEPS stack unless a second update backend is introduced. Remaining
+full S7 work is S7b: CTM local norm matrices, readiness checks, and
+transactional gauge conditioning.
+
 ## Package Layout
 
 - `Project.toml`: package metadata, dependencies, compatibility bounds, and the test workspace.
@@ -42,7 +49,7 @@ dependencies while this exported measurement surface is present.
 - Dense square-star PXP Hamiltonian, blockade projector, and projected real/imaginary gates (`src/SquarePXP.jl`).
 - Finite ITensors-backed square PEPS product-state construction (`src/SquarePEPS.jl`).
 - Periodic square iPEPS product and checkerboard states in Gamma-lambda simple-update form (`src/SquareIPEPS.jl`).
-- Periodic link-weight helpers and bond-entropy diagnostics (`src/SquareIPEPS.jl`).
+- Periodic iPEPS helper APIs, link-weight normalization, and bond-entropy diagnostics (`src/SquareIPEPS.jl`).
 - ITensor wrappers for dense square-star PXP gates (`src/SquareIPEPS.jl`).
 - QR-reduced five-site star update via `project_star!` (`src/StarSimpleUpdate.jl`).
 - Deterministic five-color Trotter evolution with log-normalization ledger diagnostics via `evolve!` (`src/IPEPSEvolution.jl`).
