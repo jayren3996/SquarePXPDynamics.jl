@@ -45,6 +45,14 @@
 - Source: `test/test_scarfinder.jl`
 - Source: `README.md`
 
+- Confirmed: S0-S7 Slice 4 adds S7b CTM local bond norm diagnostics,
+  `ctm_ready_for_gauge_updates`, and a transactional D=1 product/no-op
+  `fix_bond_gauge!` path. D>1 mutating gauge conditioning remains open.
+- Source: `docs/superpowers/plans/2026-05-16-s0-s7-slice4-ctm-gauge-readiness.md`
+- Source: `src/CTMGaugeReadiness.jl`
+- Source: `test/test_ctm_gauge_readiness.jl`
+- Source: `docs/superpowers/notes/2026-05-16-s7b-gauge-fixing-handoff.md`
+
 ## Completed And Merged Locally
 
 - Confirmed: `codex/infinite-tfim-benchmark` implemented the v1 TFIM benchmark

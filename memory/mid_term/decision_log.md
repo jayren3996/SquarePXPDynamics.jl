@@ -28,6 +28,36 @@ Source:
 
 Status: active
 
+## 2026-05-16 - Separate S7b Readiness From D>1 Gauge Mutation
+
+Decision:
+
+Add CTM local bond norm diagnostics and a public readiness predicate before
+attempting D>1 mutating gauge conditioning. The initial `fix_bond_gauge!`
+entry point is transactional and no-op for D=1 product bonds; D>1 currently
+returns an explicit nonmutation reason.
+
+Reason:
+
+The PEPSKit CTM environment supplies a usable bond-environment contraction for
+readiness diagnostics, but writing gauge-conditioned D>1 factors back into the
+custom ITensors Gamma-lambda state needs a separate representation decision and
+gauge-invariant regression suite.
+
+Consequences:
+
+ScarFinder and future full-update work can now gate gauge-changing updates on
+fresh CTM contexts, finite-chi trust, bond coverage, Hermiticity, PSD floor,
+and reciprocal condition number. Full original S7 still requires Slice 5 D>1
+mutation before completion can be claimed.
+
+Source:
+
+`docs/superpowers/plans/2026-05-16-s0-s7-slice4-ctm-gauge-readiness.md`;
+`src/CTMGaugeReadiness.jl`; `test/test_ctm_gauge_readiness.jl`
+
+Status: active
+
 ## 2026-05-16 - Add Serial Star-Sweep Evolution Schedule
 
 Decision:

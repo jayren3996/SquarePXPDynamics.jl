@@ -21,6 +21,7 @@ include("StarModels.jl")
 include("Observables.jl")
 include("PEPSKitMeasurements.jl")
 include("CTMTrust.jl")
+include("CTMGaugeReadiness.jl")
 include("StarSimpleUpdate.jl")
 include("IPEPSEvolution.jl")
 include("Benchmarks.jl")
@@ -107,7 +108,18 @@ using .PEPSKitMeasurements: pepskit_ctmrg_context, local_density_ctm
 using .PEPSKitMeasurements: nearest_neighbor_density_ctm, blockade_violation_ctm
 using .PEPSKitMeasurements: star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
 using .PEPSKitMeasurements: ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
+using .PEPSKitMeasurements: assert_fresh_pepskit_context
 using .CTMTrust: CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
+using .CTMGaugeReadinessModule:
+    CTMGaugePolicy,
+    CTMBondNormDiagnostic,
+    CTMGaugeReadiness,
+    BondGaugeFixInfo,
+    ctm_bond_norm_matrix,
+    ctm_bond_norm_diagnostic,
+    all_ctm_bond_norm_diagnostics,
+    ctm_ready_for_gauge_updates,
+    fix_bond_gauge!
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
 using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!
 using .Benchmarks:
@@ -194,7 +206,11 @@ export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export local_density_ctm, nearest_neighbor_density_ctm
 export blockade_violation_ctm, star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
 export ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
+export assert_fresh_pepskit_context
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
+export CTMGaugePolicy, CTMBondNormDiagnostic, CTMGaugeReadiness, BondGaugeFixInfo
+export ctm_bond_norm_matrix, ctm_bond_norm_diagnostic
+export all_ctm_bond_norm_diagnostics, ctm_ready_for_gauge_updates, fix_bond_gauge!
 export StarUpdateInfo, project_star!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!
 export BenchmarkSpec, BenchmarkMetadata, EvolutionDiagnostics, BenchmarkSample, BenchmarkResult

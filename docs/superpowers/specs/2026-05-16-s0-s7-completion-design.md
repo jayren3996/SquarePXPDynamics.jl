@@ -225,15 +225,20 @@ Defer:
 
 ### S7: CTMRG And Gauge-Fixed Full Update
 
-Status: S7a complete; S7b remains the main unfinished milestone.
+Status: S7a complete. S7b Slice 4 now provides CTM local norm diagnostics,
+readiness checks, and a transactional D=1 product/no-op gauge path. D>1
+mutating gauge conditioning remains for Slice 5.
 
-Complete now as S7b:
+Complete as S7b:
 
-1. Add CTM local bond norm-matrix diagnostics.
+1. Add CTM local bond norm-matrix diagnostics. (Slice 4 complete.)
 2. Add a readiness predicate that combines fresh CTM context, CTM trust
    assessment, and local norm-matrix quality.
+   (Slice 4 complete.)
 3. Add a transactional `fix_bond_gauge!` no-op/product-state path first.
+   (Slice 4 complete.)
 4. Extend to D>1 gauge conditioning only after norm matrices are validated.
+   (Slice 5 remaining.)
 
 Required diagnostics:
 
@@ -294,7 +299,9 @@ Deliver:
 - product/no-op `fix_bond_gauge!` path.
 
 This slice should not attempt full D>1 gauge mutation until the PEPSKit
-environment path is proven.
+environment path is proven. Slice 4 was completed with PEPSKit `bondenv_fu`
+norm diagnostics, readiness results, and the D=1 product/no-op
+`fix_bond_gauge!` path.
 
 ### Slice 5: S7b Gauge Conditioning
 

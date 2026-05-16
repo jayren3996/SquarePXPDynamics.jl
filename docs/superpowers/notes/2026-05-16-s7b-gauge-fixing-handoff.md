@@ -14,8 +14,8 @@ Date: 2026-05-16
 
 ## Local CTM Norm-Matrix Requirements
 
-Future `fix_bond_gauge!` work must define and test environment-backed local
-bond norm matrices before mutating tensors. Required diagnostics:
+Slice 4 defines and tests environment-backed local bond norm diagnostics before
+mutating tensors. Required diagnostics:
 
 - finite entries,
 - Hermiticity residual,
@@ -26,7 +26,9 @@ bond norm matrices before mutating tensors. Required diagnostics:
 
 ## Mutation Contract
 
-Future gauge-fixing code must:
+The Slice 4 `fix_bond_gauge!` entry point enforces freshness, trust, and norm
+diagnostics before returning a D=1 product/no-op result. Future D>1
+gauge-fixing code must:
 
 - accept a fresh `PEPSKitMeasurementContext` or build one explicitly,
 - verify measurement trust and local norm-matrix quality before mutation,
@@ -48,11 +50,11 @@ Required checks:
 - Singular or ill-conditioned norm matrices fail without partially mutating
   the state.
 
-## Known Blockers For Mutating `fix_bond_gauge!`
+## Known Blockers For D>1 Mutating `fix_bond_gauge!`
 
-- S7a does not compute CTM local bond norm matrices.
-- S7a does not define whitening or ALS/full-update truncation factors.
-- PEPSKit environment internals needed for local norm matrices still need a
-  focused feasibility check.
+- Slice 4 computes CTM local bond norm diagnostics but does not yet write
+  transformed D>1 Gamma tensors back into the custom ITensors state.
+- Slice 4 does not define whitening or ALS/full-update truncation factors for
+  the custom Gamma-lambda representation.
 - The project has not chosen whether `fix_bond_gauge!` should update only the
   current Gamma tensors or introduce a richer gauge state.

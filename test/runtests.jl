@@ -22,6 +22,7 @@ const TEST_FILES = [
     "test_benchmarks.jl",
     "test_ctm_trust.jl",
     "test_pepskit_measurements.jl",
+    "test_ctm_gauge_readiness.jl",
     "test_scarfinder.jl",
     "test_public_docs.jl",
     "test_aqua.jl",

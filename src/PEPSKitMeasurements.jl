@@ -13,6 +13,7 @@ using ..SquareIPEPS:
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
 export CTMObservableSummary, CTMValidationPoint
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
+export assert_fresh_pepskit_context
 export local_density_ctm, nearest_neighbor_density_ctm, blockade_violation_ctm
 export star_expectation_ctm, pxp_energy_density_ctm, measure_ctm, ctm_diagnostics
 export validate_ctm_sweep, write_ctm_validation_csv
@@ -354,6 +355,20 @@ function _assert_fresh_context(psi::SquareIPEPSState, ctx::PEPSKitMeasurementCon
         ),
     )
     return nothing
+end
+
+"""
+    assert_fresh_pepskit_context(psi, ctx)
+
+Validate that `ctx` was built for the exact mutable iPEPS state and state
+version currently stored in `psi`. Measurement and gauge-readiness code should
+call this before reusing a `PEPSKitMeasurementContext`.
+"""
+function assert_fresh_pepskit_context(
+    psi::SquareIPEPSState,
+    ctx::PEPSKitMeasurementContext,
+)
+    return _assert_fresh_context(psi, ctx)
 end
 
 function _validate_direction(dir::Symbol)
