@@ -422,6 +422,38 @@ Source:
 
 Status: active
 
+## 2026-05-16 - Reconcile S0-S7 Completion With Current Architecture
+
+Decision:
+
+Fulfill the original S0-S7 trajectory by preserving the verified custom
+ITensors iPEPS update stack, completing remaining helper, diagnostic,
+ScarFinder, and S7b readiness gaps, and explicitly superseding stale
+backend-abstraction requirements that no longer match the chosen architecture.
+
+Reason:
+
+The current implementation has passed default and extended verification and
+already embodies an active decision to use custom five-site updates with
+PEPSKit as an experimental CTMRG measurement adapter. Reintroducing speculative
+single-backend abstractions would add complexity without improving ScarFinder
+or S7 gauge-readiness workflows.
+
+Consequences:
+
+S0.5/S1 `AbstractProjectionBackend` and `projection_backend` requirements are
+treated as superseded unless a second update backend is introduced. Immediate
+completion work should focus on small state helper APIs, link-weight
+normalization, stronger update/evolution diagnostics, guarded ScarFinder
+energy correction, and S7b CTM norm-matrix/gauge-conditioning infrastructure.
+
+Source:
+
+`docs/superpowers/specs/2026-05-16-s0-s7-completion-design.md`;
+current S0-S7 audit in this thread; `notes/2026-05-15-ipeps-superpowers-multistage-plan.md`
+
+Status: active
+
 ## 2026-05-15 - Include S7 Gauge-Fixed CTMRG Work In Next Steps
 
 Decision:
