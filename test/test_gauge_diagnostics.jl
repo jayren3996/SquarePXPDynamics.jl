@@ -10,10 +10,9 @@ function _assert_sane_simple_gauge_diag(diag; near_zero::Bool)
     @test diag.frobenius_norm > 0
     @test isfinite(diag.diagonal_min)
     @test isfinite(diag.diagonal_max)
-    @test isfinite(diag.diagonal_sum)
     @test diag.diagonal_min >= -1e-12
     @test diag.diagonal_max >= diag.diagonal_min
-    @test diag.diagonal_sum >= diag.diagonal_max - 1e-12
+    @test diag.diagonal_condition >= 1 || isinf(diag.diagonal_condition)
     if near_zero
         @test diag.deviation ≈ 0 atol = 1e-12
     end
