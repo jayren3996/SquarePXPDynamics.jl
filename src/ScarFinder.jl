@@ -240,8 +240,10 @@ One ranked ScarFinder candidate diagnostic record. `diagnostics` is `:simple`
 for the default local/simple measurements or `:ctm` for records supplied by an
 optional CTM measurement callback. The scalar `score` is an operational sorting
 key built from existing diagnostics only; it is not an energy correction or a
-physics claim. The `log_norm_*` fields mirror the [`EvolutionLog`](@ref)
-normalization ledger for the candidate-producing evolution call.
+physics claim. `objective_parameters` records the deterministic objective
+settings needed to audit that scalar score. The `log_norm_*` fields mirror the
+[`EvolutionLog`](@ref) normalization ledger for the candidate-producing
+evolution call.
 """
 struct ScarFinderCandidateScore
     iteration::Int
@@ -258,6 +260,7 @@ struct ScarFinderCandidateScore
     max_truncerr::Float64
     score::Float64
     objective_name::String
+    objective_parameters::String
     revival_strength::Union{Nothing,Float64}
     finite_chi_drift::Union{Nothing,Float64}
     energy_variance_proxy::Union{Nothing,Float64}
@@ -431,6 +434,45 @@ function _composite_objective(objective::LowVarianceObjective)
     return CompositeObjective(; revival = nothing, low_variance = objective)
 end
 
+function _objective_parameter_value(value::Nothing)
+    return "nothing"
+end
+
+function _objective_parameter_value(value::Symbol)
+    return String(value)
+end
+
+function _objective_parameter_value(value::Real)
+    return string(Float64(value))
+end
+
+function _objective_parameters(objective::CompositeObjective)
+    revival_observable =
+        objective.revival === nothing ? nothing : objective.revival.observable
+    revival_weight = objective.revival === nothing ? nothing : objective.revival.weight
+    target_energy =
+        objective.target_energy === nothing ? nothing : objective.target_energy.target
+    target_energy_weight =
+        objective.target_energy === nothing ? nothing : objective.target_energy.weight
+    low_variance_weight =
+        objective.low_variance === nothing ? nothing : objective.low_variance.weight
+    fields = (
+        :revival_observable => revival_observable,
+        :revival_weight => revival_weight,
+        :target_energy => target_energy,
+        :target_energy_weight => target_energy_weight,
+        :low_variance_weight => low_variance_weight,
+        :blockade_weight => objective.blockade_weight,
+        :truncation_weight => objective.truncation_weight,
+        :finite_chi_weight => objective.finite_chi_weight,
+        :entropy_weight => objective.entropy_weight,
+    )
+    return join(
+        ("$(key)=$(_objective_parameter_value(value))" for (key, value) in fields),
+        ";",
+    )
+end
+
 function _score_value(
     obs,
     log::EvolutionLog,
@@ -489,6 +531,7 @@ function _candidate_score(
         log.max_truncerr,
         score,
         String(nameof(typeof(objective))),
+        _objective_parameters(composite),
         revival,
         finite_chi,
         nothing,
@@ -556,6 +599,7 @@ function _candidate_score(
         log.max_truncerr,
         score,
         String(nameof(typeof(objective))),
+        _objective_parameters(composite),
         revival,
         finite_chi,
         nothing,
@@ -963,6 +1007,7 @@ function _write_csv_log(io, result::ScarFinderResult)
         "max_truncerr",
         "score",
         "objective_name",
+        "objective_parameters",
         "revival_strength",
         "finite_chi_drift",
         "energy_variance_proxy",
@@ -997,6 +1042,7 @@ function _write_csv_log(io, result::ScarFinderResult)
             score.max_truncerr,
             score.score,
             score.objective_name,
+            score.objective_parameters,
             score.revival_strength,
             score.finite_chi_drift,
             score.energy_variance_proxy,
@@ -1048,6 +1094,7 @@ function _score_json(score::ScarFinderCandidateScore)
         :max_truncerr,
         :score,
         :objective_name,
+        :objective_parameters,
         :revival_strength,
         :finite_chi_drift,
         :energy_variance_proxy,

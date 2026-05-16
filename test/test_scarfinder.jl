@@ -268,6 +268,8 @@ end
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
     objective = CompositeObjective(;
         revival = RevivalObjective(:sublattice_imbalance, 1.0),
+        target_energy = TargetEnergyObjective(-0.25, 4.0),
+        low_variance = LowVarianceObjective(0.75),
         blockade_weight = 10.0,
         truncation_weight = 2.0,
         finite_chi_weight = 3.0,
@@ -281,6 +283,29 @@ end
     @test isfinite(score.score)
     @test score.revival_strength !== nothing
     @test score.finite_chi_drift === nothing
+    @test score.energy_variance_proxy === nothing
+    @test score.objective_parameters ==
+          "revival_observable=sublattice_imbalance;revival_weight=1.0;target_energy=-0.25;target_energy_weight=4.0;low_variance_weight=0.75;blockade_weight=10.0;truncation_weight=2.0;finite_chi_weight=3.0;entropy_weight=0.5"
+
+    expected_score =
+        score.blockade_violation * 10.0 +
+        score.max_truncerr * 2.0 +
+        score.max_bond_entropy * 0.5 -
+        score.revival_strength * 1.0 +
+        abs(score.pxp_energy_density - (-0.25)) * 4.0
+    @test score.score ≈ expected_score atol = 1e-12
+
+    csv_path = tempname() * ".csv"
+    json_path = tempname() * ".json"
+    write_scarfinder_log(result, csv_path; format = :csv)
+    write_scarfinder_log(result, json_path; format = :json)
+    csv = read(csv_path, String)
+    json = read(json_path, String)
+    @test occursin("objective_parameters", csv)
+    @test occursin("revival_observable=sublattice_imbalance", csv)
+    @test occursin("target_energy=-0.25", csv)
+    @test occursin("\"objective_parameters\"", json)
+    @test occursin("low_variance_weight=0.75", json)
 end
 
 @testset "ScarFinder CTM callback is optional and scheduled" begin
@@ -425,7 +450,7 @@ end
     @test occursin("correction_accepted", csv)
     ctm_row = split(split(chomp(csv), '\n')[3], ',')
     @test ctm_row[4] == "ctm"
-    @test ctm_row[21:27] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
+    @test ctm_row[22:28] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
     @test occursin("\"log_norm_delta\"", json)
     @test occursin("\"ctm_accepted\":true", json)
     @test occursin("\"correction_accepted\"", json)
