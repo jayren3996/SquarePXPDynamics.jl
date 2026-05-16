@@ -70,3 +70,70 @@ end
     @test rejected.trust.reason === :energy_delta_too_large
     @test rejected.trust.finite_chi_energy_delta > CTMTrustPolicy().max_energy_delta
 end
+
+@testset "PXP validation config validates ED and iPEPS controls" begin
+    config = PXPValidationConfig(3; total_time = 0.02, dt = 0.01, measure_every = 1)
+
+    @test config.n == 3
+    @test config.total_time ≈ 0.02
+    @test config.dt ≈ 0.01
+    @test config.measure_every == 1
+    @test config.initial_state === :down
+    @test config.order == 1
+    @test config.maxdim == 1
+    @test config.schedule === :serial
+
+    @test_throws ArgumentError PXPValidationConfig(2; total_time = 0.02, dt = 0.01)
+    @test_throws ArgumentError PXPValidationConfig(3; total_time = 0.025, dt = 0.01)
+    @test_throws ArgumentError PXPValidationConfig(3; total_time = 0.02, dt = 0.0)
+    @test_throws ArgumentError PXPValidationConfig(3; total_time = 0.02, dt = 0.01, order = 3)
+    @test_throws ArgumentError PXPValidationConfig(3; total_time = 0.02, dt = 0.01, schedule = :five_color)
+end
+
+@testset "ED-vs-iPEPS validation report samples matched times" begin
+    config = PXPValidationConfig(3; total_time = 0.02, dt = 0.01, measure_every = 1)
+    report = validate_pxp_ed_ipeps(config; ctm_params = nothing)
+
+    @test report isa PXPValidationReport
+    @test report.config === config
+    @test report.ed_result.lattice_size == (3, 3)
+    @test length(report.ed_result.samples) == 3
+    @test length(report.ipeps_samples) == 3
+    @test length(report.comparisons) == 3
+    @test [s.step for s in report.ipeps_samples] == [0, 1, 2]
+    @test [s.time for s in report.ipeps_samples] ≈ [0.0, 0.01, 0.02] atol = 1e-12
+    @test report.ipeps_samples[1].evolution === nothing
+    @test report.ipeps_samples[2].evolution isa EvolutionLog
+    @test report.ipeps_samples[1].ctm === nothing
+    @test report.comparisons[1].density_error_simple ≈ 0.0 atol = 1e-12
+    @test all(c -> isfinite(c.density_error_simple), report.comparisons)
+    @test all(c -> c.ipeps_ctm_density === nothing, report.comparisons)
+    @test report.metadata.julia_version == string(VERSION)
+end
+
+@testset "ED-vs-iPEPS validation can attach trusted fake CTM" begin
+    config = PXPValidationConfig(3; total_time = 0.01, dt = 0.01, measure_every = 1)
+    params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+
+    report = validate_pxp_ed_ipeps(
+        config;
+        ctm_params = params,
+        ctm_measure = (state; params) -> begin
+            simple = measure_simple(state)
+            return _validation_fake_ctm_summary(
+                params;
+                density = simple.density + params.chi * 1e-5,
+                blockade = simple.blockade_violation + params.chi * 1e-6,
+                energy = simple.pxp_energy_density - params.chi * 1e-5,
+            )
+        end,
+    )
+
+    @test all(sample -> sample.ctm isa TrustedCTMMeasurement, report.ipeps_samples)
+    @test all(comparison -> comparison.ctm_trusted === true, report.comparisons)
+    @test all(comparison -> comparison.ctm_reason === :trusted, report.comparisons)
+    @test all(comparison -> comparison.ipeps_ctm_density !== nothing, report.comparisons)
+end

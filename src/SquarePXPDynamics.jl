@@ -160,7 +160,13 @@ using .FinitePXPEEDBenchmark:
     write_pxp_ed_benchmark_json
 using .PXPValidation:
     TrustedCTMMeasurement,
-    measure_ctm_trusted
+    measure_ctm_trusted,
+    PXPValidationConfig,
+    PXPValidationMetadata,
+    PXPIPEPSSample,
+    PXPEDComparisonSample,
+    PXPValidationReport,
+    validate_pxp_ed_ipeps
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -231,6 +237,8 @@ export pxp_ed_space_group_basis, pxp_ed_constrained_count, pxp_ed_group_order
 export pxp_ed_initial_state, pxp_ed_hamiltonian_operator, sparse_pxp_ed_hamiltonian
 export run_pxp_ed_benchmark, write_pxp_ed_benchmark_json
 export TrustedCTMMeasurement, measure_ctm_trusted
+export PXPValidationConfig, PXPValidationMetadata, PXPIPEPSSample
+export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
