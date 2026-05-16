@@ -1,13 +1,15 @@
 module CTMGaugeReadinessModule
 
 using LinearAlgebra
+using ITensors
 using PEPSKit
 using TensorKit
 
 import ..PEPSKitMeasurements
 using ..SquareGeometry: SquareCoord
-using ..SquareUnitCells: BondKey, bondkey
-using ..SquareIPEPS: SquareIPEPSState, link_weight
+using ..SquareUnitCells: BondKey, bondkey, neighbor
+using ..SquareIPEPS:
+    SquareIPEPSState, physical_index, link_index, link_weight, _mark_mutated!
 using ..PEPSKitMeasurements: PEPSKitMeasurementContext, assert_fresh_pepskit_context
 using ..CTMTrust: CTMTrustAssessment
 
@@ -32,6 +34,8 @@ const _READINESS_REASONS = (
     :missing_bond_norm,
     :bad_bond_norm,
 )
+
+const _GAUGE_FIX_ATOL = 1e-12
 
 """
     CTMGaugePolicy(; max_hermiticity_residual=1e-8,
@@ -189,8 +193,9 @@ end
 """
     BondGaugeFixInfo
 
-Result returned by [`fix_bond_gauge!`](@ref). Slice 4 supports a transactional
-D=1 product/no-op path and reports D>1 as an explicit nonmutation.
+Result returned by [`fix_bond_gauge!`](@ref). D=1 product bonds are a
+transactional no-op; D>1 bonds mutate only after readiness, PEPSKit
+factorization, and Gamma-lambda conversion succeed.
 """
 struct BondGaugeFixInfo
     bond::BondKey
@@ -258,6 +263,120 @@ function _ctm_bond_norm_raw_matrix(
     else
         throw(ArgumentError("BondKey direction must be :right or :up"))
     end
+end
+
+function _validate_positive_deabsorption_weights(
+    psi::SquareIPEPSState,
+    c::SquareCoord;
+    atol::Real = _GAUGE_FIX_ATOL,
+)
+    for dir in (:up, :right, :down, :left)
+        values = link_weight(psi, c, dir)
+        all(value -> value > atol, values) || throw(
+            ArgumentError(
+                "D>1 gauge conditioning requires positive link weights on all legs of $c",
+            ),
+        )
+    end
+    return nothing
+end
+
+function _pepskit_tensor_data(tensor, dims::NTuple{5,Int})
+    length(tensor.data) == prod(dims) ||
+        throw(ArgumentError("PEPSKit tensor has incompatible dense storage"))
+    return reshape(ComplexF64.(collect(tensor.data)), dims)
+end
+
+function _gamma_tensor_from_pepskit(
+    tensor,
+    psi::SquareIPEPSState,
+    c::SquareCoord;
+    atol::Real = _GAUGE_FIX_ATOL,
+)
+    p = physical_index(psi, c)
+    left = link_index(psi, c, :left)
+    right = link_index(psi, c, :right)
+    up = link_index(psi, c, :up)
+    down = link_index(psi, c, :down)
+    dims = (ITensors.dim(p), ITensors.dim(up), ITensors.dim(right), ITensors.dim(down), ITensors.dim(left))
+    data = _pepskit_tensor_data(tensor, dims)
+    lambdas = (
+        sqrt.(link_weight(psi, c, :up)),
+        sqrt.(link_weight(psi, c, :right)),
+        sqrt.(link_weight(psi, c, :down)),
+        sqrt.(link_weight(psi, c, :left)),
+    )
+    T = ITensor(ComplexF64, p, left, right, up, down)
+    for pv in axes(data, 1),
+        n in axes(data, 2),
+        e in axes(data, 3),
+        s in axes(data, 4),
+        w in axes(data, 5)
+
+        scale = lambdas[1][n] * lambdas[2][e] * lambdas[3][s] * lambdas[4][w]
+        value = data[pv, n, e, s, w]
+        if scale <= atol
+            abs(value) <= atol || throw(
+                ArgumentError(
+                    "cannot deabsorb near-zero link weight from gauge-conditioned tensor at $c",
+                ),
+            )
+            gamma_value = 0.0 + 0.0im
+        else
+            gamma_value = value / scale
+        end
+        T[p=>pv, left=>w, right=>e, up=>n, down=>s] = gamma_value
+    end
+    return T
+end
+
+function _condition_horizontal_tensors(peps, env, row::Int, col::Int)
+    nc = size(peps, 2)
+    next_col = mod1(col + 1, nc)
+    A = peps[row, col]
+    B = peps[row, next_col]
+    X, a, b, Y = PEPSKit._qr_bond(A, B)
+    benv = PEPSKit.bondenv_fu(row, col, X, Y, env)
+    Z = PEPSKit.positive_approx(benv)
+    _, a2, b2, (Linv, Rinv) = PEPSKit.fixgauge_benv(Z, a, b)
+    X2, Y2 = PEPSKit._fixgauge_benvXY(X, Y, Linv, Rinv)
+    return PEPSKit._qr_bond_undo(X2, a2, b2, Y2)
+end
+
+function _conditioned_gamma_tensors(
+    psi::SquareIPEPSState,
+    bond::BondKey,
+    ctx::PEPSKitMeasurementContext,
+)
+    site = bond.site
+    other = neighbor(psi.unitcell, site, bond.dir)
+    _validate_positive_deabsorption_weights(psi, site)
+    _validate_positive_deabsorption_weights(psi, other)
+
+    pepskit_site = PEPSKitMeasurements._squarecoord_to_cartesianindex(psi.unitcell, site)
+    row, col = Tuple(pepskit_site)
+    if bond.dir === :right
+        A2, B2 = _condition_horizontal_tensors(ctx.peps, ctx.env, row, col)
+    elseif bond.dir === :up
+        rotated_peps = rotr90(ctx.peps)
+        rotated_env = rotr90(ctx.env)
+        rotated_site = PEPSKit.siterotr90(pepskit_site, size(ctx.peps))
+        rotated_row, rotated_col = Tuple(rotated_site)
+        Arot, Brot = _condition_horizontal_tensors(
+            rotated_peps,
+            rotated_env,
+            rotated_row,
+            rotated_col,
+        )
+        A2, B2 = rotl90(Arot), rotl90(Brot)
+    else
+        throw(ArgumentError("BondKey direction must be :right or :up"))
+    end
+
+    return (
+        site => _gamma_tensor_from_pepskit(A2, psi, site),
+        other => _gamma_tensor_from_pepskit(B2, psi, other),
+    )
 end
 
 """
@@ -412,9 +531,9 @@ end
     fix_bond_gauge!(psi, c, dir, ctx, trust; diagnostics=nothing,
                     policy=CTMGaugePolicy())
 
-Transactional S7b gauge-fix entry point. Slice 4 only performs readiness
-checks and the D=1 product/no-op path; D>1 mutation is reported explicitly for
-the next gauge-conditioning slice.
+Transactional S7b gauge-fix entry point. The state is mutated only after the
+freshness, trust, local norm diagnostic, PEPSKit factorization, and
+Gamma-lambda conversion checks all succeed.
 """
 function fix_bond_gauge!(
     psi::SquareIPEPSState,
@@ -437,7 +556,12 @@ function fix_bond_gauge!(
     if length(link_weight(psi, bond.site, bond.dir)) == 1
         return BondGaugeFixInfo(bond, false, :product_noop, readiness)
     end
-    return BondGaugeFixInfo(bond, false, :d_greater_than_one_not_implemented, readiness)
+    updates = _conditioned_gamma_tensors(psi, bond, ctx)
+    for (site, tensor) in updates
+        psi.tensors[site] = tensor
+    end
+    _mark_mutated!(psi)
+    return BondGaugeFixInfo(bond, true, :gauge_conditioned, readiness)
 end
 
 end

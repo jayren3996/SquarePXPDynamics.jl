@@ -33,27 +33,55 @@ Status: active
 Decision:
 
 Add CTM local bond norm diagnostics and a public readiness predicate before
-attempting D>1 mutating gauge conditioning. The initial `fix_bond_gauge!`
-entry point is transactional and no-op for D=1 product bonds; D>1 currently
-returns an explicit nonmutation reason.
+attempting D>1 mutating gauge conditioning. Slice 4 initially made
+`fix_bond_gauge!` transactional and no-op for D=1 product bonds, with D>1
+mutation added later in Slice 5.
 
 Reason:
 
 The PEPSKit CTM environment supplies a usable bond-environment contraction for
-readiness diagnostics, but writing gauge-conditioned D>1 factors back into the
-custom ITensors Gamma-lambda state needs a separate representation decision and
-gauge-invariant regression suite.
+readiness diagnostics. Writing gauge-conditioned D>1 factors back into the
+custom ITensors Gamma-lambda state needed a separate representation decision
+and gauge-invariant regression suite, which Slice 5 added.
 
 Consequences:
 
 ScarFinder and future full-update work can now gate gauge-changing updates on
 fresh CTM contexts, finite-chi trust, bond coverage, Hermiticity, PSD floor,
-and reciprocal condition number. Full original S7 still requires Slice 5 D>1
-mutation before completion can be claimed.
+and reciprocal condition number before D=1 no-op or D>1 gauge conditioning.
 
 Source:
 
 `docs/superpowers/plans/2026-05-16-s0-s7-slice4-ctm-gauge-readiness.md`;
+`src/CTMGaugeReadiness.jl`; `test/test_ctm_gauge_readiness.jl`
+
+Status: active
+
+## 2026-05-16 - Use PEPSKit Bond-Environments For D>1 Gauge Conditioning
+
+Decision:
+
+Implement D>1 `fix_bond_gauge!` by using PEPSKit's bond-environment
+factorization on the converted absorbed PEPS tensors, then converting the two
+conditioned tensors back into the custom ITensors Gamma-lambda representation
+by deabsorbing the stored link weights.
+
+Reason:
+
+This reuses PEPSKit's tested CTM bond-environment gauge machinery instead of
+inventing an independent full-update factorization. Writing back only after
+successful factorization and conversion preserves the project's transactional
+mutation contract and invalidates stale CTM contexts through `state_version`.
+
+Consequences:
+
+The S7b gauge-fixing API now mutates D>1 bonds when readiness passes and link
+weights on the affected tensor legs are positive. The implementation remains a
+gauge-conditioning layer, not a full ALS/full-update truncation solver.
+
+Source:
+
+`docs/superpowers/plans/2026-05-16-s0-s7-slice5-d2-gauge-conditioning.md`;
 `src/CTMGaugeReadiness.jl`; `test/test_ctm_gauge_readiness.jl`
 
 Status: active

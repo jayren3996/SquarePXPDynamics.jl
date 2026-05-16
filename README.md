@@ -31,9 +31,9 @@ The original S0-S7 implementation plan has been reconciled against the current
 architecture in `docs/superpowers/specs/2026-05-16-s0-s7-completion-design.md`.
 The current S0.5/S1 backend-facade items are superseded by the concrete custom
 ITensors iPEPS stack unless a second update backend is introduced. S7b now has
-CTM local norm-matrix diagnostics, readiness checks, and a transactional D=1
-product/no-op `fix_bond_gauge!` path; D>1 mutating gauge conditioning remains
-the outstanding S7 work.
+CTM local norm-matrix diagnostics, readiness checks, and transactional
+`fix_bond_gauge!` paths for D=1 no-op/product bonds and D>1 PEPSKit
+bond-environment gauge conditioning.
 
 ## Package Layout
 
@@ -59,12 +59,11 @@ the outstanding S7 work.
 - Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
 - CTM finite-`chi` trust assessment and audit CSV output via `assess_ctm_trust` and `write_ctm_trust_csv` (`src/CTMTrust.jl`).
 - Read-only local simple-gauge diagnostics via `gauge_diagnostic_simple` (`src/GaugeDiagnostics.jl`).
-- CTM local bond norm diagnostics, `ctm_ready_for_gauge_updates`, and the D=1 product/no-op `fix_bond_gauge!` path (`src/CTMGaugeReadiness.jl`).
+- CTM local bond norm diagnostics, `ctm_ready_for_gauge_updates`, and transactional `fix_bond_gauge!` gauge conditioning (`src/CTMGaugeReadiness.jl`).
 - `scarfinder!` orchestration, guarded simple-energy correction, candidate ranking, and CSV/JSON diagnostic logging using simple/local diagnostics by default (`src/ScarFinder.jl`).
 
 ## Not Yet Shipped
 
-- D>1 mutating full-update gauge conditioning.
 - Production ScarFinder validation.
 
 ## Minimal Example
@@ -175,8 +174,9 @@ each other; it does not use the simple/local reference deltas stored in
 `CTMValidationPoint`. A trusted assessment is a measurement-validation signal,
 not permission by itself to run gauge-changing updates. `ctm_ready_for_gauge_updates`
 adds the separate S7b checks for fresh contexts and local CTM bond norm
-diagnostics. The current `fix_bond_gauge!` path is transactional and no-op for
-D=1 product bonds; D>1 mutating gauge conditioning is still deferred.
+diagnostics. `fix_bond_gauge!` is transactional: D=1 product bonds are a no-op,
+and D>1 bonds are conditioned with PEPSKit bond-environment factorization before
+the updated tensors are written back to the Gamma-lambda iPEPS state.
 
 ## Development
 

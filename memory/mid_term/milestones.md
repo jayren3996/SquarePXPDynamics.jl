@@ -47,11 +47,19 @@
 
 - Confirmed: S0-S7 Slice 4 adds S7b CTM local bond norm diagnostics,
   `ctm_ready_for_gauge_updates`, and a transactional D=1 product/no-op
-  `fix_bond_gauge!` path. D>1 mutating gauge conditioning remains open.
+  `fix_bond_gauge!` path.
 - Source: `docs/superpowers/plans/2026-05-16-s0-s7-slice4-ctm-gauge-readiness.md`
 - Source: `src/CTMGaugeReadiness.jl`
 - Source: `test/test_ctm_gauge_readiness.jl`
 - Source: `docs/superpowers/notes/2026-05-16-s7b-gauge-fixing-handoff.md`
+
+- Confirmed: S0-S7 Slice 5 completes S7b by adding transactional D>1
+  PEPSKit bond-environment gauge conditioning with Gamma-lambda writeback,
+  state-version invalidation, D=2 finite-simple tests, and extended fresh-CTM
+  before/after regression coverage.
+- Source: `docs/superpowers/plans/2026-05-16-s0-s7-slice5-d2-gauge-conditioning.md`
+- Source: `src/CTMGaugeReadiness.jl`
+- Source: `test/test_ctm_gauge_readiness.jl`
 
 ## Completed And Merged Locally
 

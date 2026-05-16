@@ -1,4 +1,27 @@
+using ITensors
 using LinearAlgebra
+
+const RUN_EXTENDED_CTM_GAUGE_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
+
+function _positive_d2_square_ipeps(cell)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    for c in cell.reps
+        p = physical_index(psi, c)
+        left = link_index(psi, c, :left)
+        right = link_index(psi, c, :right)
+        up = link_index(psi, c, :up)
+        down = link_index(psi, c, :down)
+        T = ITensor(ComplexF64, p, left, right, up, down)
+        for pv = 1:ITensors.dim(p), lv = 1:ITensors.dim(left), rv = 1:ITensors.dim(right), uv = 1:ITensors.dim(up), dv = 1:ITensors.dim(down)
+            re = 0.02 + 0.001 * (11c.x + 13c.y + 2pv + 3lv + 5rv + 7uv + dv)
+            T[p=>pv, left=>lv, right=>rv, up=>uv, down=>dv] = complex(re, 0.0)
+        end
+        psi.tensors[c] = T
+        set_link_weight!(psi, c, :right, [0.8, 0.6])
+        set_link_weight!(psi, c, :up, [0.7, 0.5])
+    end
+    return psi
+end
 
 function _trusted_ctm_assessment()
     return CTMTrustAssessment(true, :trusted, "trusted", 2, 0.0, 0.0, 0.0, 0.0)
@@ -182,13 +205,20 @@ end
     assert_fresh_pepskit_context(psi, ctx)
 end
 
-@testset "fix_bond_gauge D greater than one is explicit nonmutation in Slice 4" begin
+@testset "fix_bond_gauge mutates D greater than one transactionally" begin
     cell = PeriodicSquareUnitCell(3, 3)
-    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    psi = _positive_d2_square_ipeps(cell)
     ctx = pepskit_ctmrg_context(psi; params = PEPSKitCTMRGParams(1, 1e-4, 1, 0))
     bond = bondkey(cell, SquareCoord(2, 2), :right)
-    diag = CTMBondNormDiagnostic(bond, Matrix{ComplexF64}(I, 2, 2))
+    policy = CTMGaugePolicy(;
+        require_all_bonds = false,
+        max_hermiticity_residual = 1e-2,
+        min_psd_eigenvalue = -1e-5,
+        min_rcond = 0.0,
+    )
+    diag = ctm_bond_norm_diagnostic(psi, bond.site, bond.dir, ctx; policy)
     before_version = state_version(psi)
+    before = measure_simple(psi)
 
     info = fix_bond_gauge!(
         psi,
@@ -197,12 +227,49 @@ end
         ctx,
         _trusted_ctm_assessment();
         diagnostics = Dict(bond => diag),
-        policy = CTMGaugePolicy(; require_all_bonds = false),
+        policy,
     )
+    after = measure_simple(psi)
 
-    @test info.mutated === false
-    @test info.reason === :d_greater_than_one_not_implemented
+    @test info.mutated === true
+    @test info.reason === :gauge_conditioned
     @test info.readiness.ready === true
-    @test state_version(psi) == before_version
+    @test state_version(psi) == before_version + 1
+    @test all(isfinite, (after.density, after.blockade_violation, after.pxp_energy_density))
+    @test isfinite(before.density)
+    @test_throws ArgumentError assert_fresh_pepskit_context(psi, ctx)
 end
 
+if RUN_EXTENDED_CTM_GAUGE_TESTS
+    @testset "fix_bond_gauge D greater than one preserves fresh CTM summaries" begin
+        cell = PeriodicSquareUnitCell(3, 3)
+        psi = _positive_d2_square_ipeps(cell)
+        params = PEPSKitCTMRGParams(2, 1e-5, 3, 0)
+        ctx_before = pepskit_ctmrg_context(psi; params)
+        before = measure_ctm(psi; params)
+        bond = bondkey(cell, SquareCoord(2, 2), :right)
+        policy = CTMGaugePolicy(;
+            require_all_bonds = false,
+            max_hermiticity_residual = 1e-2,
+            min_psd_eigenvalue = -1e-5,
+            min_rcond = 0.0,
+        )
+        diag = ctm_bond_norm_diagnostic(psi, bond.site, bond.dir, ctx_before; policy)
+
+        info = fix_bond_gauge!(
+            psi,
+            bond.site,
+            bond.dir,
+            ctx_before,
+            _trusted_ctm_assessment();
+            diagnostics = Dict(bond => diag),
+            policy,
+        )
+
+        @test info.mutated === true
+        after = measure_ctm(psi; params)
+        @test after.density ≈ before.density atol = 1e-8 rtol = 1e-6
+        @test after.blockade_violation ≈ before.blockade_violation atol = 1e-8 rtol = 1e-6
+        @test after.pxp_energy_density ≈ before.pxp_energy_density atol = 1e-8 rtol = 1e-6
+    end
+end

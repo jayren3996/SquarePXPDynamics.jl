@@ -26,16 +26,20 @@ mutating tensors. Required diagnostics:
 
 ## Mutation Contract
 
-The Slice 4 `fix_bond_gauge!` entry point enforces freshness, trust, and norm
-diagnostics before returning a D=1 product/no-op result. Future D>1
-gauge-fixing code must:
+The `fix_bond_gauge!` entry point enforces freshness, trust, and norm
+diagnostics before mutation. The D=1 product path is a no-op; D>1 uses PEPSKit
+bond-environment gauge factorization, then writes the two conditioned tensors
+back into the custom ITensors Gamma-lambda state after deabsorbing stored link
+weights.
 
-- accept a fresh `PEPSKitMeasurementContext` or build one explicitly,
-- verify measurement trust and local norm-matrix quality before mutation,
-- perform all local factorization steps before writing into `psi`,
-- increment `state_version(psi)` after mutation,
-- invalidate old CTM contexts by relying on the existing state-version guard,
-- preserve Gamma-lambda invariants or document any representation change.
+- It accepts a fresh `PEPSKitMeasurementContext`.
+- It verifies measurement trust and local norm-matrix quality before mutation.
+- It performs all local factorization and Gamma conversion steps before writing
+  into `psi`.
+- It increments `state_version(psi)` after D>1 mutation.
+- It invalidates old CTM contexts by relying on the existing state-version
+  guard.
+- It preserves the Gamma-lambda representation with the existing link weights.
 
 ## Required Gauge-Invariant Tests
 
@@ -50,11 +54,11 @@ Required checks:
 - Singular or ill-conditioned norm matrices fail without partially mutating
   the state.
 
-## Known Blockers For D>1 Mutating `fix_bond_gauge!`
+## Remaining Follow-Ups After S7b
 
-- Slice 4 computes CTM local bond norm diagnostics but does not yet write
-  transformed D>1 Gamma tensors back into the custom ITensors state.
-- Slice 4 does not define whitening or ALS/full-update truncation factors for
-  the custom Gamma-lambda representation.
-- The project has not chosen whether `fix_bond_gauge!` should update only the
-  current Gamma tensors or introduce a richer gauge state.
+- The current D>1 path conditions the existing two tensors on a bond; it does
+  not add a full ALS truncation/update solver.
+- Gauge conditioning currently requires positive link weights on all legs of
+  the two tensors being converted back from PEPSKit.
+- Production ScarFinder validation still needs physics-facing CTM workflows on
+  top of the completed S0-S7 infrastructure.
