@@ -29,8 +29,7 @@ function _env_symbol(name::String, default::Symbol)
     return Symbol(_env_value(name, String(default)))
 end
 
-out = get(
-    ENV,
+out = _env_value(
     "SQUAREPXP_PXP_VALIDATION_OUT",
     joinpath(project_root, "artifacts", "pxp_validation_report.json"),
 )

@@ -24,28 +24,31 @@ export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
 export write_pxp_validation_json
 
 """
-    TrustedCTMMeasurement(measurement, points, trust)
+    TrustedCTMMeasurement(measurement, points, trust, policy = CTMTrustPolicy())
 
 Finite-`chi` CTMRG measurement bundle for one iPEPS state. `points` stores the
 full validation sweep, `measurement` is the last sweep point's CTM observable
-summary, and `trust` is the finite-`chi` assessment returned by
-[`assess_ctm_trust`](@ref).
+summary, `trust` is the finite-`chi` assessment returned by
+[`assess_ctm_trust`](@ref), and `policy` records the trust thresholds used to
+produce that assessment.
 """
 struct TrustedCTMMeasurement
     measurement::CTMObservableSummary
     points::Vector{CTMValidationPoint}
     trust::CTMTrustAssessment
+    policy::CTMTrustPolicy
 
     function TrustedCTMMeasurement(
         measurement::CTMObservableSummary,
         points::Vector{CTMValidationPoint},
         trust::CTMTrustAssessment,
+        policy::CTMTrustPolicy = CTMTrustPolicy(),
     )
         isempty(points) &&
             throw(ArgumentError("trusted CTM measurement requires at least one sweep point"))
         points[end].measurement == measurement ||
             throw(ArgumentError("measurement must match the final CTM validation point"))
-        return new(measurement, points, trust)
+        return new(measurement, points, trust, policy)
     end
 end
 
@@ -67,7 +70,7 @@ function measure_ctm_trusted(
 )::TrustedCTMMeasurement
     points = validate_ctm_sweep(psi; params, reference, measure)
     assessment = assess_ctm_trust(points; policy)
-    return TrustedCTMMeasurement(points[end].measurement, points, assessment)
+    return TrustedCTMMeasurement(points[end].measurement, points, assessment, policy)
 end
 
 function _finite_nonnegative(value::Real, label::String)
@@ -522,7 +525,18 @@ function _ctm_point_data(point::CTMValidationPoint)
     )
 end
 
-function _trust_data(trust::CTMTrustAssessment)
+function _trust_policy_data(policy::CTMTrustPolicy)
+    return (;
+        min_points = policy.min_points,
+        require_accepted_diagnostics = policy.require_accepted_diagnostics,
+        max_density_delta = policy.max_density_delta,
+        max_blockade_delta = policy.max_blockade_delta,
+        max_energy_delta = policy.max_energy_delta,
+        max_residual = policy.max_residual,
+    )
+end
+
+function _trust_data(trust::CTMTrustAssessment, policy::CTMTrustPolicy)
     return (;
         trusted = trust.trusted,
         reason = String(trust.reason),
@@ -532,6 +546,7 @@ function _trust_data(trust::CTMTrustAssessment)
         finite_chi_blockade_delta = trust.finite_chi_blockade_delta,
         finite_chi_energy_delta = trust.finite_chi_energy_delta,
         observed_max_residual = trust.observed_max_residual,
+        policy = _trust_policy_data(policy),
     )
 end
 
@@ -543,7 +558,7 @@ function _trusted_ctm_data(ctm::TrustedCTMMeasurement)
     return (;
         measurement = _ctm_summary_data(ctm.measurement),
         points = _ctm_point_data.(ctm.points),
-        trust = _trust_data(ctm.trust),
+        trust = _trust_data(ctm.trust, ctm.policy),
     )
 end
 

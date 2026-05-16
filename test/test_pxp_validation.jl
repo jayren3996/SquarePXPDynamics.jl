@@ -28,10 +28,12 @@ end
         PEPSKitCTMRGParams(2, 1e-5, 4, 0),
         PEPSKitCTMRGParams(4, 1e-6, 4, 0),
     )
+    policy = CTMTrustPolicy(2, true, 1e-2, 1e-3, 1e-2, 1e-4)
 
     trusted = measure_ctm_trusted(
         psi;
         params,
+        policy,
         measure = (state; params) -> _validation_fake_ctm_summary(
             params;
             density = 0.2 + params.chi * 1e-5,
@@ -46,6 +48,12 @@ end
     @test trusted.trust.trusted === true
     @test trusted.trust.reason === :trusted
     @test trusted.measurement.diagnostics.chi == 4
+    @test trusted.policy.min_points == policy.min_points
+    @test trusted.policy.require_accepted_diagnostics == policy.require_accepted_diagnostics
+    @test trusted.policy.max_density_delta == policy.max_density_delta
+    @test trusted.policy.max_blockade_delta == policy.max_blockade_delta
+    @test trusted.policy.max_energy_delta == policy.max_energy_delta
+    @test trusted.policy.max_residual == policy.max_residual
 end
 
 @testset "trusted CTM measurement records rejected finite chi drift" begin
@@ -175,4 +183,36 @@ end
     @test length(parsed.ed_result.diagnostics.accepted_intervals) >= 0
     @test parsed.ipeps_samples[1].ctm === nothing
     @test parsed.comparisons[1].ctm_reason === nothing
+end
+
+@testset "PXP validation report writes CTM trust policy JSON" begin
+    config = PXPValidationConfig(3; total_time = 0.0, dt = 0.01, measure_every = 1)
+    params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+    policy = CTMTrustPolicy(2, true, 1e-2, 1e-3, 1e-2, 1e-4)
+    report = validate_pxp_ed_ipeps(
+        config;
+        ctm_params = params,
+        trust_policy = policy,
+        ctm_measure = (state; params) -> _validation_fake_ctm_summary(
+            params;
+            density = 0.2 + params.chi * 1e-5,
+            blockade = params.chi * 1e-6,
+            energy = -0.1 - params.chi * 1e-5,
+        ),
+    )
+    path = tempname() * ".json"
+
+    write_pxp_validation_json(report, path)
+    parsed = JSON3.read(read(path, String))
+    trust = parsed.ipeps_samples[1].ctm.trust
+
+    @test trust.reason == "trusted"
+    @test length(parsed.ipeps_samples[1].ctm.points) == 2
+    @test parsed.ipeps_samples[1].ctm.measurement.diagnostics.chi == 4
+    @test trust.policy.min_points == policy.min_points
+    @test trust.policy.max_density_delta == policy.max_density_delta
+    @test trust.policy.max_residual == policy.max_residual
 end
