@@ -51,6 +51,14 @@ end
         1,
         :real,
         1,
+        1e-12;
+        schedule = :bad,
+    )
+    @test_throws ArgumentError TrotterParams(
+        0.1,
+        1,
+        :real,
+        1,
         1e-12,
         (:right, :up, :left, :left),
     )
@@ -115,6 +123,35 @@ end
     params = TrotterParams(0.1, 1, :real, 1, 1e-12)
 
     @test_throws ArgumentError evolve!(psi_bad, 0.1; params = params)
+end
+
+@testset "serial sweep evolution accepts non-five-color-compatible unit cells" begin
+    cell = PeriodicSquareUnitCell(4, 4)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.02, 1, :real, 1, 1e-12; schedule = :serial)
+
+    log = evolve!(psi, 0.02; params = params)
+
+    @test log.params.schedule === :serial
+    @test log.nsteps == 1
+    @test length(log.layer_infos) == length(cell.reps)
+    @test all(length(layer) == 1 for layer in log.layer_infos)
+    @test [only(layer).center for layer in log.layer_infos] == cell.reps
+    @test isfinite(log.max_truncerr)
+    @test all(isfinite, values(all_bond_entropies(psi)))
+end
+
+@testset "second-order serial sweep reverses center order" begin
+    cell = PeriodicSquareUnitCell(4, 4)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.02, 2, :real, 1, 1e-12; schedule = :serial)
+
+    log = evolve!(psi, 0.02; params = params)
+
+    expected_centers = [cell.reps; reverse(cell.reps[1:(end - 1)])]
+    @test length(log.layer_infos) == length(expected_centers)
+    @test [only(layer).center for layer in log.layer_infos] == expected_centers
+    @test isfinite(log.max_truncerr)
 end
 
 @testset "one first-order step from all-down state" begin

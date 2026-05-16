@@ -11,10 +11,10 @@ SquarePXPDynamics.model_at(::BenchmarkRampProtocol, time, step) =
     spec = BenchmarkSpec(
         "tfim-j0",
         StaticModel(TFIMStarModel(0.0, 1.0)),
-        PeriodicSquareUnitCell(10, 10),
+        PeriodicSquareUnitCell(3, 3),
         :z_up,
         0.02,
-        TrotterParams(0.01, 1, :real, 1, 1e-12),
+        TrotterParams(0.01, 1, :real, 1, 1e-12; schedule = :serial),
         1,
     )
     result = run_benchmark(spec; run_label = "unit-test")
@@ -22,6 +22,9 @@ SquarePXPDynamics.model_at(::BenchmarkRampProtocol, time, step) =
     @test result.name == "tfim-j0"
     @test result.run_label == "unit-test"
     @test result.metadata.package_version == string(Base.pkgversion(SquarePXPDynamics))
+    @test result.metadata.cell_Lx == 3
+    @test result.metadata.cell_Ly == 3
+    @test result.metadata.schedule === :serial
     @test length(result.samples) == 3
     @test [s.step for s in result.samples] == [0, 1, 2]
     @test result.samples[end].time ≈ 0.02 atol = 1e-12
@@ -53,6 +56,7 @@ end
     @test parsed[:metadata][:observable_source] == "simple"
     @test parsed[:metadata][:package_version] == string(Base.pkgversion(SquarePXPDynamics))
     @test collect(parsed[:metadata][:split_order]) == ["up", "right", "down", "left"]
+    @test parsed[:metadata][:schedule] == "five_color"
     @test length(parsed[:samples]) == 2
 
     csv = read(csv_path, String)
@@ -67,6 +71,7 @@ end
         "D",
         "dt",
         "order",
+        "schedule",
         "mean_x",
         "mean_y",
         "mean_z",
@@ -84,10 +89,32 @@ end
     rows = split(chomp(csv), '\n')
     @test length(rows) == 3
     @test length.(split.(rows, ',')) == fill(length(expected_header), 3)
-    @test split(rows[2], ',')[1:10] ==
-          ["tfim-static", "serialize-test", "simple", "0", "0.0", "1.0", "0.0", "1", "0.01", "1"]
-    @test split(rows[3], ',')[1:10] ==
-          ["tfim-static", "serialize-test", "simple", "1", "0.01", "1.0", "0.0", "1", "0.01", "1"]
+    @test split(rows[2], ',')[1:11] == [
+        "tfim-static",
+        "serialize-test",
+        "simple",
+        "0",
+        "0.0",
+        "1.0",
+        "0.0",
+        "1",
+        "0.01",
+        "1",
+        "five_color",
+    ]
+    @test split(rows[3], ',')[1:11] == [
+        "tfim-static",
+        "serialize-test",
+        "simple",
+        "1",
+        "0.01",
+        "1.0",
+        "0.0",
+        "1",
+        "0.01",
+        "1",
+        "five_color",
+    ]
 end
 
 @testset "benchmark cadence records final sample" begin

@@ -2,12 +2,16 @@
 
 ## TFIM Schedule Reference Scope
 
-- Open question: The broad TFIM design mentions a tiny dense/sparse finite
+- Resolved on 2026-05-16: A dense finite-Hilbert-space TFIM reference was added
+  for small periodic cells such as `3 x 3`; larger sparse/EDKit-backed
+  references remain future scope if needed.
+- Former open question: The broad TFIM design mentions a tiny dense/sparse finite
   Hilbert-space schedule reference. The executed implementation plan delivered
   coefficient, non-overlap, and mapping schedule checks. Decide whether a full
   finite Hilbert-space TFIM simulator is required after the initial merge.
 - Source: `docs/superpowers/specs/2026-05-15-infinite-tfim-benchmark-design.md`
 - Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
+- Source: `src/FiniteTFIMReference.jl`
 
 ## TFIM Smoke Matrix
 

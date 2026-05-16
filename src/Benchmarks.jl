@@ -70,7 +70,7 @@ end
 
 Reproducibility metadata attached to a benchmark result, including TFIM model
 parameters, package version, unit-cell dimensions, initial state, evolution
-parameters, and the simple observable source tag.
+parameters, Trotter schedule, and the simple observable source tag.
 """
 struct BenchmarkMetadata
     observable_source::String
@@ -85,6 +85,7 @@ struct BenchmarkMetadata
     total_time::Float64
     dt::Float64
     order::Int
+    schedule::Symbol
     evolution::Symbol
     maxdim::Int
     cutoff::Float64
@@ -188,6 +189,7 @@ function _metadata(spec::BenchmarkSpec)
         spec.total_time,
         spec.trotter.dt,
         spec.trotter.order,
+        spec.trotter.schedule,
         spec.trotter.evolution,
         spec.trotter.maxdim,
         spec.trotter.cutoff,
@@ -339,6 +341,7 @@ const CSV_HEADER = [
     "D",
     "dt",
     "order",
+    "schedule",
     "mean_x",
     "mean_y",
     "mean_z",
@@ -385,6 +388,7 @@ function _csv_row(result::BenchmarkResult, sample::BenchmarkSample)
         meta.maxdim,
         meta.dt,
         meta.order,
+        meta.schedule,
         obs.mean_x,
         obs.mean_y,
         obs.mean_z,
@@ -406,7 +410,7 @@ end
 
 Write one flattened deterministic CSV time-series row per benchmark sample.
 The header starts with
-`name,run_label,observable_source,step,time,J,h,D,dt,order`.
+`name,run_label,observable_source,step,time,J,h,D,dt,order,schedule`.
 """
 function write_benchmark_csv(results, path::AbstractString)
     checked_results = collect(results)

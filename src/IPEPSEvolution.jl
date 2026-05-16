@@ -11,12 +11,23 @@ export TrotterParams, EvolutionLog, trotter_sequence, evolve!
 const _TROTTER_SPLIT_DIRECTIONS = (:right, :up, :left, :down)
 
 """
-    TrotterParams(dt, order, evolution, maxdim, cutoff, split_order = (:right, :up, :left, :down))
+    TrotterParams(
+        dt,
+        order,
+        evolution,
+        maxdim,
+        cutoff,
+        split_order = (:right, :up, :left, :down);
+        schedule = :five_color,
+    )
 
-Parameters for deterministic five-color iPEPS Trotter evolution. `dt` is the
-positive full time-step size, `order` must be `1` or `2`, `evolution` must be
-`:real` or `:imaginary`, and `maxdim`/`cutoff`/`split_order` are forwarded to
-[`project_star!`](@ref).
+Parameters for deterministic iPEPS Trotter evolution. `dt` is the positive
+full time-step size, `order` must be `1` or `2`, `evolution` must be `:real` or
+`:imaginary`, `schedule` must be `:five_color` or `:serial`, and
+`maxdim`/`cutoff`/`split_order` are forwarded to [`project_star!`](@ref).
+The default `:five_color` schedule applies disjoint star layers. The `:serial`
+schedule applies one unit-cell center per layer in representative order, with
+second order using the corresponding reversed half sweep.
 
 The legacy six-argument PXP constructor
 `TrotterParams(dt, order, evolution, projected, maxdim, cutoff)` returns a
@@ -31,6 +42,7 @@ struct TrotterParams
     maxdim::Int
     cutoff::Float64
     split_order::NTuple{4,Symbol}
+    schedule::Symbol
 
     function TrotterParams(
         dt::Real,
@@ -38,7 +50,8 @@ struct TrotterParams
         evolution::Symbol,
         maxdim::Integer,
         cutoff::Real,
-        split_order = _TROTTER_SPLIT_DIRECTIONS,
+        split_order = _TROTTER_SPLIT_DIRECTIONS;
+        schedule::Symbol = :five_color,
     )
         step = Float64(dt)
         isfinite(step) && step > 0 || throw(ArgumentError("dt must be finite and positive"))
@@ -52,7 +65,9 @@ struct TrotterParams
         isfinite(trunc_cutoff) && trunc_cutoff >= 0 ||
             throw(ArgumentError("cutoff must be finite and nonnegative"))
         order_values = _validate_trotter_split_order(split_order)
-        return new(step, ord, evolution, dim, trunc_cutoff, order_values)
+        schedule in (:five_color, :serial) ||
+            throw(ArgumentError("schedule must be :five_color or :serial"))
+        return new(step, ord, evolution, dim, trunc_cutoff, order_values, schedule)
     end
 end
 
@@ -80,7 +95,7 @@ legacy_trotter_protocol(params) = legacy_trotter_params(params)
 function Base.getproperty(params::LegacyPXPParams, name::Symbol)
     if name === :projected
         return getfield(getfield(params, :protocol), :model).projected
-    elseif name in (:dt, :order, :evolution, :maxdim, :cutoff, :split_order)
+    elseif name in (:dt, :order, :evolution, :maxdim, :cutoff, :split_order, :schedule)
         return getproperty(getfield(params, :trotter), name)
     else
         return getfield(params, name)
@@ -88,7 +103,7 @@ function Base.getproperty(params::LegacyPXPParams, name::Symbol)
 end
 
 function Base.propertynames(params::LegacyPXPParams; private::Bool = false)
-    public = (:dt, :order, :evolution, :maxdim, :cutoff, :split_order, :projected)
+    public = (:dt, :order, :evolution, :maxdim, :cutoff, :split_order, :schedule, :projected)
     return private ? (public..., :trotter, :protocol) : public
 end
 
@@ -237,6 +252,25 @@ function _assert_finite_star_update_infos(layer_infos)
     return nothing
 end
 
+function _apply_star_layer!(
+    psi::SquareIPEPSState,
+    center,
+    layer_dt::Float64,
+    params::TrotterParams,
+    model,
+)
+    return project_star!(
+        psi,
+        center,
+        layer_dt;
+        model = model,
+        evolution = params.evolution,
+        maxdim = params.maxdim,
+        cutoff = params.cutoff,
+        split_order = params.split_order,
+    )
+end
+
 function _finish_evolution_log(
     psi::SquareIPEPSState,
     total_time::Float64,
@@ -271,6 +305,54 @@ function _finish_evolution_log(
     )
 end
 
+function _evolve_five_color_step!(
+    psi::SquareIPEPSState,
+    params::TrotterParams,
+    model,
+    layer_infos,
+)
+    for (color, layer_dt) in trotter_sequence(params)
+        centers = update_centers(psi.unitcell, color)
+        stars_are_disjoint_mod_unitcell(psi.unitcell, centers) ||
+            throw(ArgumentError("color layer $color has overlapping wrapped stars"))
+        infos = StarUpdateInfo[]
+        for center in centers
+            push!(infos, _apply_star_layer!(psi, center, layer_dt, params, model))
+        end
+        push!(layer_infos, infos)
+    end
+    return nothing
+end
+
+function _serial_trotter_sequence(centers, params::TrotterParams)
+    if params.order == 1
+        return [(center, params.dt) for center in centers]
+    elseif params.order == 2
+        half_step = params.dt / 2
+        forward = [
+            (center, idx == length(centers) ? params.dt : half_step) for
+            (idx, center) in enumerate(centers)
+        ]
+        reverse_half = [(center, half_step) for center in reverse(centers[1:(end - 1)])]
+        return [forward; reverse_half]
+    else
+        throw(ArgumentError("order must be 1 or 2"))
+    end
+end
+
+function _evolve_serial_step!(
+    psi::SquareIPEPSState,
+    params::TrotterParams,
+    model,
+    layer_infos,
+)
+    for (center, layer_dt) in _serial_trotter_sequence(psi.unitcell.reps, params)
+        info = _apply_star_layer!(psi, center, layer_dt, params, model)
+        push!(layer_infos, [info])
+    end
+    return nothing
+end
+
 function _evolve_with_params!(
     psi::SquareIPEPSState,
     total_time::Real,
@@ -283,32 +365,16 @@ function _evolve_with_params!(
     nsteps == 0 &&
         return _finish_evolution_log(psi, total, params, nsteps, layer_infos, log_norm_before)
 
-    assert_five_color_compatible(psi.unitcell)
-    sequence = trotter_sequence(params)
+    params.schedule === :five_color && assert_five_color_compatible(psi.unitcell)
     for step_index = 1:nsteps
         time_before_step = (step_index - 1) * params.dt
         model = model_at(protocol, time_before_step, step_index)
-        for (color, layer_dt) in sequence
-            centers = update_centers(psi.unitcell, color)
-            stars_are_disjoint_mod_unitcell(psi.unitcell, centers) ||
-                throw(ArgumentError("color layer $color has overlapping wrapped stars"))
-            infos = StarUpdateInfo[]
-            for center in centers
-                push!(
-                    infos,
-                    project_star!(
-                        psi,
-                        center,
-                        layer_dt;
-                        model = model,
-                        evolution = params.evolution,
-                        maxdim = params.maxdim,
-                        cutoff = params.cutoff,
-                        split_order = params.split_order,
-                    ),
-                )
-            end
-            push!(layer_infos, infos)
+        if params.schedule === :five_color
+            _evolve_five_color_step!(psi, params, model, layer_infos)
+        elseif params.schedule === :serial
+            _evolve_serial_step!(psi, params, model, layer_infos)
+        else
+            throw(ArgumentError("schedule must be :five_color or :serial"))
         end
     end
 
@@ -332,14 +398,16 @@ end
         projected::Bool = true,
         maxdim::Integer = psi.maxdim,
         cutoff::Real = 1e-12,
+        schedule::Symbol = :five_color,
         protocol = nothing,
     )::EvolutionLog
 
-Apply deterministic five-color iPEPS Trotter evolution by orchestrating
-disjoint square-star layers and calling [`project_star!`](@ref) for each
-center. `total_time` must be zero or a positive integer multiple of `dt`.
-Zero time returns diagnostics without mutating `psi`. The convenience keyword
-form constructs [`TrotterParams`](@ref) and then uses the same evolution path.
+Apply deterministic iPEPS Trotter evolution by orchestrating square-star
+updates and calling [`project_star!`](@ref) for each center. `schedule` may be
+`:five_color` for disjoint color layers or `:serial` for one center per layer.
+`total_time` must be zero or a positive integer multiple of `dt`. Zero time
+returns diagnostics without mutating `psi`. The convenience keyword form
+constructs [`TrotterParams`](@ref) and then uses the same evolution path.
 """
 function evolve!(
     psi::SquareIPEPSState,
@@ -352,11 +420,12 @@ function evolve!(
     projected::Bool = true,
     maxdim::Integer = psi.maxdim,
     cutoff::Real = 1e-12,
+    schedule::Symbol = :five_color,
 )::EvolutionLog
     actual_params, actual_protocol = if params === nothing
         dt === nothing && throw(UndefKeywordError(:dt))
         (
-            TrotterParams(dt, order, evolution, maxdim, cutoff),
+            TrotterParams(dt, order, evolution, maxdim, cutoff; schedule = schedule),
             protocol === nothing ? StaticModel(PXPStarModel(projected)) : protocol,
         )
     elseif params isa LegacyPXPParams

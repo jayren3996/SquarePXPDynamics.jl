@@ -8,6 +8,8 @@ Trotter evolution, simple/local diagnostics, and ScarFinder-lite orchestration.
 """
 module SquarePXPDynamics
 
+import EDKit
+
 include("SpinOps.jl")
 include("SquareGeometry.jl")
 include("SquarePXP.jl")
@@ -22,6 +24,9 @@ include("CTMTrust.jl")
 include("StarSimpleUpdate.jl")
 include("IPEPSEvolution.jl")
 include("Benchmarks.jl")
+include("FiniteTFIMReference.jl")
+include("FiniteMPSTFIMReference.jl")
+include("FinitePXPEEDBenchmark.jl")
 include("ScarFinder.jl")
 
 using .SpinOps:
@@ -112,6 +117,32 @@ using .Benchmarks:
     run_benchmark,
     write_benchmark_json,
     write_benchmark_csv
+using .FiniteTFIMReference:
+    FiniteTFIMReferenceSample,
+    finite_tfim_hamiltonian,
+    finite_tfim_product_state,
+    measure_finite_tfim,
+    run_finite_tfim_reference
+using .FiniteMPSTFIMReference:
+    FiniteMPSTFIMMetadata,
+    FiniteMPSTFIMSample,
+    FiniteMPSTFIMResult,
+    finite_mps_site_index,
+    finite_mps_square_lattice_bonds,
+    run_finite_mps_tfim_reference
+using .FinitePXPEEDBenchmark:
+    PXPSquareSpaceGroupBasis,
+    PXPEEDBenchmarkConfig,
+    PXPEEDSample,
+    PXPEEDBenchmarkResult,
+    pxp_ed_space_group_basis,
+    pxp_ed_constrained_count,
+    pxp_ed_group_order,
+    pxp_ed_initial_state,
+    pxp_ed_hamiltonian_operator,
+    sparse_pxp_ed_hamiltonian,
+    run_pxp_ed_benchmark,
+    write_pxp_ed_benchmark_json
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -165,6 +196,17 @@ export StarUpdateInfo, project_star!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!
 export BenchmarkSpec, BenchmarkMetadata, EvolutionDiagnostics, BenchmarkSample, BenchmarkResult
 export run_benchmark, write_benchmark_json, write_benchmark_csv
+export FiniteTFIMReferenceSample
+export finite_tfim_hamiltonian, finite_tfim_product_state
+export measure_finite_tfim, run_finite_tfim_reference
+export FiniteMPSTFIMMetadata, FiniteMPSTFIMSample, FiniteMPSTFIMResult
+export finite_mps_site_index, finite_mps_square_lattice_bonds
+export run_finite_mps_tfim_reference
+export PXPSquareSpaceGroupBasis
+export PXPEEDBenchmarkConfig, PXPEEDSample, PXPEEDBenchmarkResult
+export pxp_ed_space_group_basis, pxp_ed_constrained_count, pxp_ed_group_order
+export pxp_ed_initial_state, pxp_ed_hamiltonian_operator, sparse_pxp_ed_hamiltonian
+export run_pxp_ed_benchmark, write_pxp_ed_benchmark_json
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 

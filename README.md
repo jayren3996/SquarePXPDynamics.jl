@@ -83,10 +83,10 @@ using SquarePXPDynamics
 spec = BenchmarkSpec(
     "tfim-j0",
     StaticModel(TFIMStarModel(0.0, 1.0)),
-    PeriodicSquareUnitCell(10, 10),
+    PeriodicSquareUnitCell(3, 3),
     :z_up,
     0.02,
-    TrotterParams(0.01, 1, :real, 1, 1e-12),
+    TrotterParams(0.01, 1, :real, 1, 1e-12; schedule = :serial),
     1,
 )
 
@@ -97,6 +97,24 @@ write_benchmark_csv([result], "tfim-j0.csv")
 
 The v1 TFIM benchmark uses simple-update diagnostics. Treat these outputs as
 implementation regression records, not CTMRG-quality physics estimates.
+For small cells such as `3 x 3`, `run_finite_tfim_reference` provides a dense
+finite-Hilbert-space TFIM reference trajectory with matching conventions.
+For larger finite references, `run_finite_mps_tfim_reference` runs an
+open-boundary square-lattice TFIM benchmark with a snake-MPS mapping and
+ITensorMPS TDVP; `scripts/finite_mps_tfim_6x6.jl` is the 6x6 smoke script.
+
+### PXP ED Benchmark
+
+The package also includes an EDKit-backed finite PBC PXP benchmark path for
+short-time dynamics in the fully symmetric sector. The `7 x 7` runner is:
+
+```bash
+julia --project=. scripts/pxp_ed_7x7_benchmark.jl
+```
+
+The script writes JSON by default to `scripts/pxp-ed-7x7.json`. Runtime knobs
+are environment variables, for example
+`PXP_ED_TOTAL_TIME=0.05 PXP_ED_M_MAX=40 julia --project=. scripts/pxp_ed_7x7_benchmark.jl`.
 
 An experimental PEPSKit CTMRG measurement adapter is present as `measure_ctm`,
 with CTMRG density, blockade, and five-site PXP energy diagnostics. Check the
