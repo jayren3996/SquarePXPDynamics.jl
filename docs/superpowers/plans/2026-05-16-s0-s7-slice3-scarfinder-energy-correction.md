@@ -1,5 +1,9 @@
 # S0-S7 Slice 3 ScarFinder Energy Correction Implementation Plan
 
+> **Status:** Completed and merged locally. The unchecked boxes below are the
+> original execution template, not current TODOs. See
+> `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Complete the original S6 guarded energy-correction requirement while preserving S6-lite defaults.
@@ -24,4 +28,3 @@
    fields so existing column order remains stable.
 6. Update README and milestone memory.
 7. Run focused ScarFinder/public-doc tests, then full package tests.
-

@@ -1,5 +1,9 @@
 # S0-S7 Slice 5 D2 Gauge Conditioning Implementation Plan
 
+> **Status:** Completed and merged locally. The unchecked boxes below are the
+> original execution template, not current TODOs. See
+> `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Complete S7b by adding transactional D>1 `fix_bond_gauge!` mutation using validated CTM bond environments.

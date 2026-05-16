@@ -42,6 +42,8 @@ end
     H = pxp_ed_hamiltonian_operator(basis)
     Hs = sparse_pxp_ed_hamiltonian(basis)
 
+    @test_throws ArgumentError PXPEEDBenchmarkConfig(3; initial_state = :up)
+
     @test size(H) == (4, 4)
     @test size(Hs) == (4, 4)
     @test Matrix(Hs) ≈ Matrix(Hs)' atol = 1e-12

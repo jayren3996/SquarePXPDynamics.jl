@@ -1,3 +1,8 @@
+if abspath(Base.active_project()) == abspath(joinpath(dirname(@__DIR__), "Project.toml"))
+    using Pkg
+    Pkg.activate(@__DIR__; io = devnull)
+end
+
 using Test
 using SquarePXPDynamics
 

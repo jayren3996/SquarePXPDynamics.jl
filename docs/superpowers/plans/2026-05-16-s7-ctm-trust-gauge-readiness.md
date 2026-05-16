@@ -1,5 +1,9 @@
 # S7 CTM Trust And Gauge Readiness Implementation Plan
 
+> **Status:** Completed and merged locally as part of S0-S7. The unchecked boxes
+> below are the original execution template, not current TODOs. See
+> `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add S7a CTMRG trust assessment, finite-chi audit output, and read-only simple-gauge diagnostics without implementing mutating gauge fixing.

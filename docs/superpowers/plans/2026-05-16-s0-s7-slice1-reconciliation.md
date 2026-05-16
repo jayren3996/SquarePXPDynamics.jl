@@ -1,5 +1,9 @@
 # S0-S7 Slice 1 Reconciliation Implementation Plan
 
+> **Status:** Completed and merged locally. The unchecked boxes below are the
+> original execution template, not current TODOs. See
+> `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close the low-risk S0-S2/S5 reconciliation gaps by adding small iPEPS state helper APIs, link-weight normalization, and missing PXP `:x_plus` observable regression coverage.
@@ -446,4 +450,3 @@ git log --oneline -5
 ```
 
 Expected: clean branch ahead of `main` by the Slice 1 commits.
-

@@ -1,5 +1,9 @@
 # S0-S7 Slice 2 Diagnostics Implementation Plan
 
+> **Status:** Completed and merged locally. The unchecked boxes below are the
+> original execution template, not current TODOs. See
+> `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Improve S3/S4 auditability by recording all pre-update touched link minima in star-update diagnostics and adding model/protocol metadata to evolution logs.
@@ -131,4 +135,3 @@ Run:
 git add src/StarSimpleUpdate.jl src/IPEPSEvolution.jl test/test_star_simple_update.jl test/test_ipeps_evolution.jl README.md memory/mid_term/milestones.md
 git commit -m "feat: strengthen S0-S7 update diagnostics"
 ```
-

@@ -1,5 +1,9 @@
 # Infinite TFIM Benchmark Implementation Plan
 
+> **Status:** Completed and merged locally. The unchecked boxes below are the
+> original execution template, not current TODOs. See
+> `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a v1 infinite TFIM benchmark framework that reuses the existing five-site square-star iPEPS update path while preserving PXP behavior.

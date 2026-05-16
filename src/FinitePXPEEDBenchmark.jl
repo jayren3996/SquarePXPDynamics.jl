@@ -114,6 +114,8 @@ function PXPEEDBenchmarkConfig(
     m_init_i >= 1 || throw(ArgumentError("m_init must be at least 1"))
     m_max_i >= m_init_i || throw(ArgumentError("m_max must be at least m_init"))
     extend_i >= 1 || throw(ArgumentError("extend_step must be at least 1"))
+    initial_state in (:down, :all_down) ||
+        throw(ArgumentError("supported PXP ED initial states are :down and :all_down"))
     return PXPEEDBenchmarkConfig(
         n_int,
         total,

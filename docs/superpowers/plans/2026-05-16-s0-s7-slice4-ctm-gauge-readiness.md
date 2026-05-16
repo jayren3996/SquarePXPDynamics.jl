@@ -1,5 +1,9 @@
 # S0-S7 Slice 4 CTM Gauge Readiness Implementation Plan
 
+> **Status:** Completed and merged locally. The unchecked boxes below are the
+> original execution template, not current TODOs. See
+> `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add the S7b readiness layer: CTM-backed bond norm diagnostics, a readiness predicate, and a transactional product/no-op `fix_bond_gauge!` path.
@@ -38,4 +42,3 @@
 6. Run:
    `julia --project=. test/runtests.jl test_ctm_gauge_readiness.jl test_ctm_trust.jl test_pepskit_measurements.jl test_public_docs.jl`
 7. Commit as `feat: add CTM gauge readiness diagnostics`.
-
