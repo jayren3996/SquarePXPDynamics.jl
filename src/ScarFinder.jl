@@ -12,6 +12,8 @@ using ..PEPSKitMeasurements: PEPSKitCTMRGParams, measure_ctm
 
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
+export ScarFinderObjective, RevivalObjective, TargetEnergyObjective
+export LowVarianceObjective, CompositeObjective
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
 """
@@ -135,6 +137,103 @@ function measure_scarfinder(psi::SquareIPEPSState, backend::TrustedCTMBackend)
 end
 
 """
+    ScarFinderObjective
+
+Abstract type for ScarFinder candidate ranking objectives.
+"""
+abstract type ScarFinderObjective end
+
+"""
+    RevivalObjective(observable = :sublattice_imbalance, weight = 1.0)
+
+Reward revival strength in ScarFinder ranking. Supported observables are
+`:sublattice_imbalance` and `:density`.
+"""
+struct RevivalObjective <: ScarFinderObjective
+    observable::Symbol
+    weight::Float64
+
+    function RevivalObjective(observable::Symbol = :sublattice_imbalance, weight::Real = 1.0)
+        observable in (:sublattice_imbalance, :density) ||
+            throw(ArgumentError("revival observable must be :sublattice_imbalance or :density"))
+        w = Float64(weight)
+        isfinite(w) && w >= 0 ||
+            throw(ArgumentError("revival weight must be finite and nonnegative"))
+        return new(observable, w)
+    end
+end
+
+"""
+    TargetEnergyObjective(target, weight = 1.0)
+
+Penalize distance from a target simple/local PXP energy density in ScarFinder
+ranking.
+"""
+struct TargetEnergyObjective <: ScarFinderObjective
+    target::Float64
+    weight::Float64
+
+    function TargetEnergyObjective(target::Real, weight::Real = 1.0)
+        t = Float64(target)
+        isfinite(t) || throw(ArgumentError("target energy must be finite"))
+        w = Float64(weight)
+        isfinite(w) && w >= 0 ||
+            throw(ArgumentError("target energy weight must be finite and nonnegative"))
+        return new(t, w)
+    end
+end
+
+"""
+    LowVarianceObjective(weight = 1.0)
+
+Placeholder objective component for future energy-variance proxy penalties.
+"""
+struct LowVarianceObjective <: ScarFinderObjective
+    weight::Float64
+
+    function LowVarianceObjective(weight::Real = 1.0)
+        w = Float64(weight)
+        isfinite(w) && w >= 0 ||
+            throw(ArgumentError("low variance weight must be finite and nonnegative"))
+        return new(w)
+    end
+end
+
+"""
+    CompositeObjective(; revival = RevivalObjective(), target_energy = nothing,
+                         low_variance = nothing, blockade_weight = 100.0,
+                         truncation_weight = 10.0, finite_chi_weight = 10.0,
+                         entropy_weight = 1.0)
+
+Weighted ScarFinder ranking objective combining revival rewards with blockade,
+truncation, finite-`chi`, entropy, and optional target-energy penalties.
+"""
+struct CompositeObjective <: ScarFinderObjective
+    revival::Union{Nothing,RevivalObjective}
+    target_energy::Union{Nothing,TargetEnergyObjective}
+    low_variance::Union{Nothing,LowVarianceObjective}
+    blockade_weight::Float64
+    truncation_weight::Float64
+    finite_chi_weight::Float64
+    entropy_weight::Float64
+
+    function CompositeObjective(;
+        revival::Union{Nothing,RevivalObjective} = RevivalObjective(),
+        target_energy::Union{Nothing,TargetEnergyObjective} = nothing,
+        low_variance::Union{Nothing,LowVarianceObjective} = nothing,
+        blockade_weight::Real = 100.0,
+        truncation_weight::Real = 10.0,
+        finite_chi_weight::Real = 10.0,
+        entropy_weight::Real = 1.0,
+    )
+        weights = Float64.((blockade_weight, truncation_weight, finite_chi_weight, entropy_weight))
+        all(w -> isfinite(w) && w >= 0, weights) ||
+            throw(ArgumentError("objective weights must be finite and nonnegative"))
+        return new(revival, target_energy, low_variance, weights...)
+    end
+end
+
+"""
     ScarFinderCandidateScore
 
 One ranked ScarFinder candidate diagnostic record. `diagnostics` is `:simple`
@@ -158,6 +257,10 @@ struct ScarFinderCandidateScore
     max_bond_entropy::Union{Nothing,Float64}
     max_truncerr::Float64
     score::Float64
+    objective_name::String
+    revival_strength::Union{Nothing,Float64}
+    finite_chi_drift::Union{Nothing,Float64}
+    energy_variance_proxy::Union{Nothing,Float64}
     log_norm_before::Float64
     log_norm_after::Float64
     log_norm_delta::Float64
@@ -284,18 +387,69 @@ end
 
 _scarfinder_observable(obs) = obs
 _scarfinder_observable(obs::TrustedCTMMeasurement) = obs.measurement
+_scarfinder_trusted_ctm(obs) = nothing
+_scarfinder_trusted_ctm(obs::TrustedCTMMeasurement) = obs
+
+function _imbalance(obs)
+    return obs.density_even - obs.density_odd
+end
+
+function _revival_strength(obs, objective::RevivalObjective)
+    objective.observable === :sublattice_imbalance && return abs(_imbalance(obs))
+    objective.observable === :density && return abs(obs.density)
+    throw(ArgumentError("unsupported revival observable"))
+end
+
+_finite_chi_drift(::Nothing) = nothing
+
+function _finite_chi_drift(trusted::TrustedCTMMeasurement)
+    vals = (
+        trusted.trust.finite_chi_density_delta,
+        trusted.trust.finite_chi_blockade_delta,
+        trusted.trust.finite_chi_energy_delta,
+    )
+    present = Float64[]
+    for v in vals
+        v === nothing || push!(present, abs(v))
+    end
+    return isempty(present) ? nothing : maximum(present)
+end
+
+function _composite_objective(objective::CompositeObjective)
+    return objective
+end
+
+function _composite_objective(objective::RevivalObjective)
+    return CompositeObjective(; revival = objective)
+end
+
+function _composite_objective(objective::TargetEnergyObjective)
+    return CompositeObjective(; revival = nothing, target_energy = objective)
+end
+
+function _composite_objective(objective::LowVarianceObjective)
+    return CompositeObjective(; revival = nothing, low_variance = objective)
+end
 
 function _score_value(
     obs,
     log::EvolutionLog,
     mean_bond_entropy::Union{Nothing,Float64},
     max_bond_entropy::Union{Nothing,Float64},
+    objective::CompositeObjective;
+    trusted_ctm = nothing,
 )
+    revival = objective.revival === nothing ? nothing : _revival_strength(obs, objective.revival)
+    finite_chi = _finite_chi_drift(trusted_ctm)
     entropy_penalty = max_bond_entropy === nothing ? 0.0 : max_bond_entropy
-    return abs(obs.pxp_energy_density) +
-           obs.blockade_violation +
-           entropy_penalty +
-           log.max_truncerr
+    score = obs.blockade_violation * objective.blockade_weight +
+            log.max_truncerr * objective.truncation_weight +
+            entropy_penalty * objective.entropy_weight
+    finite_chi === nothing || (score += finite_chi * objective.finite_chi_weight)
+    revival === nothing || (score -= objective.revival.weight * revival)
+    objective.target_energy === nothing ||
+        (score += objective.target_energy.weight * abs(obs.pxp_energy_density - objective.target_energy.target))
+    return score, revival, finite_chi
 end
 
 function _candidate_score(
@@ -308,7 +462,18 @@ function _candidate_score(
     correction_accepted::Union{Nothing,Bool} = nothing,
     correction_energy_before::Union{Nothing,Float64} = nothing,
     correction_energy_after::Union{Nothing,Float64} = nothing,
+    objective::ScarFinderObjective = CompositeObjective(),
+    trusted_ctm = nothing,
 )
+    composite = _composite_objective(objective)
+    score, revival, finite_chi = _score_value(
+        obs,
+        log,
+        obs.mean_bond_entropy,
+        obs.max_bond_entropy,
+        composite;
+        trusted_ctm,
+    )
     return ScarFinderCandidateScore(
         iteration,
         diagnostics,
@@ -322,7 +487,11 @@ function _candidate_score(
         obs.mean_bond_entropy,
         obs.max_bond_entropy,
         log.max_truncerr,
-        _score_value(obs, log, obs.mean_bond_entropy, obs.max_bond_entropy),
+        score,
+        String(nameof(typeof(objective))),
+        revival,
+        finite_chi,
+        nothing,
         log.log_norm_before,
         log.log_norm_after,
         log.log_norm_delta,
@@ -365,8 +534,13 @@ function _candidate_score(
     correction_accepted::Union{Nothing,Bool} = nothing,
     correction_energy_before::Union{Nothing,Float64} = nothing,
     correction_energy_after::Union{Nothing,Float64} = nothing,
+    objective::ScarFinderObjective = CompositeObjective(),
+    trusted_ctm = nothing,
 )
     ctm_fields = _ctm_score_fields(obs.diagnostics)
+    composite = _composite_objective(objective)
+    score, revival, finite_chi =
+        _score_value(obs, log, nothing, nothing, composite; trusted_ctm)
     return ScarFinderCandidateScore(
         iteration,
         diagnostics,
@@ -380,7 +554,11 @@ function _candidate_score(
         nothing,
         nothing,
         log.max_truncerr,
-        _score_value(obs, log, nothing, nothing),
+        score,
+        String(nameof(typeof(objective))),
+        revival,
+        finite_chi,
+        nothing,
         log.log_norm_before,
         log.log_norm_after,
         log.log_norm_delta,
@@ -401,6 +579,8 @@ function _candidate_score(
     correction_accepted::Union{Nothing,Bool} = nothing,
     correction_energy_before::Union{Nothing,Float64} = nothing,
     correction_energy_after::Union{Nothing,Float64} = nothing,
+    objective::ScarFinderObjective = CompositeObjective(),
+    trusted_ctm = nothing,
 )
     throw(
         ArgumentError(
@@ -588,6 +768,7 @@ algorithm or direct star-projection logic is performed here.
 function scarfinder!(
     psi::SquareIPEPSState,
     params::ScarFinderParams;
+    objective::ScarFinderObjective = CompositeObjective(),
     ctm_callback = nothing,
     ctm_every::Integer = 0,
     ctm_at_end::Bool = false,
@@ -618,11 +799,13 @@ function scarfinder!(
             correction_accepted,
             correction_energy_before,
             correction_energy_after,
+            objective,
         )
         ctm_score = nothing
         if ctm_callback !== nothing &&
            _should_measure_ctm(n, params.iterations, ctm_period, ctm_at_end)
-            ctm_obs = _scarfinder_observable(ctm_callback(psi, n, simple_score))
+            raw_ctm = ctm_callback(psi, n, simple_score)
+            ctm_obs = _scarfinder_observable(raw_ctm)
             _finite_summary(ctm_obs) || throw(ArgumentError("non-finite CTM diagnostic"))
             ctm_score = _candidate_score(
                 n,
@@ -634,6 +817,8 @@ function scarfinder!(
                 correction_accepted,
                 correction_energy_before,
                 correction_energy_after,
+                objective,
+                _scarfinder_trusted_ctm(raw_ctm),
             )
         end
         push!(
@@ -681,6 +866,7 @@ end
         target_energy = nothing,
         correction_time = 0,
         correction_attempts = 0,
+        objective = CompositeObjective(),
     )::ScarFinderResult
 
 Convenience keyword constructor for [`ScarFinderParams`](@ref), then delegates
@@ -705,6 +891,7 @@ function scarfinder!(
     ctm_at_end::Bool = false,
     log_path::Union{Nothing,AbstractString} = nothing,
     log_format::Symbol = :csv,
+    objective::ScarFinderObjective = CompositeObjective(),
 )::ScarFinderResult
     params = ScarFinderParams(
         projection_time,
@@ -721,6 +908,7 @@ function scarfinder!(
     return scarfinder!(
         psi,
         params;
+        objective,
         ctm_callback,
         ctm_every,
         ctm_at_end,
@@ -774,6 +962,10 @@ function _write_csv_log(io, result::ScarFinderResult)
         "max_bond_entropy",
         "max_truncerr",
         "score",
+        "objective_name",
+        "revival_strength",
+        "finite_chi_drift",
+        "energy_variance_proxy",
         "log_norm_before",
         "log_norm_after",
         "log_norm_delta",
@@ -804,6 +996,10 @@ function _write_csv_log(io, result::ScarFinderResult)
             score.max_bond_entropy,
             score.max_truncerr,
             score.score,
+            score.objective_name,
+            score.revival_strength,
+            score.finite_chi_drift,
+            score.energy_variance_proxy,
             score.log_norm_before,
             score.log_norm_after,
             score.log_norm_delta,
@@ -851,6 +1047,10 @@ function _score_json(score::ScarFinderCandidateScore)
         :max_bond_entropy,
         :max_truncerr,
         :score,
+        :objective_name,
+        :revival_strength,
+        :finite_chi_drift,
+        :energy_variance_proxy,
         :log_norm_before,
         :log_norm_after,
         :log_norm_delta,

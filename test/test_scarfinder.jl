@@ -261,6 +261,28 @@ end
     @test all(iteration -> iteration.ctm_score === nothing, result.iterations)
 end
 
+@testset "ScarFinder physics objectives score candidates" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    objective = CompositeObjective(;
+        revival = RevivalObjective(:sublattice_imbalance, 1.0),
+        blockade_weight = 10.0,
+        truncation_weight = 2.0,
+        finite_chi_weight = 3.0,
+        entropy_weight = 0.5,
+    )
+
+    result = scarfinder!(psi, params; objective)
+    score = only(rank_scarfinder_candidates(result; diagnostics = :simple))
+
+    @test score.objective_name == "CompositeObjective"
+    @test isfinite(score.score)
+    @test score.revival_strength !== nothing
+    @test score.finite_chi_drift === nothing
+end
+
 @testset "ScarFinder CTM callback is optional and scheduled" begin
     cell = PeriodicSquareUnitCell(10, 10)
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
@@ -403,7 +425,7 @@ end
     @test occursin("correction_accepted", csv)
     ctm_row = split(split(chomp(csv), '\n')[3], ',')
     @test ctm_row[4] == "ctm"
-    @test ctm_row[17:23] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
+    @test ctm_row[21:27] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
     @test occursin("\"log_norm_delta\"", json)
     @test occursin("\"ctm_accepted\":true", json)
     @test occursin("\"correction_accepted\"", json)
