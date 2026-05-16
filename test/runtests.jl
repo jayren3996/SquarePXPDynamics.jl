@@ -16,6 +16,7 @@ const TEST_FILES = [
     "test_tfim_observables.jl",
     "test_tfim_schedule_reference.jl",
     "test_benchmarks.jl",
+    "test_ctm_trust.jl",
     "test_pepskit_measurements.jl",
     "test_scarfinder.jl",
     "test_public_docs.jl",
