@@ -186,6 +186,7 @@ end
         ctx_stale = pepskit_ctmrg_context(psi_stale; params)
         project_star!(psi_stale, c, dt; evolution = :real, projected = true, maxdim = 1)
         @test_throws ArgumentError local_density_ctm(psi_stale, c, ctx_stale)
+        @test_throws ArgumentError pxp_energy_density_ctm(psi_stale, ctx_stale)
     end
 
     @testset "PXP energy density equals average CTM star expectations" begin
