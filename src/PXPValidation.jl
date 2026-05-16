@@ -2,16 +2,17 @@ module PXPValidation
 
 using JSON3
 
-using ..SquareIPEPS: SquareIPEPSState, log_norm, product_square_ipeps
+using ..SquareIPEPS: SquareIPEPSState, copy_state, log_norm, product_square_ipeps
 using ..SquareUnitCells: PeriodicSquareUnitCell
 using ..Observables: SimpleObservableSummary, measure_simple
 using ..PEPSKitMeasurements:
     CTMObservableSummary,
     CTMValidationPoint,
+    PEPSKitCTMRGParams,
     measure_ctm,
     validate_ctm_sweep
 using ..CTMTrust: CTMTrustAssessment, CTMTrustPolicy, assess_ctm_trust
-using ..IPEPSEvolution: EvolutionLog, TrotterParams, evolve!
+using ..IPEPSEvolution: EvolutionLog, TrotterParams, evolve!, reverse_evolve!
 using ..FinitePXPEEDBenchmark:
     PXPEEDBenchmarkConfig,
     PXPEEDBenchmarkResult,
@@ -22,6 +23,9 @@ export TrustedCTMMeasurement, measure_ctm_trusted
 export PXPValidationConfig, PXPValidationMetadata, PXPIPEPSSample
 export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
 export write_pxp_validation_json
+export PXPConvergenceConfig, PXPConvergenceReport, validate_pxp_convergence
+export write_pxp_convergence_json
+export PXPReversibilityReport, validate_pxp_reversibility
 
 """
     TrustedCTMMeasurement(measurement, points, trust, policy = CTMTrustPolicy())
@@ -261,6 +265,80 @@ struct PXPValidationReport
     metadata::PXPValidationMetadata
 end
 
+"""
+    PXPConvergenceConfig(base; dt_values, D_values, chi_values = Int[],
+                         cutoff_values)
+
+Parameter grid for repeated PXP ED-versus-iPEPS validation runs. `base`
+provides all controls not swept explicitly. `dt_values`, `D_values`, and
+`cutoff_values` define the run grid and must be nonempty and positive.
+`chi_values` are positive finite-`chi` CTM trust-sweep values for each run;
+leave them empty to skip CTM comparisons.
+"""
+struct PXPConvergenceConfig
+    base::PXPValidationConfig
+    dt_values::Vector{Float64}
+    D_values::Vector{Int}
+    chi_values::Vector{Int}
+    cutoff_values::Vector{Float64}
+
+    function PXPConvergenceConfig(
+        base::PXPValidationConfig;
+        dt_values,
+        D_values,
+        chi_values = Int[],
+        cutoff_values,
+    )
+        dt_grid = [_finite_positive(dt, "dt_values entry") for dt in dt_values]
+        D_grid = [_positive_int(D, "D_values entry") for D in D_values]
+        chi_grid = [_positive_int(chi, "chi_values entry") for chi in chi_values]
+        cutoff_grid = [_finite_positive(cutoff, "cutoff_values entry") for cutoff in cutoff_values]
+
+        isempty(dt_grid) && throw(ArgumentError("dt_values must be nonempty"))
+        isempty(D_grid) && throw(ArgumentError("D_values must be nonempty"))
+        isempty(cutoff_grid) && throw(ArgumentError("cutoff_values must be nonempty"))
+
+        return new(base, dt_grid, D_grid, chi_grid, cutoff_grid)
+    end
+end
+
+"""
+    PXPConvergenceReport
+
+Machine-readable convergence/error-budget report containing every validation
+run in a `dt x D x cutoff` sweep, the maximum absolute simple-density error,
+and optional CTM density-error and trust summaries when finite-`chi` CTM trust
+sweeps were requested. CTM density error is aggregated across all validation
+points in each trust sweep, not just the final `chi`.
+"""
+struct PXPConvergenceReport
+    config::PXPConvergenceConfig
+    runs::Vector{PXPValidationReport}
+    max_abs_density_error_simple::Float64
+    max_abs_density_error_ctm::Union{Nothing,Float64}
+    all_ctm_trusted::Union{Nothing,Bool}
+end
+
+"""
+    PXPReversibilityReport
+
+Simple-observable reversibility diagnostics for a forward real-time PXP
+evolution followed by [`reverse_evolve!`](@ref). `before`, `after_forward`, and
+`after_reverse` store the simple measurements around the protocol, the log
+fields store both evolution calls, and the drift fields are absolute differences
+between `before` and `after_reverse`.
+"""
+struct PXPReversibilityReport
+    before::SimpleObservableSummary
+    after_forward::SimpleObservableSummary
+    after_reverse::SimpleObservableSummary
+    forward_log::EvolutionLog
+    reverse_log::EvolutionLog
+    density_drift::Float64
+    blockade_drift::Float64
+    energy_drift::Float64
+end
+
 function _validation_ed_config(config::PXPValidationConfig)
     return PXPEEDBenchmarkConfig(
         config.n;
@@ -277,6 +355,31 @@ function _validation_ed_config(config::PXPValidationConfig)
     )
 end
 
+function _copy_config(
+    base::PXPValidationConfig;
+    dt = base.dt,
+    maxdim = base.maxdim,
+    cutoff = base.cutoff,
+)
+    return PXPValidationConfig(
+        base.n;
+        total_time = base.total_time,
+        dt,
+        measure_every = max(1, round(Int, base.measure_every * base.dt / dt)),
+        initial_state = base.initial_state,
+        point_group = base.point_group,
+        use_sparse = base.use_sparse,
+        ed_tol = base.ed_tol,
+        ed_m_init = base.ed_m_init,
+        ed_m_max = base.ed_m_max,
+        ed_extend_step = base.ed_extend_step,
+        order = base.order,
+        maxdim,
+        cutoff,
+        schedule = base.schedule,
+    )
+end
+
 function _validation_trotter(config::PXPValidationConfig)
     return TrotterParams(
         config.dt,
@@ -285,6 +388,40 @@ function _validation_trotter(config::PXPValidationConfig)
         config.maxdim,
         config.cutoff;
         schedule = config.schedule,
+    )
+end
+
+"""
+    validate_pxp_reversibility(psi, total_time; params, protocol = nothing)
+
+Measure simple PXP observables before evolution, after forward real-time
+evolution, and after applying [`reverse_evolve!`](@ref) for the same duration.
+The supplied state is copied before mutation, so the returned
+[`PXPReversibilityReport`](@ref) is a validation artifact and does not change
+the caller's `psi`.
+"""
+function validate_pxp_reversibility(
+    psi::SquareIPEPSState,
+    total_time::Real;
+    params::TrotterParams,
+    protocol = nothing,
+)::PXPReversibilityReport
+    work = copy_state(psi)
+    before = measure_simple(work)
+    forward_log = evolve!(work, total_time; params, protocol)
+    after_forward = measure_simple(work)
+    reverse_log = reverse_evolve!(work, total_time; params, protocol)
+    after_reverse = measure_simple(work)
+
+    return PXPReversibilityReport(
+        before,
+        after_forward,
+        after_reverse,
+        forward_log,
+        reverse_log,
+        abs(after_reverse.density - before.density),
+        abs(after_reverse.blockade_violation - before.blockade_violation),
+        abs(after_reverse.pxp_energy_density - before.pxp_energy_density),
     )
 end
 
@@ -435,6 +572,59 @@ function validate_pxp_ed_ipeps(
     )
 end
 
+"""
+    validate_pxp_convergence(config; trust_policy = CTMTrustPolicy(),
+                             ctm_measure = measure_ctm)
+
+Run a `dt x D x cutoff` validation grid from [`PXPConvergenceConfig`](@ref)
+and aggregate simple and CTM density error budgets. `config.chi_values`
+provides the finite-`chi` trust sweep evaluated within each grid run. When it
+is empty, CTM sweeps are skipped and CTM summary fields are `nothing`.
+"""
+function validate_pxp_convergence(
+    config::PXPConvergenceConfig;
+    trust_policy::CTMTrustPolicy = CTMTrustPolicy(),
+    ctm_measure = measure_ctm,
+)::PXPConvergenceReport
+    ctm_params = isempty(config.chi_values) ? nothing :
+        Tuple(PEPSKitCTMRGParams(chi, 1e-8, 100, 0) for chi in config.chi_values)
+    runs = PXPValidationReport[]
+
+    for dt in config.dt_values, D in config.D_values, cutoff in config.cutoff_values
+        run_config = _copy_config(config.base; dt, maxdim = D, cutoff)
+        push!(
+            runs,
+            validate_pxp_ed_ipeps(
+                run_config;
+                ctm_params,
+                trust_policy,
+                ctm_measure,
+            ),
+        )
+    end
+
+    simple_errors = [abs(c.density_error_simple) for r in runs for c in r.comparisons]
+    ctm_errors = Float64[]
+    trust_flags = Bool[]
+    for run in runs
+        for (ed_sample, ipeps_sample) in zip(run.ed_result.samples, run.ipeps_samples)
+            ipeps_sample.ctm === nothing && continue
+            for point in ipeps_sample.ctm.points
+                push!(ctm_errors, abs(point.measurement.density - ed_sample.excitation_density))
+            end
+            push!(trust_flags, ipeps_sample.ctm.trust.trusted)
+        end
+    end
+
+    return PXPConvergenceReport(
+        config,
+        runs,
+        maximum(simple_errors),
+        isempty(ctm_errors) ? nothing : maximum(ctm_errors),
+        isempty(trust_flags) ? nothing : all(==(true), trust_flags),
+    )
+end
+
 function _json_value(value::Nothing)
     return nothing
 end
@@ -506,6 +696,8 @@ function _ctm_summary_data(summary::CTMObservableSummary)
         density_odd = summary.density_odd,
         blockade_violation = summary.blockade_violation,
         pxp_energy_density = summary.pxp_energy_density,
+        sublattice_imbalance = summary.sublattice_imbalance,
+        checkerboard_structure_factor = summary.checkerboard_structure_factor,
         diagnostics = _ctm_diagnostics_data(summary.diagnostics),
     )
 end
@@ -516,6 +708,7 @@ function _ctm_point_data(point::CTMValidationPoint)
         tol = point.params.tol,
         maxiter = point.params.maxiter,
         verbosity = point.params.verbosity,
+        seed = point.params.seed,
         measurement = _ctm_summary_data(point.measurement),
         delta_density = point.delta_density,
         delta_density_even = point.delta_density_even,
@@ -659,6 +852,28 @@ function _report_data(report::PXPValidationReport)
     )
 end
 
+function _convergence_config_data(config::PXPConvergenceConfig)
+    return (;
+        base = _config_data(config.base),
+        dt_values = config.dt_values,
+        D_values = config.D_values,
+        chi_values = config.chi_values,
+        cutoff_values = config.cutoff_values,
+    )
+end
+
+function _convergence_report_data(report::PXPConvergenceReport)
+    return (;
+        config = _convergence_config_data(report.config),
+        summary = (;
+            max_abs_density_error_simple = report.max_abs_density_error_simple,
+            max_abs_density_error_ctm = report.max_abs_density_error_ctm,
+            all_ctm_trusted = report.all_ctm_trusted,
+        ),
+        runs = _report_data.(report.runs),
+    )
+end
+
 """
     write_pxp_validation_json(report, path)
 
@@ -669,6 +884,21 @@ and matched observable comparisons.
 function write_pxp_validation_json(report::PXPValidationReport, path::AbstractString)
     open(path, "w") do io
         JSON3.write(io, _report_data(report))
+        write(io, '\n')
+    end
+    return path
+end
+
+"""
+    write_pxp_convergence_json(report, path)
+
+Write a [`PXPConvergenceReport`](@ref) to `path` as JSON containing the swept
+configuration, aggregate error-budget summary fields, and full per-run
+validation reports.
+"""
+function write_pxp_convergence_json(report::PXPConvergenceReport, path::AbstractString)
+    open(path, "w") do io
+        JSON3.write(io, _convergence_report_data(report))
         write(io, '\n')
     end
     return path

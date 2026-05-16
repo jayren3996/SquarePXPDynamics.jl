@@ -6,7 +6,7 @@ using ..SquareIPEPS: SquareIPEPSState, all_bond_entropies, log_norm
 using ..StarSimpleUpdate: StarUpdateInfo, project_star!
 using ..StarModels: AbstractModelProtocol, PXPStarModel, StaticModel, model_at
 
-export TrotterParams, EvolutionLog, trotter_sequence, evolve!
+export TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 
 const _TROTTER_SPLIT_DIRECTIONS = (:right, :up, :left, :down)
 
@@ -322,23 +322,15 @@ function _finish_evolution_log(
     )
 end
 
-function _evolve_five_color_step!(
-    psi::SquareIPEPSState,
-    params::TrotterParams,
-    model,
-    layer_infos,
-)
+function _five_color_layer_sequence(psi::SquareIPEPSState, params::TrotterParams)
+    layers = Tuple{Vector{eltype(psi.unitcell.reps)},Float64}[]
     for (color, layer_dt) in trotter_sequence(params)
         centers = update_centers(psi.unitcell, color)
         stars_are_disjoint_mod_unitcell(psi.unitcell, centers) ||
             throw(ArgumentError("color layer $color has overlapping wrapped stars"))
-        infos = StarUpdateInfo[]
-        for center in centers
-            push!(infos, _apply_star_layer!(psi, center, layer_dt, params, model))
-        end
-        push!(layer_infos, infos)
+        push!(layers, (centers, layer_dt))
     end
-    return nothing
+    return layers
 end
 
 function _serial_trotter_sequence(centers, params::TrotterParams)
@@ -357,26 +349,52 @@ function _serial_trotter_sequence(centers, params::TrotterParams)
     end
 end
 
-function _evolve_serial_step!(
+function _serial_layer_sequence(psi::SquareIPEPSState, params::TrotterParams)
+    return [
+        ([center], layer_dt) for
+        (center, layer_dt) in _serial_trotter_sequence(psi.unitcell.reps, params)
+    ]
+end
+
+function _trotter_layer_sequence(psi::SquareIPEPSState, params::TrotterParams)
+    if params.schedule === :five_color
+        return _five_color_layer_sequence(psi, params)
+    elseif params.schedule === :serial
+        return _serial_layer_sequence(psi, params)
+    else
+        throw(ArgumentError("schedule must be :five_color or :serial"))
+    end
+end
+
+function _apply_trotter_layer_sequence!(
     psi::SquareIPEPSState,
     params::TrotterParams,
     model,
     layer_infos,
+    layer_sequence,
+    step_sign::Float64,
 )
-    for (center, layer_dt) in _serial_trotter_sequence(psi.unitcell.reps, params)
-        info = _apply_star_layer!(psi, center, layer_dt, params, model)
-        push!(layer_infos, [info])
+    for (centers, layer_dt) in layer_sequence
+        infos = StarUpdateInfo[]
+        for center in centers
+            push!(infos, _apply_star_layer!(psi, center, step_sign * layer_dt, params, model))
+        end
+        push!(layer_infos, infos)
     end
     return nothing
 end
 
-function _evolve_with_params!(
+function _evolve_with_signed_time!(
     psi::SquareIPEPSState,
-    total_time::Real,
+    signed_total_time::Real,
     params::TrotterParams,
     protocol::AbstractModelProtocol,
 )::EvolutionLog
-    nsteps, total = _nsteps_for_total_time(total_time, params)
+    signed_total = Float64(signed_total_time)
+    isfinite(signed_total) || throw(ArgumentError("total_time must be finite"))
+    reverse_time = signed_total < 0
+    step_sign = reverse_time ? -1.0 : 1.0
+    nsteps, total = _nsteps_for_total_time(abs(signed_total), params)
     log_norm_before = log_norm(psi)
     metadata = _model_metadata(protocol)
     layer_infos = Vector{Vector{StarUpdateInfo}}()
@@ -392,16 +410,20 @@ function _evolve_with_params!(
         )
 
     params.schedule === :five_color && assert_five_color_compatible(psi.unitcell)
-    for step_index = 1:nsteps
+    forward_layers = _trotter_layer_sequence(psi, params)
+    layer_sequence = reverse_time ? reverse(forward_layers) : forward_layers
+    step_indices = reverse_time ? reverse(1:nsteps) : (1:nsteps)
+    for step_index in step_indices
         time_before_step = (step_index - 1) * params.dt
         model = model_at(protocol, time_before_step, step_index)
-        if params.schedule === :five_color
-            _evolve_five_color_step!(psi, params, model, layer_infos)
-        elseif params.schedule === :serial
-            _evolve_serial_step!(psi, params, model, layer_infos)
-        else
-            throw(ArgumentError("schedule must be :five_color or :serial"))
-        end
+        _apply_trotter_layer_sequence!(
+            psi,
+            params,
+            model,
+            layer_infos,
+            layer_sequence,
+            step_sign,
+        )
     end
 
     return _finish_evolution_log(
@@ -413,6 +435,16 @@ function _evolve_with_params!(
         layer_infos,
         log_norm_before,
     )
+end
+
+function _evolve_with_params!(
+    psi::SquareIPEPSState,
+    total_time::Real,
+    params::TrotterParams,
+    protocol::AbstractModelProtocol,
+)::EvolutionLog
+    _nsteps_for_total_time(total_time, params)
+    return _evolve_with_signed_time!(psi, total_time, params, protocol)
 end
 
 """
@@ -474,6 +506,52 @@ function evolve!(
         )
     end
     return _evolve_with_params!(psi, total_time, actual_params, actual_protocol)
+end
+
+"""
+    reverse_evolve!(
+        psi::SquareIPEPSState,
+        total_time::Real;
+        params::TrotterParams,
+        protocol = nothing,
+    )::EvolutionLog
+
+Evolve `psi` backward in real time by applying negative local Trotter steps in
+the inverse layer order of [`evolve!`](@ref). `params.dt` remains positive,
+`params.evolution` must be `:real`, and `total_time` follows the same
+nonnegative integer-step validation as [`evolve!`](@ref). Reverse evolution
+currently supports static model protocols only.
+"""
+function reverse_evolve!(
+    psi::SquareIPEPSState,
+    total_time::Real;
+    params::TrotterParams,
+    protocol::Union{AbstractModelProtocol,Nothing} = nothing,
+)::EvolutionLog
+    params.evolution === :real ||
+        throw(ArgumentError("reverse_evolve! is defined only for real-time evolution"))
+    _nsteps_for_total_time(total_time, params)
+    reverse_params = TrotterParams(
+        params.dt,
+        params.order,
+        :real,
+        params.maxdim,
+        params.cutoff,
+        params.split_order;
+        schedule = params.schedule,
+    )
+    actual_protocol = protocol === nothing ? StaticModel(PXPStarModel(true)) : protocol
+    actual_protocol isa StaticModel || throw(
+        ArgumentError(
+            "reverse_evolve! currently supports only static model protocols; time-dependent inverse evolution is not implemented",
+        ),
+    )
+    return _evolve_with_signed_time!(
+        psi,
+        -Float64(total_time),
+        reverse_params,
+        actual_protocol,
+    )
 end
 
 end

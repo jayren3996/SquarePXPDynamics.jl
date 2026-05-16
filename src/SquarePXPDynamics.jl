@@ -94,6 +94,7 @@ using .GaugeDiagnostics: SimpleGaugeDiagnostic
 using .GaugeDiagnostics: gauge_diagnostic_simple, gauge_deviation_simple
 using .GaugeDiagnostics: all_gauge_deviations_simple
 using .Observables: local_density_simple, density_simple, sublattice_densities
+using .Observables: sublattice_imbalance_simple, checkerboard_structure_factor_simple
 using .Observables: nearest_neighbor_density_simple, blockade_violation_simple
 using .Observables: star_expectation_simple, pxp_energy_density_simple
 using .Observables: mean_bond_entropy, max_bond_entropy
@@ -120,9 +121,10 @@ using .CTMGaugeReadinessModule:
     ctm_bond_norm_diagnostic,
     all_ctm_bond_norm_diagnostics,
     ctm_ready_for_gauge_updates,
+    pepskit_private_full_update_available,
     fix_bond_gauge!
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
-using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!
+using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 using .Benchmarks:
     BenchmarkSpec,
     BenchmarkMetadata,
@@ -167,12 +169,30 @@ using .PXPValidation:
     PXPEDComparisonSample,
     PXPValidationReport,
     validate_pxp_ed_ipeps,
-    write_pxp_validation_json
+    write_pxp_validation_json,
+    PXPConvergenceConfig,
+    PXPConvergenceReport,
+    validate_pxp_convergence,
+    write_pxp_convergence_json,
+    PXPReversibilityReport,
+    validate_pxp_reversibility
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
     ScarFinderIteration,
     ScarFinderResult,
+    MeasurementBackend,
+    SimpleBackend,
+    TrustedCTMBackend,
+    measure_scarfinder,
+    CandidateStore,
+    NoCandidateStore,
+    JSONCandidateStore,
+    ScarFinderObjective,
+    RevivalObjective,
+    TargetEnergyObjective,
+    LowVarianceObjective,
+    CompositeObjective,
     rank_scarfinder_candidates,
     write_scarfinder_log,
     scarfinder!
@@ -203,6 +223,7 @@ export square_pxp_gate_itensor, projected_square_pxp_gate_itensor
 export SimpleGaugeDiagnostic
 export gauge_diagnostic_simple, gauge_deviation_simple, all_gauge_deviations_simple
 export local_density_simple, density_simple, sublattice_densities
+export sublattice_imbalance_simple, checkerboard_structure_factor_simple
 export nearest_neighbor_density_simple, blockade_violation_simple
 export star_expectation_simple, pxp_energy_density_simple
 export mean_bond_entropy, max_bond_entropy
@@ -221,9 +242,10 @@ export assert_fresh_pepskit_context
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
 export CTMGaugePolicy, CTMBondNormDiagnostic, CTMGaugeReadiness, BondGaugeFixInfo
 export ctm_bond_norm_matrix, ctm_bond_norm_diagnostic
-export all_ctm_bond_norm_diagnostics, ctm_ready_for_gauge_updates, fix_bond_gauge!
+export all_ctm_bond_norm_diagnostics, ctm_ready_for_gauge_updates
+export pepskit_private_full_update_available, fix_bond_gauge!
 export StarUpdateInfo, project_star!
-export TrotterParams, EvolutionLog, trotter_sequence, evolve!
+export TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 export BenchmarkSpec, BenchmarkMetadata, EvolutionDiagnostics, BenchmarkSample, BenchmarkResult
 export run_benchmark, write_benchmark_json, write_benchmark_csv
 export FiniteTFIMReferenceSample
@@ -241,7 +263,14 @@ export TrustedCTMMeasurement, measure_ctm_trusted
 export PXPValidationConfig, PXPValidationMetadata, PXPIPEPSSample
 export PXPEDComparisonSample, PXPValidationReport, validate_pxp_ed_ipeps
 export write_pxp_validation_json
+export PXPConvergenceConfig, PXPConvergenceReport, validate_pxp_convergence
+export write_pxp_convergence_json
+export PXPReversibilityReport, validate_pxp_reversibility
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
+export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
+export CandidateStore, NoCandidateStore, JSONCandidateStore
+export ScarFinderObjective, RevivalObjective, TargetEnergyObjective
+export LowVarianceObjective, CompositeObjective
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
 end

@@ -1,6 +1,10 @@
 using ITensors
 using LinearAlgebra
 
+struct ReverseEvolutionRampProtocol <: AbstractModelProtocol end
+
+SquarePXPDynamics.model_at(::ReverseEvolutionRampProtocol, time, step) = PXPStarModel(isodd(step))
+
 function _seeded_nontrivial_d2_evolution_ipeps_test(cell)
     psi = product_square_ipeps(cell; state = :down, maxdim = 2)
     for c in cell.reps
@@ -118,6 +122,22 @@ end
     @test_throws ArgumentError evolve!(psi, NaN; params = params)
 end
 
+@testset "reverse evolution validates real-time positive duration" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    real_params = TrotterParams(0.1, 1, :real, 1, 1e-12)
+    imaginary_params = TrotterParams(0.1, 1, :imaginary, 1, 1e-12)
+
+    @test_throws ArgumentError reverse_evolve!(psi, 0.1; params = imaginary_params)
+    @test_throws ArgumentError reverse_evolve!(psi, -0.1; params = real_params)
+    @test_throws ArgumentError reverse_evolve!(
+        psi,
+        0.1;
+        params = real_params,
+        protocol = ReverseEvolutionRampProtocol(),
+    )
+end
+
 @testset "evolution requires five-color-compatible unit cells" begin
     psi_bad = product_square_ipeps(PeriodicSquareUnitCell(4, 4); state = :down, maxdim = 1)
     params = TrotterParams(0.1, 1, :real, 1, 1e-12)
@@ -154,6 +174,27 @@ end
     @test isfinite(log.max_truncerr)
 end
 
+@testset "reverse serial sweep applies inverse center order" begin
+    cell = PeriodicSquareUnitCell(4, 4)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.02, 1, :real, 1, 1e-12; schedule = :serial)
+
+    log = reverse_evolve!(psi, 0.02; params)
+
+    @test [only(layer).center for layer in log.layer_infos] == reverse(cell.reps)
+end
+
+@testset "reverse five-color sweep applies inverse layer order" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = TrotterParams(0.02, 1, :real, 1, 1e-12)
+
+    log = reverse_evolve!(psi, 0.02; params)
+
+    expected_layers = reverse([update_centers(cell, color) for color = 1:5])
+    @test [getproperty.(layer, :center) for layer in log.layer_infos] == expected_layers
+end
+
 @testset "one first-order step from all-down state" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
@@ -187,6 +228,20 @@ end
     @test length(log.layer_infos) == 9
     @test isfinite(log.max_truncerr)
     @test all(isfinite, [log.max_bond_entropy, log.mean_bond_entropy])
+end
+
+@testset "reverse real-time evolution returns close in D1 product limit" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    before = measure_simple(psi)
+    params = TrotterParams(0.01, 1, :real, 1, 1e-12; schedule = :serial)
+
+    evolve!(psi, 0.01; params)
+    reverse_evolve!(psi, 0.01; params)
+    after = measure_simple(psi)
+
+    @test after.density ≈ before.density atol = 1e-10
+    @test after.blockade_violation ≈ before.blockade_violation atol = 1e-10
 end
 
 @testset "repeated small steps remain finite" begin

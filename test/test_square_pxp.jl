@@ -36,3 +36,16 @@ using LinearAlgebra
     @test size(square_pxp_gate(-t; evolution = :real)) == (32, 32)
     @test size(projected_square_pxp_gate(-t; evolution = :real)) == (32, 32)
 end
+
+@testset "projected PXP gate documents left and sandwich projection" begin
+    dt = 0.01
+    P = square_star_blockade_projector()
+    U = square_pxp_gate(dt; evolution = :real)
+
+    @test projected_square_pxp_gate(dt; evolution = :real) ≈ P * U
+    @test projected_square_pxp_gate(dt; evolution = :real, projection = :sandwich) ≈
+          P * U * P
+    @test projected_square_pxp_gate(dt; evolution = :real) ≈
+          projected_square_pxp_gate(dt; evolution = :real, projection = :sandwich)
+    @test_throws ArgumentError projected_square_pxp_gate(dt; projection = :bad)
+end

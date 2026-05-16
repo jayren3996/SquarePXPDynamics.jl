@@ -1,3 +1,5 @@
+using JSON3
+
 @testset "ScarFinder parameter validation" begin
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
     params = ScarFinderParams(0.01, trotter, 1, Inf, Inf, Inf, false)
@@ -261,6 +263,53 @@ end
     @test all(iteration -> iteration.ctm_score === nothing, result.iterations)
 end
 
+@testset "ScarFinder physics objectives score candidates" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    objective = CompositeObjective(;
+        revival = RevivalObjective(:sublattice_imbalance, 1.0),
+        target_energy = TargetEnergyObjective(-0.25, 4.0),
+        low_variance = LowVarianceObjective(0.75),
+        blockade_weight = 10.0,
+        truncation_weight = 2.0,
+        finite_chi_weight = 3.0,
+        entropy_weight = 0.5,
+    )
+
+    result = scarfinder!(psi, params; objective)
+    score = only(rank_scarfinder_candidates(result; diagnostics = :simple))
+
+    @test score.objective_name == "CompositeObjective"
+    @test isfinite(score.score)
+    @test score.revival_strength !== nothing
+    @test score.finite_chi_drift === nothing
+    @test score.energy_variance_proxy === nothing
+    @test score.objective_parameters ==
+          "revival_observable=sublattice_imbalance;revival_weight=1.0;target_energy=-0.25;target_energy_weight=4.0;low_variance_weight=0.75;blockade_weight=10.0;truncation_weight=2.0;finite_chi_weight=3.0;entropy_weight=0.5"
+
+    expected_score =
+        score.blockade_violation * 10.0 +
+        score.max_truncerr * 2.0 +
+        score.max_bond_entropy * 0.5 -
+        score.revival_strength * 1.0 +
+        abs(score.pxp_energy_density - (-0.25)) * 4.0
+    @test score.score ≈ expected_score atol = 1e-12
+
+    csv_path = tempname() * ".csv"
+    json_path = tempname() * ".json"
+    write_scarfinder_log(result, csv_path; format = :csv)
+    write_scarfinder_log(result, json_path; format = :json)
+    csv = read(csv_path, String)
+    json = read(json_path, String)
+    @test occursin("objective_parameters", csv)
+    @test occursin("revival_observable=sublattice_imbalance", csv)
+    @test occursin("target_energy=-0.25", csv)
+    @test occursin("\"objective_parameters\"", json)
+    @test occursin("low_variance_weight=0.75", json)
+end
+
 @testset "ScarFinder CTM callback is optional and scheduled" begin
     cell = PeriodicSquareUnitCell(10, 10)
     trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
@@ -287,6 +336,190 @@ end
     @test length(ranked_ctm) == 2
     @test all(score -> score.diagnostics === :ctm, ranked_ctm)
     @test result.iterations[1].simple_score.ctm_accepted === nothing
+end
+
+@testset "ScarFinder measurement backends construct and validate" begin
+    simple = SimpleBackend()
+    @test simple isa MeasurementBackend
+
+    params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+    policy = CTMTrustPolicy(2, true, 1e-2, 1e-3, 1e-2, 1e-4)
+    trusted = TrustedCTMBackend(params, policy)
+
+    @test trusted isa MeasurementBackend
+    @test trusted.params === params
+    @test trusted.policy === policy
+    @test_throws ArgumentError TrustedCTMBackend((), policy)
+end
+
+@testset "ScarFinder measurement backends measure and integrate with CTM callbacks" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+
+    simple_measurement = measure_scarfinder(psi, SimpleBackend())
+    @test simple_measurement isa SimpleObservableSummary
+    @test simple_measurement == measure_simple(psi)
+
+    params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+    policy = CTMTrustPolicy(2, true, 1e-2, 1e-3, 1e-2, 1e-4)
+    calls = PEPSKitCTMRGParams[]
+    fake_measure = (state; params) -> begin
+        push!(calls, params)
+        return CTMObservableSummary(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            CTMRGDiagnostics(
+                params.chi,
+                params.tol,
+                params.maxiter,
+                params.maxiter,
+                params.tol / 10,
+                true,
+                true,
+            ),
+        )
+    end
+    backend = TrustedCTMBackend(params, policy; measure = fake_measure)
+
+    trusted_measurement = measure_scarfinder(psi, backend)
+    @test trusted_measurement isa TrustedCTMMeasurement
+    @test calls == collect(params)
+    @test trusted_measurement.measurement isa CTMObservableSummary
+    @test trusted_measurement.measurement.diagnostics.chi == 4
+    @test trusted_measurement.trust.trusted
+
+    empty!(calls)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    scar_params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    result = scarfinder!(
+        psi,
+        scar_params;
+        ctm_every = 1,
+        ctm_callback = (state, iteration, simple_score) -> measure_scarfinder(state, backend),
+    )
+    ctm_score = only(rank_scarfinder_candidates(result; diagnostics = :ctm))
+
+    @test calls == collect(params)
+    @test ctm_score.ctm_chi == 4
+    @test ctm_score.ctm_residual == 1e-7
+    @test ctm_score.ctm_accepted === true
+end
+
+@testset "ScarFinder trusted CTM backend gates ranking" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    ctm_params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+    backend = TrustedCTMBackend(
+        ctm_params,
+        CTMTrustPolicy(2, true, 1e-2, 1e-3, 1e-2, 1e-4);
+        measure = (state; params) -> CTMObservableSummary(
+            0.1 + params.chi * 1e-5,
+            0.12,
+            0.08,
+            params.chi * 1e-6,
+            -0.01,
+            CTMRGDiagnostics(params.chi, params.tol, params.maxiter, 3, params.tol / 10, true, true),
+        ),
+    )
+
+    result = scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        measurement = backend,
+        ctm_every = 1,
+        require_trusted_ctm = true,
+    )
+
+    ranked = rank_scarfinder_candidates(result; diagnostics = :ctm, require_ctm_trusted = true)
+    @test length(ranked) == 1
+    @test ranked[1].ctm_trusted === true
+    @test ranked[1].ctm_trust_reason == "trusted"
+    @test ranked[1].finite_chi_drift !== nothing
+
+    csv_path = tempname() * ".csv"
+    json_path = tempname() * ".json"
+    write_scarfinder_log(result, csv_path; format = :csv)
+    write_scarfinder_log(result, json_path; format = :json)
+    csv = read(csv_path, String)
+    json = read(json_path, String)
+    @test occursin("ctm_trusted", csv)
+    @test occursin("ctm_trust_reason", csv)
+    @test occursin(",ctm,", csv)
+    @test occursin(",true,trusted,", csv)
+    @test occursin("\"ctm_trusted\":true", json)
+    @test occursin("\"ctm_trust_reason\":\"trusted\"", json)
+end
+
+@testset "ScarFinder require trusted CTM validates scheduled observations" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+
+    @test_throws ArgumentError scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        require_trusted_ctm = true,
+    )
+
+    @test_throws ArgumentError scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        ctm_every = 1,
+        require_trusted_ctm = true,
+        ctm_callback = (state, iteration, simple_score) -> nothing,
+    )
+end
+
+@testset "ScarFinder untrusted CTM policy rejects iteration" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    ctm_params = (
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+    )
+    backend = TrustedCTMBackend(
+        ctm_params,
+        CTMTrustPolicy(2, true, 1e-6, 1e-6, 1e-6, 1e-4);
+        measure = (state; params) -> CTMObservableSummary(
+            0.1 + params.chi * 1e-3,
+            0.12,
+            0.08,
+            params.chi * 1e-6,
+            -0.01,
+            CTMRGDiagnostics(params.chi, params.tol, params.maxiter, 3, params.tol / 10, true, true),
+        ),
+    )
+
+    result = scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        measurement = backend,
+        ctm_every = 1,
+        require_trusted_ctm = true,
+    )
+    ctm_score = only(rank_scarfinder_candidates(result; diagnostics = :ctm))
+
+    @test result.accepted_iterations == 0
+    @test result.rejected_iterations == 1
+    @test result.iterations[1].reject_reason == "trusted CTM policy rejected iteration"
+    @test ctm_score.accepted === false
+    @test ctm_score.ctm_trusted === false
+    @test ctm_score.ctm_trust_reason == "density_delta_too_large"
+    @test isempty(rank_scarfinder_candidates(result; diagnostics = :ctm, require_ctm_trusted = true))
 end
 
 @testset "ScarFinder CTM diagnostics are logged and can require trust" begin
@@ -327,7 +560,7 @@ end
     @test occursin("correction_accepted", csv)
     ctm_row = split(split(chomp(csv), '\n')[3], ',')
     @test ctm_row[4] == "ctm"
-    @test ctm_row[17:23] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
+    @test ctm_row[22:28] == ["4", "1.0e-8", "10", "10", "1.0e-9", "true", "true"]
     @test occursin("\"log_norm_delta\"", json)
     @test occursin("\"ctm_accepted\":true", json)
     @test occursin("\"correction_accepted\"", json)
@@ -426,6 +659,103 @@ end
     @test occursin("\"correction_energy_after\"", json)
     @test length(csv_result.iterations) == 1
     @test length(json_result.iterations) == 1
+end
+
+@testset "ScarFinder candidate store writes auditable metadata" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    dir = mktempdir()
+    store = JSONCandidateStore(dir)
+
+    result = scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        candidate_store = store,
+    )
+
+    files = readdir(dir)
+    @test "candidate_000001.json" in files
+    data = JSON3.read(read(joinpath(dir, "candidate_000001.json"), String))
+    @test data.iteration == 1
+    @test data.accepted == true
+    @test data.state_version isa Integer
+    @test data.log_norm isa Number
+    @test data.score.diagnostics == "simple"
+    @test data.simple_score.diagnostics == "simple"
+    @test data.ctm_score === nothing
+    @test length(result.iterations) == 1
+end
+
+@testset "ScarFinder candidate store keeps simple and CTM scores explicit" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    dir = mktempdir()
+    diag = CTMRGDiagnostics(4, 1e-8, 10, 10, 1e-9, true, true)
+    ctm_summary = CTMObservableSummary(0.0, 0.0, 0.0, 0.0, 0.0, diag)
+
+    scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        ctm_every = 1,
+        ctm_callback = (state, iteration, simple_score) -> ctm_summary,
+        candidate_store = JSONCandidateStore(dir),
+    )
+
+    data = JSON3.read(read(joinpath(dir, "candidate_000001.json"), String))
+    @test data.score.diagnostics == "simple"
+    @test data.simple_score.diagnostics == "simple"
+    @test data.ctm_score.diagnostics == "ctm"
+end
+
+@testset "ScarFinder candidate store persists rejection metadata" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, 0.5, Inf, false)
+    dir = mktempdir()
+
+    scarfinder!(
+        product_square_ipeps(cell; state = :up, maxdim = 1),
+        params;
+        candidate_store = JSONCandidateStore(dir),
+    )
+
+    data = JSON3.read(read(joinpath(dir, "candidate_000001.json"), String))
+    @test data.accepted == false
+    @test occursin("blockade", data.reject_reason)
+    @test data.score.accepted == false
+    @test occursin("blockade", data.score.reject_reason)
+end
+
+@testset "NoCandidateStore writes no candidate files" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
+    dir = mktempdir()
+
+    scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        candidate_store = NoCandidateStore(),
+    )
+
+    @test isempty(readdir(dir))
+end
+
+@testset "ScarFinder candidate store writes one file per iteration" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = ScarFinderParams(0.0, trotter, 2, Inf, Inf, Inf, false)
+    dir = mktempdir()
+
+    scarfinder!(
+        product_square_ipeps(cell; state = :down, maxdim = 1),
+        params;
+        candidate_store = JSONCandidateStore(dir),
+    )
+
+    @test sort(readdir(dir)) == ["candidate_000001.json", "candidate_000002.json"]
 end
 
 @testset "ScarFinder source stays above star projection layer" begin

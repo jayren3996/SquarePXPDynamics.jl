@@ -151,6 +151,24 @@ end
     )
 end
 
+@testset "CTM trust finite summary validation rejects nonfinite stored fields" begin
+    summary = CTMObservableSummary(
+        NaN,
+        0.25,
+        0.15,
+        0.0,
+        -0.1,
+        0.1,
+        0.01,
+        nothing,
+    )
+
+    @test_throws ArgumentError SquarePXPDynamics.CTMTrust._assert_finite_summary(
+        summary,
+        "measurement",
+    )
+end
+
 @testset "CTM trust accepts stable final chi window" begin
     points = [
         _trust_point_test(chi = 2, tol = 1e-5, density = 9.0, blockade = 3.0, energy = -4.0),

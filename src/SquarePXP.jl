@@ -96,14 +96,27 @@ function square_pxp_gate(step::Real; evolution::Symbol = :real)
 end
 
 """
-    projected_square_pxp_gate(step; evolution = :real)
+    projected_square_pxp_gate(step; evolution = :real, projection = :left)
 
-Return `square_star_blockade_projector() * square_pxp_gate(step; evolution)`,
-keeping local blockade enforcement explicit.
+Return a dense square-star PXP evolution gate with local blockade projection.
+The default `projection = :left` preserves the historical `P * U` behavior and
+assumes the input vector is already in the constrained sector. Use
+`projection = :sandwich` to return `P * U * P` for explicit constrained-sector
+action on raw local vectors. For the current square-star PXP Hamiltonian, `P`
+commutes with `U`, so `:left` and `:sandwich` are equivalent operators; the
+keyword makes the chosen convention explicit at call sites.
 """
-function projected_square_pxp_gate(step::Real; evolution::Symbol = :real)
+function projected_square_pxp_gate(
+    step::Real;
+    evolution::Symbol = :real,
+    projection::Symbol = :left,
+)
     _validate_finite_step(step)
-    return square_star_blockade_projector() * square_pxp_gate(step; evolution)
+    P = square_star_blockade_projector()
+    U = square_pxp_gate(step; evolution)
+    projection === :left && return P * U
+    projection === :sandwich && return P * U * P
+    throw(ArgumentError("projection must be :left or :sandwich"))
 end
 
 end

@@ -2,6 +2,7 @@ module PEPSKitMeasurements
 
 using ITensors
 using PEPSKit
+using Random
 using TensorKit
 using ..SquareGeometry: SquareCoord
 using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
@@ -21,31 +22,38 @@ export validate_ctm_sweep, write_ctm_validation_csv
 const _DIRECTIONS = (:right, :up, :left, :down)
 
 """
-    PEPSKitCTMRGParams(chi, tol, maxiter, verbosity)
+    PEPSKitCTMRGParams(chi, tol, maxiter, verbosity; seed = nothing)
 
 Validated CTMRG controls for the PEPSKit measurement adapter. `chi` is the
 environment bond dimension, `tol` and `maxiter` are forwarded to
 `PEPSKit.leading_boundary`, and `verbosity` follows PEPSKit's CTMRG logging
-levels. This struct configures measurements only; it is not used by the custom
-ITensors simple-update dynamics.
+levels. `seed` optionally makes the initial CTMRG environment reproducible.
+This struct configures measurements only; it is not used by the custom ITensors
+simple-update dynamics.
 """
 struct PEPSKitCTMRGParams
     chi::Int
     tol::Float64
     maxiter::Int
     verbosity::Int
+    seed::Union{Nothing,Int}
 
     function PEPSKitCTMRGParams(
         chi::Integer,
         tol::Real,
         maxiter::Integer,
-        verbosity::Integer,
+        verbosity::Integer;
+        seed::Union{Nothing,Integer} = nothing,
     )
         chi >= 1 || throw(ArgumentError("chi must be at least 1"))
         isfinite(tol) && tol > 0 || throw(ArgumentError("tol must be finite and positive"))
         maxiter >= 1 || throw(ArgumentError("maxiter must be at least 1"))
         verbosity >= 0 || throw(ArgumentError("verbosity must be nonnegative"))
-        return new(Int(chi), Float64(tol), Int(maxiter), Int(verbosity))
+        seed_value = seed === nothing ? nothing : Int(seed)
+        seed_value === nothing ||
+            seed_value >= 0 ||
+            throw(ArgumentError("seed must be nonnegative"))
+        return new(Int(chi), Float64(tol), Int(maxiter), Int(verbosity), seed_value)
     end
 end
 
@@ -141,7 +149,8 @@ PEPSKitMeasurementContext(
 
 Summary of PEPSKit CTMRG observables for a custom ITensors square iPEPS state:
 total density, even/odd sublattice densities, nearest-neighbor blockade
-violation, and the five-site PXP energy density.
+violation, five-site PXP energy density, and derived checkerboard/scar
+observables.
 """
 struct CTMObservableSummary
     density::Float64
@@ -149,7 +158,63 @@ struct CTMObservableSummary
     density_odd::Float64
     blockade_violation::Float64
     pxp_energy_density::Float64
+    sublattice_imbalance::Float64
+    checkerboard_structure_factor::Float64
     diagnostics::Union{CTMRGDiagnostics,Nothing}
+
+    function CTMObservableSummary(
+        density::Real,
+        density_even::Real,
+        density_odd::Real,
+        blockade_violation::Real,
+        pxp_energy_density::Real,
+        sublattice_imbalance::Real,
+        checkerboard_structure_factor::Real,
+        diagnostics::Union{CTMRGDiagnostics,Nothing},
+    )
+        converted_density = Float64(density)
+        converted_density_even = Float64(density_even)
+        converted_density_odd = Float64(density_odd)
+        converted_blockade_violation = Float64(blockade_violation)
+        converted_pxp_energy_density = Float64(pxp_energy_density)
+        converted_sublattice_imbalance = Float64(sublattice_imbalance)
+        converted_checkerboard_structure_factor = Float64(checkerboard_structure_factor)
+
+        expected_imbalance = converted_density_even - converted_density_odd
+        isapprox(
+            converted_sublattice_imbalance,
+            expected_imbalance;
+            atol = 1e-12,
+            rtol = 1e-10,
+        ) || throw(
+            ArgumentError(
+                "sublattice_imbalance must equal density_even - density_odd",
+            ),
+        )
+
+        expected_structure = converted_sublattice_imbalance^2
+        isapprox(
+            converted_checkerboard_structure_factor,
+            expected_structure;
+            atol = 1e-12,
+            rtol = 1e-10,
+        ) || throw(
+            ArgumentError(
+                "checkerboard_structure_factor must equal sublattice_imbalance^2",
+            ),
+        )
+
+        return new(
+            converted_density,
+            converted_density_even,
+            converted_density_odd,
+            converted_blockade_violation,
+            converted_pxp_energy_density,
+            converted_sublattice_imbalance,
+            converted_checkerboard_structure_factor,
+            diagnostics,
+        )
+    end
 end
 
 CTMObservableSummary(
@@ -158,22 +223,15 @@ CTMObservableSummary(
     density_odd::Float64,
     blockade_violation::Float64,
     pxp_energy_density::Float64,
-    diagnostics::CTMRGDiagnostics,
-) = invoke(
-    CTMObservableSummary,
-    Tuple{
-        Float64,
-        Float64,
-        Float64,
-        Float64,
-        Float64,
-        Union{CTMRGDiagnostics,Nothing},
-    },
+    diagnostics::Union{CTMRGDiagnostics,Nothing},
+) = CTMObservableSummary(
     density,
     density_even,
     density_odd,
     blockade_violation,
     pxp_energy_density,
+    density_even - density_odd,
+    (density_even - density_odd)^2,
     diagnostics,
 )
 
@@ -198,7 +256,7 @@ CTMObservableSummary(
     density_odd::Real,
     blockade_violation::Real,
     pxp_energy_density::Real,
-    diagnostics::CTMRGDiagnostics,
+    diagnostics::Union{CTMRGDiagnostics,Nothing},
 ) = CTMObservableSummary(
     Float64(density),
     Float64(density_even),
@@ -231,6 +289,8 @@ function _assert_finite_ctm_summary(obs::CTMObservableSummary, label::String)
             obs.density_odd,
             obs.blockade_violation,
             obs.pxp_energy_density,
+            obs.sublattice_imbalance,
+            obs.checkerboard_structure_factor,
         ),
     ) || throw(ArgumentError("$label CTM validation summary must be finite"))
     return obs
@@ -344,6 +404,13 @@ function _ctmrg_diagnostics(params::PEPSKitCTMRGParams, info)::CTMRGDiagnostics
         converged,
         accepted,
     )
+end
+
+_ctm_initializer(::Nothing) = randn
+
+function _ctm_initializer(seed::Int)
+    rng = Random.MersenneTwister(seed)
+    return (T, dims...) -> randn(rng, T, dims...)
 end
 
 function _assert_fresh_context(psi::SquareIPEPSState, ctx::PEPSKitMeasurementContext)
@@ -614,7 +681,7 @@ function pepskit_ctmrg_context(
 )::PEPSKitMeasurementContext
     peps = to_pepskit_infinitepeps(psi)
     chi_space = TensorKit.ComplexSpace(params.chi)
-    env0 = PEPSKit.CTMRGEnv(randn, ComplexF64, peps, chi_space)
+    env0 = PEPSKit.CTMRGEnv(_ctm_initializer(params.seed), ComplexF64, peps, chi_space)
     env, info = PEPSKit.leading_boundary(
         env0,
         peps;
@@ -886,6 +953,7 @@ function write_ctm_validation_csv(points, path::AbstractString)
         "tol",
         "maxiter",
         "verbosity",
+        "seed",
         "reference_density",
         "ctm_density",
         "delta_density",
@@ -914,6 +982,7 @@ function write_ctm_validation_csv(points, path::AbstractString)
                 point.params.tol,
                 point.params.maxiter,
                 point.params.verbosity,
+                point.params.seed,
                 point.reference.density,
                 point.measurement.density,
                 point.delta_density,

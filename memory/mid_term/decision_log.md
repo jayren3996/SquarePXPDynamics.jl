@@ -28,6 +28,69 @@ Source:
 
 Status: active
 
+## 2026-05-16 - ScarFinder Uses Trusted Measurement Backends
+
+Decision:
+
+Make ScarFinder's production-facing control flow depend on explicit objective
+objects and measurement backends. Keep `SimpleBackend` as the development
+default, but support `TrustedCTMBackend` with finite-`chi` trust assessment,
+`require_trusted_ctm`, objective-aware scoring, and JSON candidate metadata
+persistence.
+
+Reason:
+
+The GPT review correctly identified that simple/local diagnostics cannot be the
+basis for physics claims. The repo already had CTM measurement, CTM trust, and
+ED validation scaffolding; the missing step was wiring those pieces into the
+candidate-ranking path without removing the fast smoke-test workflow.
+
+Consequences:
+
+ScarFinder candidates now carry objective metadata, CTM trust fields when
+available, scar-oriented derived observables, and optional persisted metadata.
+Trusted CTM ranking is available as a first-class API, while publication-grade
+claims still require convergence reports across `dt`, `D`, `chi`, cutoff, unit
+cell, and update scheme. Full tensor snapshot persistence and CTM-aware/full
+updates remain future work.
+
+Source:
+
+`src/ScarFinder.jl`; `src/PEPSKitMeasurements.jl`; `src/CTMTrust.jl`;
+`src/PXPValidation.jl`; `README.md`
+
+Status: active
+
+## 2026-05-16 - Sequence Remaining GPT Review Work Around Trusted ScarFinder
+
+Decision:
+
+Plan the remaining GPT review work as a sequenced ScarFinder/validation
+roadmap: measurement backends and physics objectives first, then trusted CTM
+ranking, scar observables, CTMRG reproducibility, convergence reports,
+candidate persistence, reverse-evolution validation, projection semantics, and
+CTM-aware update compatibility boundaries.
+
+Reason:
+
+The repository already has the CTM-trusted validation report and ED-vs-iPEPS
+harness. The next limiting factor is that ScarFinder still needs to consume
+trusted CTM measurements and physics objectives by default before broader
+algorithmic work can produce auditable candidates.
+
+Consequences:
+
+The next implementation branch should follow
+`docs/superpowers/plans/2026-05-16-complete-gpt-pxp-roadmap.md`, preferably
+with subagent-driven task slices and review checkpoints after each commit.
+
+Source:
+
+Current user request; `docs/superpowers/plans/2026-05-16-complete-gpt-pxp-roadmap.md`;
+`src/ScarFinder.jl`; `src/PXPValidation.jl`
+
+Status: active
+
 ## 2026-05-16 - Separate S7b Readiness From D>1 Gauge Mutation
 
 Decision:
@@ -117,6 +180,35 @@ Source:
 
 Current user discussion; `src/IPEPSEvolution.jl`;
 `test/test_ipeps_evolution.jl`
+
+Status: active
+
+## 2026-05-16 - Derive Scar Observables From Sublattice Density Contrast
+
+Decision:
+
+Represent scar-oriented checkerboard observables as derived density-contrast
+diagnostics: sublattice imbalance is `density_even - density_odd`, and the
+checkerboard structure factor is the squared imbalance. CTM summaries carry
+these fields while preserving legacy constructor calls.
+
+Reason:
+
+The current ScarFinder revival objective already uses the even-minus-odd
+density contrast. Storing the same derived quantities in simple and CTM-backed
+measurement summaries makes validation and serialization explicit without
+changing ranking behavior.
+
+Consequences:
+
+Simple/local helpers expose the cheap product-limit diagnostics, and CTM
+serialization includes the same derived fields for downstream reports. CTM
+finite-chi validation density deltas remain unchanged.
+
+Source:
+
+Current Task 4 request; `src/Observables.jl`; `src/PEPSKitMeasurements.jl`;
+`src/PXPValidation.jl`; `src/ScarFinder.jl`
 
 Status: active
 

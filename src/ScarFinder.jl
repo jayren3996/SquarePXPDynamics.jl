@@ -1,13 +1,22 @@
 module ScarFinder
 
+using JSON3
+
 using ..SquareIPEPS: SquareIPEPSState, copy_state, state_version, log_norm
 using ..IPEPSEvolution:
     TrotterParams, EvolutionLog, legacy_trotter_params, legacy_trotter_protocol, evolve!
 using ..StarModels: AbstractModelProtocol
 using ..Observables: SimpleObservableSummary, measure_simple
+using ..PXPValidation: TrustedCTMMeasurement, measure_ctm_trusted
+using ..CTMTrust: CTMTrustPolicy
 using ..PEPSKitMeasurements: CTMObservableSummary, CTMRGDiagnostics
+using ..PEPSKitMeasurements: PEPSKitCTMRGParams, measure_ctm
 
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
+export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
+export CandidateStore, NoCandidateStore, JSONCandidateStore
+export ScarFinderObjective, RevivalObjective, TargetEnergyObjective
+export LowVarianceObjective, CompositeObjective
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 
 """
@@ -89,14 +98,188 @@ struct ScarFinderParams
 end
 
 """
+    MeasurementBackend
+
+Abstract ScarFinder measurement backend interface.
+"""
+abstract type MeasurementBackend end
+
+"""Development backend using local/simple-update observables only."""
+struct SimpleBackend <: MeasurementBackend end
+
+"""Trusted finite-chi CTM backend for production ScarFinder diagnostics."""
+struct TrustedCTMBackend <: MeasurementBackend
+    params::Tuple
+    policy::CTMTrustPolicy
+    measure::Any
+
+    function TrustedCTMBackend(
+        params,
+        policy::CTMTrustPolicy = CTMTrustPolicy();
+        measure = measure_ctm,
+    )
+        collected = Tuple(params)
+        isempty(collected) &&
+            throw(ArgumentError("TrustedCTMBackend requires at least one CTMRG parameter point"))
+        all(p -> p isa PEPSKitCTMRGParams, collected) ||
+            throw(ArgumentError("TrustedCTMBackend params must be PEPSKitCTMRGParams"))
+        return new(collected, policy, measure)
+    end
+end
+
+"""Measure `psi` with a ScarFinder measurement backend."""
+measure_scarfinder(psi::SquareIPEPSState, ::SimpleBackend) = measure_simple(psi)
+
+function measure_scarfinder(psi::SquareIPEPSState, backend::TrustedCTMBackend)
+    return measure_ctm_trusted(
+        psi;
+        params = backend.params,
+        policy = backend.policy,
+        measure = backend.measure,
+    )
+end
+
+"""
+    CandidateStore
+
+Abstract ScarFinder candidate metadata persistence target. Candidate stores
+record audit metadata for completed iterations; they do not save tensor-state
+snapshots.
+"""
+abstract type CandidateStore end
+
+"""
+    NoCandidateStore()
+
+Default ScarFinder candidate store that writes no metadata and saves no tensor
+snapshots.
+"""
+struct NoCandidateStore <: CandidateStore end
+
+"""
+    JSONCandidateStore(directory)
+
+Write one JSON metadata file per ScarFinder candidate iteration under
+`directory`. Files contain auditable iteration, state-version, normalization,
+observable, and score metadata only; candidate tensor snapshots are not saved.
+"""
+struct JSONCandidateStore <: CandidateStore
+    directory::String
+
+    function JSONCandidateStore(directory::AbstractString)
+        mkpath(directory)
+        return new(String(directory))
+    end
+end
+
+"""
+    ScarFinderObjective
+
+Abstract type for ScarFinder candidate ranking objectives.
+"""
+abstract type ScarFinderObjective end
+
+"""
+    RevivalObjective(observable = :sublattice_imbalance, weight = 1.0)
+
+Reward revival strength in ScarFinder ranking. Supported observables are
+`:sublattice_imbalance` and `:density`.
+"""
+struct RevivalObjective <: ScarFinderObjective
+    observable::Symbol
+    weight::Float64
+
+    function RevivalObjective(observable::Symbol = :sublattice_imbalance, weight::Real = 1.0)
+        observable in (:sublattice_imbalance, :density) ||
+            throw(ArgumentError("revival observable must be :sublattice_imbalance or :density"))
+        w = Float64(weight)
+        isfinite(w) && w >= 0 ||
+            throw(ArgumentError("revival weight must be finite and nonnegative"))
+        return new(observable, w)
+    end
+end
+
+"""
+    TargetEnergyObjective(target, weight = 1.0)
+
+Penalize distance from a target simple/local PXP energy density in ScarFinder
+ranking.
+"""
+struct TargetEnergyObjective <: ScarFinderObjective
+    target::Float64
+    weight::Float64
+
+    function TargetEnergyObjective(target::Real, weight::Real = 1.0)
+        t = Float64(target)
+        isfinite(t) || throw(ArgumentError("target energy must be finite"))
+        w = Float64(weight)
+        isfinite(w) && w >= 0 ||
+            throw(ArgumentError("target energy weight must be finite and nonnegative"))
+        return new(t, w)
+    end
+end
+
+"""
+    LowVarianceObjective(weight = 1.0)
+
+Placeholder objective component for future energy-variance proxy penalties.
+"""
+struct LowVarianceObjective <: ScarFinderObjective
+    weight::Float64
+
+    function LowVarianceObjective(weight::Real = 1.0)
+        w = Float64(weight)
+        isfinite(w) && w >= 0 ||
+            throw(ArgumentError("low variance weight must be finite and nonnegative"))
+        return new(w)
+    end
+end
+
+"""
+    CompositeObjective(; revival = RevivalObjective(), target_energy = nothing,
+                         low_variance = nothing, blockade_weight = 100.0,
+                         truncation_weight = 10.0, finite_chi_weight = 10.0,
+                         entropy_weight = 1.0)
+
+Weighted ScarFinder ranking objective combining revival rewards with blockade,
+truncation, finite-`chi`, entropy, and optional target-energy penalties.
+"""
+struct CompositeObjective <: ScarFinderObjective
+    revival::Union{Nothing,RevivalObjective}
+    target_energy::Union{Nothing,TargetEnergyObjective}
+    low_variance::Union{Nothing,LowVarianceObjective}
+    blockade_weight::Float64
+    truncation_weight::Float64
+    finite_chi_weight::Float64
+    entropy_weight::Float64
+
+    function CompositeObjective(;
+        revival::Union{Nothing,RevivalObjective} = RevivalObjective(),
+        target_energy::Union{Nothing,TargetEnergyObjective} = nothing,
+        low_variance::Union{Nothing,LowVarianceObjective} = nothing,
+        blockade_weight::Real = 100.0,
+        truncation_weight::Real = 10.0,
+        finite_chi_weight::Real = 10.0,
+        entropy_weight::Real = 1.0,
+    )
+        weights = Float64.((blockade_weight, truncation_weight, finite_chi_weight, entropy_weight))
+        all(w -> isfinite(w) && w >= 0, weights) ||
+            throw(ArgumentError("objective weights must be finite and nonnegative"))
+        return new(revival, target_energy, low_variance, weights...)
+    end
+end
+
+"""
     ScarFinderCandidateScore
 
 One ranked ScarFinder candidate diagnostic record. `diagnostics` is `:simple`
 for the default local/simple measurements or `:ctm` for records supplied by an
 optional CTM measurement callback. The scalar `score` is an operational sorting
 key built from existing diagnostics only; it is not an energy correction or a
-physics claim. The `log_norm_*` fields mirror the [`EvolutionLog`](@ref)
-normalization ledger for the candidate-producing evolution call.
+physics claim. `objective_parameters` records the deterministic objective
+settings needed to audit that scalar score. The `log_norm_*` fields mirror the
+[`EvolutionLog`](@ref) normalization ledger for the candidate-producing
+evolution call.
 """
 struct ScarFinderCandidateScore
     iteration::Int
@@ -112,6 +295,11 @@ struct ScarFinderCandidateScore
     max_bond_entropy::Union{Nothing,Float64}
     max_truncerr::Float64
     score::Float64
+    objective_name::String
+    objective_parameters::String
+    revival_strength::Union{Nothing,Float64}
+    finite_chi_drift::Union{Nothing,Float64}
+    energy_variance_proxy::Union{Nothing,Float64}
     log_norm_before::Float64
     log_norm_after::Float64
     log_norm_delta::Float64
@@ -122,6 +310,8 @@ struct ScarFinderCandidateScore
     ctm_residual::Union{Nothing,Float64}
     ctm_converged::Union{Nothing,Bool}
     ctm_accepted::Union{Nothing,Bool}
+    ctm_trusted::Union{Nothing,Bool}
+    ctm_trust_reason::Union{Nothing,String}
     correction_accepted::Union{Nothing,Bool}
     correction_energy_before::Union{Nothing,Float64}
     correction_energy_after::Union{Nothing,Float64}
@@ -169,6 +359,32 @@ ScarFinderIteration(
     nothing,
     nothing,
 )
+
+store_candidate!(::NoCandidateStore, psi::SquareIPEPSState, iteration::ScarFinderIteration) = nothing
+
+function store_candidate!(
+    store::JSONCandidateStore,
+    psi::SquareIPEPSState,
+    iteration::ScarFinderIteration,
+)
+    path = joinpath(store.directory, "candidate_$(lpad(iteration.iteration, 6, '0')).json")
+    payload = (;
+        iteration = iteration.iteration,
+        accepted = iteration.accepted,
+        reject_reason = iteration.reject_reason,
+        state_version = state_version(psi),
+        log_norm = log_norm(psi),
+        simple = iteration.observables,
+        score = iteration.simple_score,
+        simple_score = iteration.simple_score,
+        ctm_score = iteration.ctm_score,
+    )
+    open(path, "w") do io
+        JSON3.write(io, payload)
+        write(io, '\n')
+    end
+    return path
+end
 
 """
     ScarFinderResult
@@ -232,7 +448,94 @@ function _finite_summary(obs::CTMObservableSummary)
             obs.density_odd,
             obs.blockade_violation,
             obs.pxp_energy_density,
+            obs.sublattice_imbalance,
+            obs.checkerboard_structure_factor,
         ),
+    )
+end
+
+_scarfinder_observable(obs) = obs
+_scarfinder_observable(obs::TrustedCTMMeasurement) = obs.measurement
+_scarfinder_trusted_ctm(obs) = nothing
+_scarfinder_trusted_ctm(obs::TrustedCTMMeasurement) = obs
+
+function _imbalance(obs)
+    return obs.density_even - obs.density_odd
+end
+
+function _revival_strength(obs, objective::RevivalObjective)
+    objective.observable === :sublattice_imbalance && return abs(_imbalance(obs))
+    objective.observable === :density && return abs(obs.density)
+    throw(ArgumentError("unsupported revival observable"))
+end
+
+_finite_chi_drift(::Nothing) = nothing
+
+function _finite_chi_drift(trusted::TrustedCTMMeasurement)
+    vals = (
+        trusted.trust.finite_chi_density_delta,
+        trusted.trust.finite_chi_blockade_delta,
+        trusted.trust.finite_chi_energy_delta,
+    )
+    present = Float64[]
+    for v in vals
+        v === nothing || push!(present, abs(v))
+    end
+    return isempty(present) ? nothing : maximum(present)
+end
+
+function _composite_objective(objective::CompositeObjective)
+    return objective
+end
+
+function _composite_objective(objective::RevivalObjective)
+    return CompositeObjective(; revival = objective)
+end
+
+function _composite_objective(objective::TargetEnergyObjective)
+    return CompositeObjective(; revival = nothing, target_energy = objective)
+end
+
+function _composite_objective(objective::LowVarianceObjective)
+    return CompositeObjective(; revival = nothing, low_variance = objective)
+end
+
+function _objective_parameter_value(value::Nothing)
+    return "nothing"
+end
+
+function _objective_parameter_value(value::Symbol)
+    return String(value)
+end
+
+function _objective_parameter_value(value::Real)
+    return string(Float64(value))
+end
+
+function _objective_parameters(objective::CompositeObjective)
+    revival_observable =
+        objective.revival === nothing ? nothing : objective.revival.observable
+    revival_weight = objective.revival === nothing ? nothing : objective.revival.weight
+    target_energy =
+        objective.target_energy === nothing ? nothing : objective.target_energy.target
+    target_energy_weight =
+        objective.target_energy === nothing ? nothing : objective.target_energy.weight
+    low_variance_weight =
+        objective.low_variance === nothing ? nothing : objective.low_variance.weight
+    fields = (
+        :revival_observable => revival_observable,
+        :revival_weight => revival_weight,
+        :target_energy => target_energy,
+        :target_energy_weight => target_energy_weight,
+        :low_variance_weight => low_variance_weight,
+        :blockade_weight => objective.blockade_weight,
+        :truncation_weight => objective.truncation_weight,
+        :finite_chi_weight => objective.finite_chi_weight,
+        :entropy_weight => objective.entropy_weight,
+    )
+    return join(
+        ("$(key)=$(_objective_parameter_value(value))" for (key, value) in fields),
+        ";",
     )
 end
 
@@ -241,12 +544,47 @@ function _score_value(
     log::EvolutionLog,
     mean_bond_entropy::Union{Nothing,Float64},
     max_bond_entropy::Union{Nothing,Float64},
+    objective::CompositeObjective;
+    trusted_ctm = nothing,
 )
+    revival = objective.revival === nothing ? nothing : _revival_strength(obs, objective.revival)
+    finite_chi = _finite_chi_drift(trusted_ctm)
     entropy_penalty = max_bond_entropy === nothing ? 0.0 : max_bond_entropy
-    return abs(obs.pxp_energy_density) +
-           obs.blockade_violation +
-           entropy_penalty +
-           log.max_truncerr
+    score = obs.blockade_violation * objective.blockade_weight +
+            log.max_truncerr * objective.truncation_weight +
+            entropy_penalty * objective.entropy_weight
+    finite_chi === nothing || (score += finite_chi * objective.finite_chi_weight)
+    revival === nothing || (score -= objective.revival.weight * revival)
+    objective.target_energy === nothing ||
+        (score += objective.target_energy.weight * abs(obs.pxp_energy_density - objective.target_energy.target))
+    return score, revival, finite_chi
+end
+
+function _candidate_score(
+    iteration::Int,
+    diagnostics::Symbol,
+    accepted::Bool,
+    reject_reason::Union{Nothing,String},
+    log::EvolutionLog,
+    trusted::TrustedCTMMeasurement,
+    correction_accepted::Union{Nothing,Bool} = nothing,
+    correction_energy_before::Union{Nothing,Float64} = nothing,
+    correction_energy_after::Union{Nothing,Float64} = nothing,
+    objective::ScarFinderObjective = CompositeObjective(),
+)
+    return _candidate_score(
+        iteration,
+        diagnostics,
+        accepted,
+        reject_reason,
+        log,
+        trusted.measurement,
+        correction_accepted,
+        correction_energy_before,
+        correction_energy_after,
+        objective,
+        trusted,
+    )
 end
 
 function _candidate_score(
@@ -259,7 +597,18 @@ function _candidate_score(
     correction_accepted::Union{Nothing,Bool} = nothing,
     correction_energy_before::Union{Nothing,Float64} = nothing,
     correction_energy_after::Union{Nothing,Float64} = nothing,
+    objective::ScarFinderObjective = CompositeObjective(),
+    trusted_ctm = nothing,
 )
+    composite = _composite_objective(objective)
+    score, revival, finite_chi = _score_value(
+        obs,
+        log,
+        obs.mean_bond_entropy,
+        obs.max_bond_entropy,
+        composite;
+        trusted_ctm,
+    )
     return ScarFinderCandidateScore(
         iteration,
         diagnostics,
@@ -273,10 +622,17 @@ function _candidate_score(
         obs.mean_bond_entropy,
         obs.max_bond_entropy,
         log.max_truncerr,
-        _score_value(obs, log, obs.mean_bond_entropy, obs.max_bond_entropy),
+        score,
+        String(nameof(typeof(objective))),
+        _objective_parameters(composite),
+        revival,
+        finite_chi,
+        nothing,
         log.log_norm_before,
         log.log_norm_after,
         log.log_norm_delta,
+        nothing,
+        nothing,
         nothing,
         nothing,
         nothing,
@@ -306,6 +662,14 @@ function _ctm_score_fields(diagnostics::CTMRGDiagnostics)
     )
 end
 
+function _ctm_trust_score_fields(::Nothing)
+    return (nothing, nothing)
+end
+
+function _ctm_trust_score_fields(trusted::TrustedCTMMeasurement)
+    return (trusted.trust.trusted, String(trusted.trust.reason))
+end
+
 function _candidate_score(
     iteration::Int,
     diagnostics::Symbol,
@@ -316,8 +680,14 @@ function _candidate_score(
     correction_accepted::Union{Nothing,Bool} = nothing,
     correction_energy_before::Union{Nothing,Float64} = nothing,
     correction_energy_after::Union{Nothing,Float64} = nothing,
+    objective::ScarFinderObjective = CompositeObjective(),
+    trusted_ctm = nothing,
 )
     ctm_fields = _ctm_score_fields(obs.diagnostics)
+    trust_fields = _ctm_trust_score_fields(trusted_ctm)
+    composite = _composite_objective(objective)
+    score, revival, finite_chi =
+        _score_value(obs, log, nothing, nothing, composite; trusted_ctm)
     return ScarFinderCandidateScore(
         iteration,
         diagnostics,
@@ -331,11 +701,17 @@ function _candidate_score(
         nothing,
         nothing,
         log.max_truncerr,
-        _score_value(obs, log, nothing, nothing),
+        score,
+        String(nameof(typeof(objective))),
+        _objective_parameters(composite),
+        revival,
+        finite_chi,
+        nothing,
         log.log_norm_before,
         log.log_norm_after,
         log.log_norm_delta,
         ctm_fields...,
+        trust_fields...,
         correction_accepted,
         correction_energy_before,
         correction_energy_after,
@@ -352,6 +728,8 @@ function _candidate_score(
     correction_accepted::Union{Nothing,Bool} = nothing,
     correction_energy_before::Union{Nothing,Float64} = nothing,
     correction_energy_after::Union{Nothing,Float64} = nothing,
+    objective::ScarFinderObjective = CompositeObjective(),
+    trusted_ctm = nothing,
 )
     throw(
         ArgumentError(
@@ -470,6 +848,45 @@ function _should_measure_ctm(iteration::Int, total::Int, ctm_every::Int, ctm_at_
            (ctm_at_end && iteration == total)
 end
 
+function _scheduled_ctm_observation(
+    psi::SquareIPEPSState,
+    measurement::MeasurementBackend,
+    ctm_callback,
+    iteration::Int,
+    simple_score::ScarFinderCandidateScore,
+    require_trusted_ctm::Bool,
+)
+    if ctm_callback !== nothing
+        return ctm_callback(psi, iteration, simple_score)
+    elseif measurement isa SimpleBackend
+        require_trusted_ctm &&
+            throw(ArgumentError("require_trusted_ctm requires a TrustedCTMMeasurement"))
+        return nothing
+    else
+        return measure_scarfinder(psi, measurement)
+    end
+end
+
+function _validate_trusted_ctm_schedule(require_trusted_ctm::Bool, ctm_every::Int, ctm_at_end::Bool)
+    require_trusted_ctm && ctm_every == 0 && !ctm_at_end &&
+        throw(ArgumentError("require_trusted_ctm requires ctm_every > 0 or ctm_at_end = true"))
+    return nothing
+end
+
+function _apply_trusted_ctm_gate(
+    accepted::Bool,
+    reason::Union{Nothing,String},
+    raw_ctm,
+    require_trusted_ctm::Bool,
+)
+    trusted = _scarfinder_trusted_ctm(raw_ctm)
+    require_trusted_ctm || return accepted, reason, trusted
+    trusted === nothing &&
+        throw(ArgumentError("require_trusted_ctm requires a TrustedCTMMeasurement"))
+    trusted.trust.trusted || return false, "trusted CTM policy rejected iteration", trusted
+    return accepted, reason, trusted
+end
+
 function _iteration_score(iteration::ScarFinderIteration, diagnostics::Symbol)
     if diagnostics === :simple
         return iteration.simple_score
@@ -486,6 +903,7 @@ end
         diagnostics = :simple,
         accepted_only = false,
         require_ctm_accepted = false,
+        require_ctm_trusted = false,
         by = :score,
     )
 
@@ -493,25 +911,31 @@ Return candidate scores sorted by a field of [`ScarFinderCandidateScore`](@ref).
 Simple ranking is available for every iteration. CTM ranking includes only
 iterations where an optional CTM callback supplied diagnostics. Set
 `require_ctm_accepted = true` with `diagnostics = :ctm` to exclude CTM records
-whose diagnostics are missing or flagged as unaccepted. Nullable sort fields,
-such as CTM residuals, are sorted with missing values last.
+whose diagnostics are missing or flagged as unaccepted. Set
+`require_ctm_trusted = true` with `diagnostics = :ctm` to rank only trusted CTM
+measurements. Nullable sort fields, such as CTM residuals, are sorted with
+missing values last.
 """
 function rank_scarfinder_candidates(
     result::ScarFinderResult;
     diagnostics::Symbol = :simple,
     accepted_only::Bool = false,
     require_ctm_accepted::Bool = false,
+    require_ctm_trusted::Bool = false,
     by::Symbol = :score,
     rev::Bool = false,
 )
     require_ctm_accepted && diagnostics !== :ctm &&
         throw(ArgumentError("require_ctm_accepted is only valid with diagnostics = :ctm"))
+    require_ctm_trusted && diagnostics !== :ctm &&
+        throw(ArgumentError("require_ctm_trusted is only valid with diagnostics = :ctm"))
     scores = ScarFinderCandidateScore[]
     for iteration in result.iterations
         accepted_only && !iteration.accepted && continue
         score = _iteration_score(iteration, diagnostics)
         score === nothing && continue
         require_ctm_accepted && score.ctm_accepted !== true && continue
+        require_ctm_trusted && score.ctm_trusted !== true && continue
         push!(scores, score)
     end
     if !hasfield(ScarFinderCandidateScore, by)
@@ -532,20 +956,28 @@ and accepts or rejects the iteration by truncation error, simple blockade
 violation, simple bond entropy, and finite-diagnostic checks. `psi` is mutated
 like [`evolve!`](@ref). If `params.target_energy` is supplied, the loop may
 apply guarded simple/local imaginary-time correction attempts and records their
-diagnostic outcome. CTM diagnostics are recorded only when a caller supplies
-`ctm_callback` and schedules it with `ctm_every` or `ctm_at_end`. No new CTMRG
-algorithm or direct star-projection logic is performed here.
+diagnostic outcome. CTM diagnostics are recorded when a caller supplies
+`ctm_callback` or a non-default `measurement` backend and schedules it with
+`ctm_every` or `ctm_at_end`. The default [`SimpleBackend`](@ref) is not used to
+create scheduled `:ctm` scores without a callback. Set `require_trusted_ctm =
+true` to reject iterations whose scheduled CTM measurement fails the trust
+policy. No direct star-projection logic is performed here.
 """
 function scarfinder!(
     psi::SquareIPEPSState,
     params::ScarFinderParams;
+    objective::ScarFinderObjective = CompositeObjective(),
+    measurement::MeasurementBackend = SimpleBackend(),
+    require_trusted_ctm::Bool = false,
     ctm_callback = nothing,
     ctm_every::Integer = 0,
     ctm_at_end::Bool = false,
     log_path::Union{Nothing,AbstractString} = nothing,
     log_format::Symbol = :csv,
+    candidate_store::CandidateStore = NoCandidateStore(),
 )::ScarFinderResult
     ctm_period = _nonnegative_int(ctm_every, "ctm_every")
+    _validate_trusted_ctm_schedule(require_trusted_ctm, ctm_period, ctm_at_end)
     iterations = ScarFinderIteration[]
 
     for n = 1:params.iterations
@@ -569,23 +1001,51 @@ function scarfinder!(
             correction_accepted,
             correction_energy_before,
             correction_energy_after,
+            objective,
         )
         ctm_score = nothing
-        if ctm_callback !== nothing &&
-           _should_measure_ctm(n, params.iterations, ctm_period, ctm_at_end)
-            ctm_obs = ctm_callback(psi, n, simple_score)
-            _finite_summary(ctm_obs) || throw(ArgumentError("non-finite CTM diagnostic"))
-            ctm_score = _candidate_score(
+        if _should_measure_ctm(n, params.iterations, ctm_period, ctm_at_end)
+            raw_ctm = _scheduled_ctm_observation(
+                psi,
+                measurement,
+                ctm_callback,
                 n,
-                :ctm,
-                accepted,
-                reason,
-                log,
-                ctm_obs,
-                correction_accepted,
-                correction_energy_before,
-                correction_energy_after,
+                simple_score,
+                require_trusted_ctm,
             )
+            raw_ctm === nothing && require_trusted_ctm &&
+                throw(ArgumentError("require_trusted_ctm requires a scheduled trusted CTM measurement"))
+            if raw_ctm !== nothing
+                accepted, reason, trusted_ctm =
+                    _apply_trusted_ctm_gate(accepted, reason, raw_ctm, require_trusted_ctm)
+                simple_score = _candidate_score(
+                    n,
+                    :simple,
+                    accepted,
+                    reason,
+                    log,
+                    obs,
+                    correction_accepted,
+                    correction_energy_before,
+                    correction_energy_after,
+                    objective,
+                )
+                ctm_obs = _scarfinder_observable(raw_ctm)
+                _finite_summary(ctm_obs) || throw(ArgumentError("non-finite CTM diagnostic"))
+                ctm_score = _candidate_score(
+                    n,
+                    :ctm,
+                    accepted,
+                    reason,
+                    log,
+                    ctm_obs,
+                    correction_accepted,
+                    correction_energy_before,
+                    correction_energy_after,
+                    objective,
+                    trusted_ctm,
+                )
+            end
         end
         push!(
             iterations,
@@ -602,6 +1062,7 @@ function scarfinder!(
                 correction_energy_after,
             ),
         )
+        store_candidate!(candidate_store, psi, iterations[end])
 
         if !accepted && params.stop_on_reject
             break
@@ -632,6 +1093,10 @@ end
         target_energy = nothing,
         correction_time = 0,
         correction_attempts = 0,
+        measurement = SimpleBackend(),
+        require_trusted_ctm = false,
+        objective = CompositeObjective(),
+        candidate_store = NoCandidateStore(),
     )::ScarFinderResult
 
 Convenience keyword constructor for [`ScarFinderParams`](@ref), then delegates
@@ -652,10 +1117,14 @@ function scarfinder!(
     correction_time::Real = 0,
     correction_attempts::Integer = 0,
     ctm_callback = nothing,
+    measurement::MeasurementBackend = SimpleBackend(),
+    require_trusted_ctm::Bool = false,
     ctm_every::Integer = 0,
     ctm_at_end::Bool = false,
     log_path::Union{Nothing,AbstractString} = nothing,
     log_format::Symbol = :csv,
+    candidate_store::CandidateStore = NoCandidateStore(),
+    objective::ScarFinderObjective = CompositeObjective(),
 )::ScarFinderResult
     params = ScarFinderParams(
         projection_time,
@@ -672,11 +1141,15 @@ function scarfinder!(
     return scarfinder!(
         psi,
         params;
+        objective,
+        measurement,
+        require_trusted_ctm,
         ctm_callback,
         ctm_every,
         ctm_at_end,
         log_path,
         log_format,
+        candidate_store,
     )
 end
 
@@ -725,6 +1198,11 @@ function _write_csv_log(io, result::ScarFinderResult)
         "max_bond_entropy",
         "max_truncerr",
         "score",
+        "objective_name",
+        "objective_parameters",
+        "revival_strength",
+        "finite_chi_drift",
+        "energy_variance_proxy",
         "log_norm_before",
         "log_norm_after",
         "log_norm_delta",
@@ -735,6 +1213,8 @@ function _write_csv_log(io, result::ScarFinderResult)
         "ctm_residual",
         "ctm_converged",
         "ctm_accepted",
+        "ctm_trusted",
+        "ctm_trust_reason",
         "correction_accepted",
         "correction_energy_before",
         "correction_energy_after",
@@ -755,6 +1235,11 @@ function _write_csv_log(io, result::ScarFinderResult)
             score.max_bond_entropy,
             score.max_truncerr,
             score.score,
+            score.objective_name,
+            score.objective_parameters,
+            score.revival_strength,
+            score.finite_chi_drift,
+            score.energy_variance_proxy,
             score.log_norm_before,
             score.log_norm_after,
             score.log_norm_delta,
@@ -765,6 +1250,8 @@ function _write_csv_log(io, result::ScarFinderResult)
             score.ctm_residual,
             score.ctm_converged,
             score.ctm_accepted,
+            score.ctm_trusted,
+            score.ctm_trust_reason,
             score.correction_accepted,
             score.correction_energy_before,
             score.correction_energy_after,
@@ -802,6 +1289,11 @@ function _score_json(score::ScarFinderCandidateScore)
         :max_bond_entropy,
         :max_truncerr,
         :score,
+        :objective_name,
+        :objective_parameters,
+        :revival_strength,
+        :finite_chi_drift,
+        :energy_variance_proxy,
         :log_norm_before,
         :log_norm_after,
         :log_norm_delta,
@@ -812,6 +1304,8 @@ function _score_json(score::ScarFinderCandidateScore)
         :ctm_residual,
         :ctm_converged,
         :ctm_accepted,
+        :ctm_trusted,
+        :ctm_trust_reason,
         :correction_accepted,
         :correction_energy_before,
         :correction_energy_after,

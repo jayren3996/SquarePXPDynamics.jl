@@ -163,6 +163,8 @@ function _assert_finite_summary(summary::CTMObservableSummary, label::String)
             summary.density_odd,
             summary.blockade_violation,
             summary.pxp_energy_density,
+            summary.sublattice_imbalance,
+            summary.checkerboard_structure_factor,
         ),
     ) || throw(ArgumentError("$label CTM summary fields must be finite"))
     return summary
