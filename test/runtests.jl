@@ -13,6 +13,7 @@ const TEST_FILES = [
     "test_star_simple_update.jl",
     "test_ipeps_evolution.jl",
     "test_observables_evolved.jl",
+    "test_gauge_diagnostics.jl",
     "test_tfim_observables.jl",
     "test_tfim_schedule_reference.jl",
     "test_benchmarks.jl",
