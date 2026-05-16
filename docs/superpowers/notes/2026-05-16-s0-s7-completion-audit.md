@@ -4,6 +4,8 @@ Date: 2026-05-16
 
 Branch: `codex/s0-s7-completion`
 
+Merged to local `main` on 2026-05-16 by fast-forward merge.
+
 ## Result
 
 S0-S7 is complete for the current project architecture. The original backend
@@ -54,6 +56,9 @@ claim.
 ## Verification
 
 - `julia --project=. test/runtests.jl test_ctm_gauge_readiness.jl`
+  was rerun immediately before the local `main` merge and passed: 98/98 in
+  54.9s.
+- `julia --project=. test/runtests.jl test_ctm_gauge_readiness.jl`
   passed: 98/98.
 - `SQUAREPXP_EXTENDED_TESTS=1 julia --project=. test/runtests.jl test_ctm_gauge_readiness.jl`
   passed: 102/102.
@@ -61,3 +66,6 @@ claim.
   passed: 65149/65149.
 - `git diff --check` passed before the Slice 5 code commit and after the
   final audit documentation changes.
+- After fast-forwarding to local `main` and refreshing memory files,
+  `julia --project=. -e 'using Pkg; Pkg.test()'` passed: 65149/65149 in
+  4m35.1s, and `git diff --check` passed.

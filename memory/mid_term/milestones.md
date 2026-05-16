@@ -2,10 +2,11 @@
 
 ## Completed On Current Main
 
-- Confirmed: S0-S6 prototype pipeline exists: dense model definitions, finite
-  and periodic PEPS/iPEPS state containers, QR-reduced five-site star updates,
-  deterministic Trotter evolution, simple/local observables, experimental CTM
-  measurement hooks, and ScarFinder-lite orchestration.
+- Confirmed: S0-S7 prototype pipeline exists on local `main`: dense model
+  definitions, finite and periodic PEPS/iPEPS state containers, QR-reduced
+  five-site star updates, deterministic Trotter evolution, simple/local and
+  CTM-backed diagnostics, benchmark/reference paths, ScarFinder orchestration,
+  CTM trust, and S7b gauge-conditioning readiness.
 - Source: `README.md`
 - Source: `src/SquarePXPDynamics.jl`
 - Source: `test/runtests.jl`
@@ -72,16 +73,25 @@
 - Source: `git log` in
   `/Users/ren/.config/superpowers/worktrees/iPEPS/codex-infinite-tfim-benchmark`
 
+- Confirmed: `codex/s0-s7-completion` was fast-forward merged into local
+  `main` on 2026-05-16 after a focused S7b test rerun. The branch adds S0-S7
+  reconciliation, guarded ScarFinder simple-energy correction, CTM local bond
+  norm diagnostics, readiness checks, and transactional D>1 gauge conditioning.
+- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- Source: `git log`
+- Source: `test/test_ctm_gauge_readiness.jl`
+
 ## Future Milestones
 
-- Confirmed: The local integration path chosen on 2026-05-15 was direct merge
-  into `main`, followed by verification and push to GitHub.
-- Open question: Add a full finite Hilbert-space TFIM schedule reference if it
-  is required beyond the current coefficient/non-overlap/mapping tests.
+- Confirmed: Local `main` is ahead of `origin/main` after the S0-S7 merge and
+  memory refresh work. Push remains an explicit follow-up if remote publication
+  is desired.
 - Open question: Add the broader Tier 2 TFIM smoke matrix across multiple
   `h/J` values, initial states, `D`, and `dt`.
-- Open question: Make CTMRG validation production-like enough for physics
-  claims and energy-targeted ScarFinder ranking.
+- Open question: Build production ScarFinder validation on top of the completed
+  S0-S7 infrastructure, including physics-facing CTM workflows and explicit
+  finite-chi policies for ranking/claims.
 - Source: `docs/superpowers/specs/2026-05-15-infinite-tfim-benchmark-design.md`
 - Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
+- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
 - Source: `README.md`

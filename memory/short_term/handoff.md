@@ -1,59 +1,62 @@
 # Agent Handoff
 
-## Current objective
+## Current Objective
 
-Create a curated repository-local project memory system for
-`SquarePXPDynamics`.
+Integrate the completed S0-S7/S7b work into local `main`, refresh project
+memory, verify the merged result, and tidy the S0-S7 worktree.
 
-## What was just done
+## What Was Just Done
 
-Inspected README, project files, notes, docs, source/test layout, git status,
-recent commits, and the TFIM benchmark handoff note. Created `memory/` with
-long-term, mid-term, and short-term memory files plus a top-level `AGENTS.md`
-pointer. Then committed the memory system and merged
-`codex/infinite-tfim-benchmark` into local `main`.
+Fast-forward merged `codex/s0-s7-completion` into local `main` after rerunning
+the focused S7b gauge-readiness test in the feature worktree. Refreshed
+mid-term architecture/goals/milestones/open-questions/results and short-term
+state/task/handoff files so memory reflects S0-S7 completion on `main`.
+Removed the merged S0-S7 worktree and deleted the local
+`codex/s0-s7-completion` branch.
 
-## Important files touched
+## Important Files Touched
 
-- `AGENTS.md`
-- `memory/README.md`
-- `memory/long_term/*.md`
-- `memory/mid_term/*.md`
+- `memory/mid_term/project_goals.md`
+- `memory/mid_term/architecture.md`
+- `memory/mid_term/milestones.md`
+- `memory/mid_term/open_questions.md`
+- `memory/mid_term/experiments_and_results.md`
 - `memory/short_term/*.md`
+- `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
 
-## Commands run
+## Commands Run
 
 - `git status --short --branch`
-- `git log --oneline -10`
-- `rg --files`
-- `rg -n '^#|^##|^###' notes docs/superpowers`
-- `sed -n ...` on README, project files, notes, docs, source entrypoint, and
-  test runner
+- `git worktree list`
+- `git merge-base --is-ancestor ...`
+- `julia --project=. test/runtests.jl test_ctm_gauge_readiness.jl`
+- `git merge --ff-only codex/s0-s7-completion`
+- `git worktree remove /Users/ren/Codex/iPEPS/.worktrees/codex/s0-s7-completion`
+- `git branch -d codex/s0-s7-completion`
 
-## Tests/results
+## Tests/Results
 
-No Julia tests were run for this documentation-only memory update. Verification
-was limited to reading the generated Markdown, checking repository status, and
-running `git diff --check`.
+- Focused S7b branch verification before merge:
+  `julia --project=. test/runtests.jl test_ctm_gauge_readiness.jl` passed
+  `98/98` in `54.9s`.
+- Post-merge full-suite verification on local `main`:
+  `julia --project=. -e 'using Pkg; Pkg.test()'` passed `65149/65149` in
+  `4m35.1s`.
+- `git diff --check` passed after the memory/notes edits.
 
-## Known problems
+## Known Problems
 
-- The memory system is committed, but this post-merge handoff update still
-  needs its own commit.
-- The completed TFIM benchmark work is merged into local `main`, but `main`
-  has not been pushed to GitHub yet.
-- Existing notes contain some superseded descriptions of earlier repo state;
-  current README/source should be preferred for architecture status.
+- Local `main` is ahead of `origin/main`; it has not been pushed after the S0-S7
+  integration.
+- Production ScarFinder validation remains future work.
 
-## Next recommended actions
+## Next Recommended Actions
 
-Run verification on the merged tree, commit these memory updates, then push
-`main` to GitHub.
+Push `main` if remote publication is desired.
 
-## Things not to do
+## Things Not To Do
 
 - Do not treat simple/local observables as CTMRG-quality physics measurements.
-- Do not delete older notes just because they are summarized here.
+- Do not claim production ScarFinder validation from S0-S7 completion alone.
 - Do not rerun `project-memory-curator` unless explicitly requested.
-- Do not silently overwrite contradictions; record them in
-  `memory/mid_term/open_questions.md`.
+- Do not delete older notes just because they are summarized here.

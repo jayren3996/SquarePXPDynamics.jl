@@ -38,3 +38,18 @@
 - Confirmed: A manual `J = 0` smoke benchmark produced three samples and final
   `<Z> = 0.9992001066609787`.
 - Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
+
+## S0-S7 Completion Verification
+
+- Confirmed: Before merging `codex/s0-s7-completion` into `main`, the focused
+  S7b gauge-readiness test command
+  `julia --project=. test/runtests.jl test_ctm_gauge_readiness.jl` passed
+  `98/98` in the feature worktree on 2026-05-16.
+- Confirmed: After fast-forwarding `main` and refreshing memory files,
+  `julia --project=. -e 'using Pkg; Pkg.test()'` passed `65149/65149` in
+  `4m35.1s` on 2026-05-16.
+- Confirmed: The S0-S7 audit records prior full-suite verification for the
+  branch: default package tests passed `65149/65149`, focused S7b tests passed
+  `98/98`, and extended S7b tests passed `102/102`.
+- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- Source: `test/test_ctm_gauge_readiness.jl`

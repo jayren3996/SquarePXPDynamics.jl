@@ -29,6 +29,9 @@
   simple-update style state, not a canonical iPEPS gauge.
 - Confirmed: The five-site square-star update uses QR reduction of the four
   leaf tensors before applying the dense gate to the reduced core.
+- Confirmed: S7b adds CTM-backed local bond norm diagnostics and transactional
+  gauge conditioning on top of the Gamma-lambda representation. This is a
+  conditioning/readiness layer, not a full ALS/full-update solver.
 - Confirmed: Simple/local observables are development and regression
   diagnostics, not final CTMRG-quality physics measurements.
 - Source: `README.md`
@@ -36,6 +39,7 @@
 - Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `src/SquareIPEPS.jl`
 - Source: `src/StarSimpleUpdate.jl`
+- Source: `src/CTMGaugeReadiness.jl`
 - Source: `src/Observables.jl`
 
 ## ScarFinder Context
@@ -46,6 +50,8 @@
 - Confirmed: In this repository, ScarFinder should orchestrate evolution,
   measurement, ranking, and logging; it should not own low-level tensor index
   logic or CTMRG internals.
+- Confirmed: Current ScarFinder includes optional guarded simple-energy
+  correction. Production CTM-trusted ScarFinder validation remains future work.
 - Source: `notes/README.md`
 - Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `src/ScarFinder.jl`

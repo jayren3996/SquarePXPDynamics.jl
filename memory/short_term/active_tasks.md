@@ -1,14 +1,12 @@
 # Active Tasks
 
-- Confirmed: Curate a repository-local `memory/` system using the explicitly
-  invoked `project-memory-curator` skill.
-- Confirmed: Preserve the current TFIM benchmark handoff note and do not delete
-  existing notes or implementation worktrees.
-- Confirmed: The memory files and current-work note were committed in
-  `0a71c5e docs: add project memory system`.
-- Confirmed: The completed `codex/infinite-tfim-benchmark` branch was merged
-  into local `main`.
-- Active task: verify the merged tree, commit these short-term memory updates,
-  then push `main` to GitHub.
-- Source: user request on 2026-05-15
-- Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
+- Confirmed: The merged `main` tree was verified after the S0-S7 fast-forward
+  merge and memory refresh.
+- Confirmed: The post-merge memory/notes update was committed on `main`.
+- Confirmed: The now-merged
+  `/Users/ren/Codex/iPEPS/.worktrees/codex/s0-s7-completion` worktree was
+  removed and the local `codex/s0-s7-completion` branch was deleted.
+- Follow-up: push local `main` to `origin/main` if remote publication is wanted.
+- Source: user request on 2026-05-16
+- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- Source: `git status`

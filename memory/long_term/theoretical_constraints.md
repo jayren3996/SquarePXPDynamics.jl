@@ -7,9 +7,13 @@
 - Confirmed: CTMRG-backed measurements require convergence diagnostics and
   finite-chi sensitivity checks before being used for quantitative ranking or
   literature comparison.
+- Confirmed: S7b gauge conditioning is a readiness/conditioning layer over
+  trusted CTM contexts and local bond norm diagnostics; it is not by itself a
+  full-update solver or production ScarFinder validation.
 - Source: `README.md`
 - Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 - Source: `src/PEPSKitMeasurements.jl`
+- Source: `src/CTMGaugeReadiness.jl`
 
 ## Blockade And Projection
 
@@ -46,5 +50,8 @@
 - Confirmed: D=2 update tests should compare gauge-invariant observables, not
   raw tensor equality, because gauge-changing factorizations can alter tensor
   representatives.
+- Confirmed: S7b tests should compare observables, CTM summaries, freshness
+  guards, and transactional mutation behavior rather than raw tensor entries.
 - Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 - Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `docs/superpowers/notes/2026-05-16-s7b-gauge-fixing-handoff.md`

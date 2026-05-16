@@ -14,9 +14,12 @@
 
 ## iPEPS, CTMRG, And Update Algorithms
 
-- Confirmed: Simple update is the local first algorithmic layer; CTMRG and
-  full-update/gauge-fixed truncation are later accuracy infrastructure.
+- Confirmed: Simple update is the local first algorithmic layer. CTMRG-backed
+  measurement trust and S7b local gauge conditioning are now implemented
+  accuracy/readiness layers; a full ALS/full-update truncation solver remains
+  later infrastructure.
 - Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
 - Literature anchors recorded there include iPEPS gauge fixing / fast full
   update `https://arxiv.org/abs/1503.05345`, CTMRG for iPEPS contraction
   `https://arxiv.org/abs/0905.3225`, and Neighborhood Tensor Update

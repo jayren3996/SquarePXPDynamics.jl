@@ -14,23 +14,26 @@
 ## Active Scope
 
 - Confirmed: Active scope is square-lattice PXP dynamics, PEPS/iPEPS tooling
-  that directly supports ScarFinder, dense local gates, local diagnostics, and
-  fixed-bond-dimension evolve-project loops.
-- Confirmed: CTMRG/full-update machinery is later accuracy infrastructure, not
-  a prerequisite for the current simple-update ScarFinder prototype.
+  that directly supports ScarFinder, dense local gates, local and CTM-backed
+  diagnostics, fixed-bond-dimension evolve-project loops, and benchmark/reference
+  validation.
+- Confirmed: CTMRG trust and S7b gauge-conditioning infrastructure are now
+  available as accuracy/readiness layers. Production ScarFinder validation and
+  physics-facing CTM workflows remain future work.
 - Source: `README.md`
 - Source: `notes/README.md`
+- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
 
-## Current Branch Goal
+## Current Integrated State
 
-- Confirmed: A completed feature branch,
-  `codex/infinite-tfim-benchmark`, adds a v1 infinite TFIM benchmark framework
-  reusing the five-site square-star iPEPS update machinery while preserving PXP
-  behavior.
-- Confirmed: That branch is intended to produce simple-update benchmark
-  records, not CTMRG-quality TFIM physics claims.
-- Source: `docs/superpowers/specs/2026-05-15-infinite-tfim-benchmark-design.md`
-- Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
+- Confirmed: Local `main` now includes the S0-S7 completion branch, including
+  the v1 infinite TFIM benchmark framework, finite TFIM/MPS/PXP ED reference
+  paths, S7a CTM trust, and S7b CTM gauge-readiness/conditioning APIs.
+- Confirmed: Simple-update TFIM and ScarFinder outputs remain implementation
+  diagnostics unless backed by appropriate CTM trust and finite-chi workflows.
+- Source: `README.md`
+- Source: `src/SquarePXPDynamics.jl`
+- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
 
 ## Working Rule
 

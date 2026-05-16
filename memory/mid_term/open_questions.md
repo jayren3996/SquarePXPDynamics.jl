@@ -24,11 +24,24 @@
 
 ## CTMRG Trust Policy
 
-- Open question: What convergence thresholds and finite-chi sensitivity policy
-  are sufficient before CTM values can drive energy-oriented ScarFinder ranking
-  or physics claims?
+- Partially resolved: S7a provides a software trust policy over finite-chi CTM
+  sweep records, and S7b requires that trust before gauge-changing updates.
+- Open question: What physics-facing convergence thresholds, finite-chi
+  sensitivity policy, and benchmark evidence are sufficient before CTM values
+  can drive energy-oriented ScarFinder ranking or external physics claims?
 - Source: `README.md`
 - Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
+- Source: `src/CTMTrust.jl`
+- Source: `src/CTMGaugeReadiness.jl`
+
+## Production ScarFinder Validation
+
+- Open question: How should the completed S0-S7 infrastructure be assembled
+  into production ScarFinder validation runs with CTM-trusted energy/ranking,
+  finite-chi sweeps, benchmark comparisons, and acceptance criteria?
+- Source: `README.md`
+- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- Source: `docs/superpowers/notes/2026-05-16-s7b-gauge-fixing-handoff.md`
 
 ## PEPSKit Public API Boundary
 
@@ -41,7 +54,8 @@
 
 - Superseded: Older notes describe the repo as having only a few modules and
   not yet having production Simple Update, evolution, or ScarFinder scaffolding.
-  Current `README.md` and source show the S0-S6 prototype now exists.
+  Current `README.md` and source show the S0-S7 prototype now exists, including
+  S7b CTM gauge-readiness and conditioning APIs.
 - Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `README.md`
 - Source: `src/SquarePXPDynamics.jl`
