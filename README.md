@@ -18,14 +18,14 @@ diagnostics supplied by caller callbacks. Do not make physics claims from
 simple diagnostics alone.
 
 This checkout also contains PEPSKit/TensorKit-facing measurement code in
-`src/PEPSKitMeasurements.jl`. The PEPSKit CTMRG measurement adapter is shipped
-as an experimental S5c-facing API, not production ScarFinder validation.
-Within that adapter, density, blockade diagnostics, and five-site square-star
-PXP energy density use PEPSKit CTMRG. The dense square-star Hamiltonian remains
-the source of truth for the PXP energy operator, with site order `(center,
-right, up, left, down)` and basis order `1 = :up`, `2 = :down`.
-PEPSKit and TensorKit therefore remain main dependencies while this exported
-measurement surface is present.
+`src/PEPSKitMeasurements.jl` and S7a CTM trust helpers in `src/CTMTrust.jl`.
+The PEPSKit CTMRG measurement adapter is shipped as an experimental S5c-facing
+API, not production ScarFinder validation. Within that adapter, density,
+blockade diagnostics, and five-site square-star PXP energy density use PEPSKit
+CTMRG. The dense square-star Hamiltonian remains the source of truth for the
+PXP energy operator, with site order `(center, right, up, left, down)` and
+basis order `1 = :up`, `2 = :down`. PEPSKit and TensorKit therefore remain main
+dependencies while this exported measurement surface is present.
 
 ## Package Layout
 
@@ -49,11 +49,12 @@ measurement surface is present.
 - Simple/local density, blockade, energy-density, and entropy observables via `measure_simple` (`src/Observables.jl`).
 - Simple/local TFIM observables and reproducible JSON/CSV benchmark records via `run_benchmark` (`src/Benchmarks.jl`).
 - Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
+- CTM finite-`chi` trust assessment and audit CSV output via `assess_ctm_trust` and `write_ctm_trust_csv` (`src/CTMTrust.jl`).
+- Read-only local simple-gauge diagnostics via `gauge_diagnostic_simple` (`src/GaugeDiagnostics.jl`).
 - S6-lite `scarfinder!` orchestration, candidate ranking, and CSV/JSON diagnostic logging using simple/local diagnostics by default (`src/ScarFinder.jl`).
 
 ## Not Yet Shipped
 
-- Production CTMRG convergence policy and finite-chi validation suitable for physics claims.
 - Full-update gauge fixing.
 - Energy targeting or correction.
 - Production ScarFinder validation.
@@ -134,11 +135,18 @@ points = validate_ctm_sweep(
         PEPSKitCTMRGParams(8, 1e-8, 100, 0),
     ],
 )
+assessment = assess_ctm_trust(points)
 write_ctm_validation_csv(points, "ctm-validation.csv")
+write_ctm_trust_csv(points, "ctm-trust.csv")
 ```
 
 Each `CTMValidationPoint` records the CTM summary, the simple/local reference,
 observable deltas, and CTMRG diagnostics for one parameter setting.
+`assess_ctm_trust` compares the final finite-`chi` CTM measurements against
+each other; it does not use the simple/local reference deltas stored in
+`CTMValidationPoint`. A trusted assessment is a measurement-validation signal,
+not permission to run gauge-changing updates. Mutating full-update-style gauge
+conditioning is deferred to S7b.
 
 ## Development
 
