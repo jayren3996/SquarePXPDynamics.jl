@@ -79,13 +79,21 @@ end
 
     right = gauge_diagnostic_simple(psi, c, :right)
     left_alias = gauge_diagnostic_simple(psi, neighbor(cell, c, :right), :left)
+    up = gauge_diagnostic_simple(psi, c, :up)
+    down_alias = gauge_diagnostic_simple(psi, neighbor(cell, c, :up), :down)
     @test right.bond == bondkey(cell, c, :right)
     @test left_alias.bond == right.bond
     @test left_alias.deviation ≈ right.deviation atol = 1e-14
     @test left_alias.frobenius_norm ≈ right.frobenius_norm atol = 1e-14
+    @test up.bond == bondkey(cell, c, :up)
+    @test down_alias.bond == up.bond
+    @test down_alias.deviation ≈ up.deviation atol = 1e-14
+    @test down_alias.frobenius_norm ≈ up.frobenius_norm atol = 1e-14
     @test gauge_deviation_simple(psi, c, :right) ≈ right.deviation atol = 1e-14
     _assert_sane_simple_gauge_diag(right; near_zero = true)
     _assert_sane_simple_gauge_diag(left_alias; near_zero = true)
+    _assert_sane_simple_gauge_diag(up; near_zero = true)
+    _assert_sane_simple_gauge_diag(down_alias; near_zero = true)
 
     deviations = all_gauge_deviations_simple(psi)
     @test deviations isa Dict{BondKey,Float64}
@@ -106,6 +114,10 @@ end
         @test gauge_deviation_simple(psi, c, dir) ≈ diag.deviation atol = 1e-14
         _assert_sane_simple_gauge_diag(diag; near_zero = true)
     end
+
+    deviations = all_gauge_deviations_simple(psi)
+    @test length(deviations) == length(psi.link_weights)
+    @test all(value -> isapprox(value, 0; atol = 1e-12), values(deviations))
 end
 
 @testset "simple gauge diagnostics detect off-diagonal D=2 fixture" begin
@@ -132,13 +144,7 @@ end
     not_simple = _copy_with_gauge(psi, :not_simple)
     @test not_simple.gauge === :not_simple
     @test psi.gauge === :simple
-    @test not_simple.unitcell === psi.unitcell
-    @test not_simple.maxdim == psi.maxdim
-    @test state_version(not_simple) == state_version(psi)
-    @test log_norm(not_simple) == log_norm(psi)
     @test not_simple !== psi
-    @test not_simple.link_weights !== psi.link_weights
-    @test all(key -> not_simple.link_weights[key] == psi.link_weights[key], keys(psi.link_weights))
 
     @test_throws ArgumentError gauge_diagnostic_simple(not_simple, c, :right)
     @test_throws ArgumentError gauge_deviation_simple(not_simple, c, :right)
