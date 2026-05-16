@@ -111,6 +111,17 @@ end
     @test report.metadata.julia_version == string(VERSION)
 end
 
+@testset "PXP validation metadata uses package checkout git commit" begin
+    config = PXPValidationConfig(3; total_time = 0.0, dt = 0.01, measure_every = 1)
+    package_root = abspath(joinpath(@__DIR__, ".."))
+    expected_commit = chomp(read(`git -C $package_root rev-parse HEAD`, String))
+
+    cd(mktempdir()) do
+        report = validate_pxp_ed_ipeps(config; ctm_params = nothing)
+        @test report.metadata.git_commit == expected_commit
+    end
+end
+
 @testset "ED-vs-iPEPS validation can attach trusted fake CTM" begin
     config = PXPValidationConfig(3; total_time = 0.01, dt = 0.01, measure_every = 1)
     params = (
@@ -136,4 +147,12 @@ end
     @test all(comparison -> comparison.ctm_trusted === true, report.comparisons)
     @test all(comparison -> comparison.ctm_reason === :trusted, report.comparisons)
     @test all(comparison -> comparison.ipeps_ctm_density !== nothing, report.comparisons)
+    for (sample, comparison) in zip(report.ipeps_samples, report.comparisons)
+        expected_density = sample.simple.density + 4e-5
+        expected_blockade = sample.simple.blockade_violation + 4e-6
+        @test comparison.ipeps_ctm_density ≈ expected_density atol = 1e-12
+        @test comparison.density_error_ctm ≈
+            expected_density - comparison.ed_excitation_density atol = 1e-12
+        @test comparison.ctm_blockade_violation ≈ expected_blockade atol = 1e-12
+    end
 end

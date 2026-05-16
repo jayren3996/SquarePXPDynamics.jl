@@ -290,7 +290,9 @@ end
 
 function _git_commit()
     try
-        commit = chomp(read(`git rev-parse HEAD`, String))
+        package_root = abspath(joinpath(@__DIR__, ".."))
+        command = pipeline(`git -C $package_root rev-parse HEAD`; stderr = devnull)
+        commit = chomp(read(command, String))
         isempty(commit) && return nothing
         return commit
     catch
