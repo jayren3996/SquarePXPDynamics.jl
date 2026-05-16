@@ -23,6 +23,13 @@ end
         @test_throws ArgumentError PEPSKitCTMRGParams(4, 1e-8, 10, -1)
     end
 
+    @testset "PEPSKit CTMRG params carry reproducibility seed" begin
+        params = PEPSKitCTMRGParams(4, 1e-8, 10, 0; seed = 1234)
+        @test params.seed == 1234
+        @test PEPSKitCTMRGParams(4, 1e-8, 10, 0).seed === nothing
+        @test_throws ArgumentError PEPSKitCTMRGParams(4, 1e-8, 10, 0; seed = -1)
+    end
+
     @testset "CTMRG diagnostics expose acceptance metadata" begin
         params = PEPSKitCTMRGParams(4, 1e-8, 10, 0)
         diag = CTMRGDiagnostics(
@@ -204,12 +211,13 @@ end
         # Keep default CI to one minimal CTMRG solve. PEPSKit's first CTMRG
         # expectation compiles a substantial tensor stack, so broader
         # product/full-unit-cell sweeps live behind SQUAREPXP_EXTENDED_TESTS=1.
-        params = PEPSKitCTMRGParams(1, 1e-4, 1, 0)
+        params = PEPSKitCTMRGParams(1, 1e-4, 1, 0; seed = 1234)
         ctx = pepskit_ctmrg_context(psi; params)
 
         @test ctx isa PEPSKitMeasurementContext
         @test ctx.peps !== nothing
         @test ctx.env !== nothing
+        @test ctx.params.seed == 1234
         @test ctx.diagnostics isa CTMRGDiagnostics
         @test ctm_diagnostics(ctx) === ctx.diagnostics
         @test ctx.diagnostics.chi == params.chi
@@ -288,7 +296,7 @@ end
 
     @testset "CTM validation CSV includes sweep metadata" begin
         point = CTMValidationPoint(
-            PEPSKitCTMRGParams(4, 1e-8, 10, 0),
+            PEPSKitCTMRGParams(4, 1e-8, 10, 0; seed = 1234),
             CTMObservableSummary(0.5, 0.5, 0.5, 0.0, -0.1),
             CTMObservableSummary(
                 0.51,
@@ -305,9 +313,10 @@ end
         csv = read(path, String)
 
         @test occursin("chi,tol,maxiter", csv)
+        @test occursin("verbosity,seed", csv)
         @test occursin("delta_density", csv)
         @test occursin("ctm_accepted", csv)
-        @test occursin("4,1.0e-8,10", csv)
+        @test occursin("4,1.0e-8,10,0,1234", csv)
         @test occursin("0.010000000000000009", csv)
     end
 

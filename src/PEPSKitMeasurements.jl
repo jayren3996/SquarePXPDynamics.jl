@@ -2,6 +2,7 @@ module PEPSKitMeasurements
 
 using ITensors
 using PEPSKit
+using Random
 using TensorKit
 using ..SquareGeometry: SquareCoord
 using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
@@ -21,31 +22,38 @@ export validate_ctm_sweep, write_ctm_validation_csv
 const _DIRECTIONS = (:right, :up, :left, :down)
 
 """
-    PEPSKitCTMRGParams(chi, tol, maxiter, verbosity)
+    PEPSKitCTMRGParams(chi, tol, maxiter, verbosity; seed = nothing)
 
 Validated CTMRG controls for the PEPSKit measurement adapter. `chi` is the
 environment bond dimension, `tol` and `maxiter` are forwarded to
 `PEPSKit.leading_boundary`, and `verbosity` follows PEPSKit's CTMRG logging
-levels. This struct configures measurements only; it is not used by the custom
-ITensors simple-update dynamics.
+levels. `seed` optionally makes the initial CTMRG environment reproducible.
+This struct configures measurements only; it is not used by the custom ITensors
+simple-update dynamics.
 """
 struct PEPSKitCTMRGParams
     chi::Int
     tol::Float64
     maxiter::Int
     verbosity::Int
+    seed::Union{Nothing,Int}
 
     function PEPSKitCTMRGParams(
         chi::Integer,
         tol::Real,
         maxiter::Integer,
-        verbosity::Integer,
+        verbosity::Integer;
+        seed::Union{Nothing,Integer} = nothing,
     )
         chi >= 1 || throw(ArgumentError("chi must be at least 1"))
         isfinite(tol) && tol > 0 || throw(ArgumentError("tol must be finite and positive"))
         maxiter >= 1 || throw(ArgumentError("maxiter must be at least 1"))
         verbosity >= 0 || throw(ArgumentError("verbosity must be nonnegative"))
-        return new(Int(chi), Float64(tol), Int(maxiter), Int(verbosity))
+        seed_value = seed === nothing ? nothing : Int(seed)
+        seed_value === nothing ||
+            seed_value >= 0 ||
+            throw(ArgumentError("seed must be nonnegative"))
+        return new(Int(chi), Float64(tol), Int(maxiter), Int(verbosity), seed_value)
     end
 end
 
@@ -398,6 +406,13 @@ function _ctmrg_diagnostics(params::PEPSKitCTMRGParams, info)::CTMRGDiagnostics
     )
 end
 
+_ctm_initializer(::Nothing) = randn
+
+function _ctm_initializer(seed::Int)
+    rng = Random.MersenneTwister(seed)
+    return (T, dims...) -> randn(rng, T, dims...)
+end
+
 function _assert_fresh_context(psi::SquareIPEPSState, ctx::PEPSKitMeasurementContext)
     objectid(psi) == ctx.source_state_id ||
         throw(ArgumentError("PEPSKit measurement context belongs to a different iPEPS state"))
@@ -666,7 +681,7 @@ function pepskit_ctmrg_context(
 )::PEPSKitMeasurementContext
     peps = to_pepskit_infinitepeps(psi)
     chi_space = TensorKit.ComplexSpace(params.chi)
-    env0 = PEPSKit.CTMRGEnv(randn, ComplexF64, peps, chi_space)
+    env0 = PEPSKit.CTMRGEnv(_ctm_initializer(params.seed), ComplexF64, peps, chi_space)
     env, info = PEPSKit.leading_boundary(
         env0,
         peps;
@@ -938,6 +953,7 @@ function write_ctm_validation_csv(points, path::AbstractString)
         "tol",
         "maxiter",
         "verbosity",
+        "seed",
         "reference_density",
         "ctm_density",
         "delta_density",
@@ -966,6 +982,7 @@ function write_ctm_validation_csv(points, path::AbstractString)
                 point.params.tol,
                 point.params.maxiter,
                 point.params.verbosity,
+                point.params.seed,
                 point.reference.density,
                 point.measurement.density,
                 point.delta_density,

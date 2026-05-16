@@ -188,8 +188,8 @@ end
 @testset "PXP validation report writes CTM trust policy JSON" begin
     config = PXPValidationConfig(3; total_time = 0.0, dt = 0.01, measure_every = 1)
     params = (
-        PEPSKitCTMRGParams(2, 1e-5, 4, 0),
-        PEPSKitCTMRGParams(4, 1e-6, 4, 0),
+        PEPSKitCTMRGParams(2, 1e-5, 4, 0; seed = 1234),
+        PEPSKitCTMRGParams(4, 1e-6, 4, 0; seed = 1234),
     )
     policy = CTMTrustPolicy(2, true, 1e-2, 1e-3, 1e-2, 1e-4)
     report = validate_pxp_ed_ipeps(
@@ -211,6 +211,8 @@ end
 
     @test trust.reason == "trusted"
     @test length(parsed.ipeps_samples[1].ctm.points) == 2
+    @test parsed.ipeps_samples[1].ctm.points[1].seed == 1234
+    @test parsed.ipeps_samples[1].ctm.points[2].seed == 1234
     @test parsed.ipeps_samples[1].ctm.measurement.diagnostics.chi == 4
     @test parsed.ipeps_samples[1].ctm.measurement.sublattice_imbalance == 0
     @test parsed.ipeps_samples[1].ctm.measurement.checkerboard_structure_factor == 0

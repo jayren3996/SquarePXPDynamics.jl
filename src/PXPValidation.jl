@@ -518,6 +518,7 @@ function _ctm_point_data(point::CTMValidationPoint)
         tol = point.params.tol,
         maxiter = point.params.maxiter,
         verbosity = point.params.verbosity,
+        seed = point.params.seed,
         measurement = _ctm_summary_data(point.measurement),
         delta_density = point.delta_density,
         delta_density_even = point.delta_density_even,
