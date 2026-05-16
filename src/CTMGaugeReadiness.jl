@@ -16,7 +16,7 @@ using ..CTMTrust: CTMTrustAssessment
 export CTMGaugePolicy, CTMBondNormDiagnostic, CTMGaugeReadiness, BondGaugeFixInfo
 export ctm_bond_norm_matrix, ctm_bond_norm_diagnostic
 export all_ctm_bond_norm_diagnostics, ctm_ready_for_gauge_updates
-export fix_bond_gauge!
+export pepskit_private_full_update_available, fix_bond_gauge!
 
 const _DIAG_REASONS = (
     :accepted,
@@ -36,6 +36,15 @@ const _READINESS_REASONS = (
 )
 
 const _GAUGE_FIX_ATOL = 1e-12
+
+const _PEPSKIT_PRIVATE_FULL_UPDATE_HELPERS = (
+    :_qr_bond,
+    :bondenv_fu,
+    :positive_approx,
+    :fixgauge_benv,
+    :_fixgauge_benvXY,
+    :_qr_bond_undo,
+)
 
 """
     CTMGaugePolicy(; max_hermiticity_residual=1e-8,
@@ -233,7 +242,31 @@ function _matrix_from_bondenv(benv)
     return reshape(ComplexF64.(collect(benv.data)), rows, cols)
 end
 
+"""
+    pepskit_private_full_update_available()
+
+Return whether the installed PEPSKit exposes the helper functions used
+by the experimental CTM gauge-readiness and gauge-fixing path. This centralizes
+the compatibility check because this path depends on PEPSKit full-update helper
+names, including private names.
+"""
+function pepskit_private_full_update_available()::Bool
+    return all(name -> isdefined(PEPSKit, name), _PEPSKIT_PRIVATE_FULL_UPDATE_HELPERS)
+end
+
+function _assert_pepskit_private_full_update_available()
+    pepskit_private_full_update_available() && return nothing
+    missing = filter(name -> !isdefined(PEPSKit, name), _PEPSKIT_PRIVATE_FULL_UPDATE_HELPERS)
+    missing_text = join(string.(missing), ", ")
+    throw(
+        ArgumentError(
+            "installed PEPSKit does not expose required full-update helper functions: $missing_text",
+        ),
+    )
+end
+
 function _horizontal_bondenv_matrix(peps, env, row::Int, col::Int)
+    _assert_pepskit_private_full_update_available()
     nc = size(peps, 2)
     next_col = mod1(col + 1, nc)
     X, _, _, Y = PEPSKit._qr_bond(peps[row, col], peps[row, next_col])
@@ -331,6 +364,7 @@ function _gamma_tensor_from_pepskit(
 end
 
 function _condition_horizontal_tensors(peps, env, row::Int, col::Int)
+    _assert_pepskit_private_full_update_available()
     nc = size(peps, 2)
     next_col = mod1(col + 1, nc)
     A = peps[row, col]

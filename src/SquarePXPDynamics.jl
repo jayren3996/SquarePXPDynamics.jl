@@ -121,6 +121,7 @@ using .CTMGaugeReadinessModule:
     ctm_bond_norm_diagnostic,
     all_ctm_bond_norm_diagnostics,
     ctm_ready_for_gauge_updates,
+    pepskit_private_full_update_available,
     fix_bond_gauge!
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
 using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
@@ -241,7 +242,8 @@ export assert_fresh_pepskit_context
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
 export CTMGaugePolicy, CTMBondNormDiagnostic, CTMGaugeReadiness, BondGaugeFixInfo
 export ctm_bond_norm_matrix, ctm_bond_norm_diagnostic
-export all_ctm_bond_norm_diagnostics, ctm_ready_for_gauge_updates, fix_bond_gauge!
+export all_ctm_bond_norm_diagnostics, ctm_ready_for_gauge_updates
+export pepskit_private_full_update_available, fix_bond_gauge!
 export StarUpdateInfo, project_star!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 export BenchmarkSpec, BenchmarkMetadata, EvolutionDiagnostics, BenchmarkSample, BenchmarkResult

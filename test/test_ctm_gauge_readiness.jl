@@ -50,7 +50,12 @@ end
     @test isdefined(SquarePXPDynamics, :all_ctm_bond_norm_diagnostics)
     @test isdefined(SquarePXPDynamics, :ctm_ready_for_gauge_updates)
     @test isdefined(SquarePXPDynamics, :fix_bond_gauge!)
+    @test isdefined(SquarePXPDynamics, :pepskit_private_full_update_available)
     @test isdefined(SquarePXPDynamics, :assert_fresh_pepskit_context)
+end
+
+@testset "PEPSKit private full-update helper compatibility is centralized" begin
+    @test SquarePXPDynamics.pepskit_private_full_update_available() isa Bool
 end
 
 @testset "CTM bond norm diagnostic validates synthetic matrices" begin
