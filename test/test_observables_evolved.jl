@@ -31,6 +31,22 @@ end
     @test pxp_energy_density_simple(cb) ≈ 0 atol = 1e-14
 end
 
+@testset "PXP x-plus star expectation matches dense product reference" begin
+    cell = PeriodicSquareUnitCell(10, 10)
+    psi = product_square_ipeps(cell; state = :x_plus, maxdim = 1)
+    c = SquareCoord(5, 5)
+    Hstar = square_pxp_star_hamiltonian()
+
+    plus = fill(inv(sqrt(2)), 2)
+    dense = zeros(ComplexF64, 2^SQUARE_STAR_SITES)
+    for values in Iterators.product((1:2 for _ = 1:SQUARE_STAR_SITES)...)
+        dense[_dense_square_star_index_obs(values)] = prod(plus[value] for value in values)
+    end
+    expected = dot(dense, Hstar * dense) / dot(dense, dense)
+
+    @test star_expectation_simple(psi, c, Hstar) ≈ expected atol = 1e-12
+end
+
 @testset "local density after one star update" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
