@@ -151,14 +151,14 @@ end
     )
 end
 
-@testset "CTM trust finite summary validation covers derived scar fields" begin
+@testset "CTM trust finite summary validation rejects nonfinite stored fields" begin
     summary = CTMObservableSummary(
-        0.2,
+        NaN,
         0.25,
         0.15,
         0.0,
         -0.1,
-        NaN,
+        0.1,
         0.01,
         nothing,
     )

@@ -64,6 +64,34 @@ end
         @test with_diag.diagnostics === diag
     end
 
+    @testset "CTM scar observable full constructor validates consistency" begin
+        consistent = CTMObservableSummary(0.2, 0.25, 0.15, 0.0, -0.1, 0.1, 0.01, nothing)
+
+        @test consistent.sublattice_imbalance ≈ 0.1 atol = 1e-12
+        @test consistent.checkerboard_structure_factor ≈ 0.01 atol = 1e-12
+
+        @test_throws ArgumentError CTMObservableSummary(
+            0.2,
+            0.25,
+            0.15,
+            0.0,
+            -0.1,
+            0.2,
+            0.01,
+            nothing,
+        )
+        @test_throws ArgumentError CTMObservableSummary(
+            0.2,
+            0.25,
+            0.15,
+            0.0,
+            -0.1,
+            0.1,
+            0.02,
+            nothing,
+        )
+    end
+
     @testset "product-state conversion" begin
         cell = PeriodicSquareUnitCell(10, 10)
         psi = product_square_ipeps(cell; state = :down, maxdim = 1)

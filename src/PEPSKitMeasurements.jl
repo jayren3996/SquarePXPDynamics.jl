@@ -153,6 +153,60 @@ struct CTMObservableSummary
     sublattice_imbalance::Float64
     checkerboard_structure_factor::Float64
     diagnostics::Union{CTMRGDiagnostics,Nothing}
+
+    function CTMObservableSummary(
+        density::Real,
+        density_even::Real,
+        density_odd::Real,
+        blockade_violation::Real,
+        pxp_energy_density::Real,
+        sublattice_imbalance::Real,
+        checkerboard_structure_factor::Real,
+        diagnostics::Union{CTMRGDiagnostics,Nothing},
+    )
+        converted_density = Float64(density)
+        converted_density_even = Float64(density_even)
+        converted_density_odd = Float64(density_odd)
+        converted_blockade_violation = Float64(blockade_violation)
+        converted_pxp_energy_density = Float64(pxp_energy_density)
+        converted_sublattice_imbalance = Float64(sublattice_imbalance)
+        converted_checkerboard_structure_factor = Float64(checkerboard_structure_factor)
+
+        expected_imbalance = converted_density_even - converted_density_odd
+        isapprox(
+            converted_sublattice_imbalance,
+            expected_imbalance;
+            atol = 1e-12,
+            rtol = 1e-10,
+        ) || throw(
+            ArgumentError(
+                "sublattice_imbalance must equal density_even - density_odd",
+            ),
+        )
+
+        expected_structure = converted_sublattice_imbalance^2
+        isapprox(
+            converted_checkerboard_structure_factor,
+            expected_structure;
+            atol = 1e-12,
+            rtol = 1e-10,
+        ) || throw(
+            ArgumentError(
+                "checkerboard_structure_factor must equal sublattice_imbalance^2",
+            ),
+        )
+
+        return new(
+            converted_density,
+            converted_density_even,
+            converted_density_odd,
+            converted_blockade_violation,
+            converted_pxp_energy_density,
+            converted_sublattice_imbalance,
+            converted_checkerboard_structure_factor,
+            diagnostics,
+        )
+    end
 end
 
 CTMObservableSummary(
@@ -162,18 +216,7 @@ CTMObservableSummary(
     blockade_violation::Float64,
     pxp_energy_density::Float64,
     diagnostics::Union{CTMRGDiagnostics,Nothing},
-) = invoke(
-    CTMObservableSummary,
-    Tuple{
-        Float64,
-        Float64,
-        Float64,
-        Float64,
-        Float64,
-        Float64,
-        Float64,
-        Union{CTMRGDiagnostics,Nothing},
-    },
+) = CTMObservableSummary(
     density,
     density_even,
     density_odd,
