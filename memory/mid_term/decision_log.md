@@ -28,6 +28,36 @@ Source:
 
 Status: active
 
+## 2026-05-17 - Use Symmetric PBC ED Only For Global M3 Observables
+
+Decision:
+
+M3 larger-D PXP dynamics benchmarks compare against the current symmetry-reduced
+finite PBC ED path only through global sector-preserving observables: ED return
+probability and global site-averaged excitation density. Exact finite iPEPS
+contraction is used for tiny 3x3 validation when enabled. Central-region
+observables are not claimed for symmetric PBC ED.
+
+Reason:
+
+The current ED basis is reduced by translations and, by default, the square
+point group. A local or central-region operator does not preserve that basis as
+a literal local observable; after projection it becomes a group average. PBC
+also has no physical center.
+
+Consequences:
+
+5x5 and 7x7 PBC ED benchmarks are scientifically honest global comparisons.
+Literal central 3x3 comparisons require a future unreduced/open-boundary ED
+path and are outside M3.
+
+Source:
+
+`src/FinitePXPEEDBenchmark.jl`; `src/PXPValidation.jl`;
+`docs/superpowers/notes/2026-05-17-m3-larger-d-pxp-ed-benchmark.md`
+
+Status: active
+
 ## 2026-05-17 - Add Opt-In Exact Finite Observable References For Tiny Cells
 
 Decision:

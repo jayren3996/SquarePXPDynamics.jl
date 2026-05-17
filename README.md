@@ -69,6 +69,10 @@ bond-environment gauge conditioning.
   `write_pxp_validation_json`, or sweep `dt`, `D`, cutoff, and CTM finite-`chi`
   settings via `validate_pxp_convergence` and
   `write_pxp_convergence_json` (`src/PXPValidation.jl`).
+- M3 larger-D PXP ED benchmark reports via `run_pxp_larger_d_benchmark`, with
+  exact finite 3x3 iPEPS observables when enabled and symmetric PBC ED global
+  density/return-probability metadata for larger odd cells
+  (`src/PXPValidation.jl`).
 - Read-only local simple-gauge diagnostics via `gauge_diagnostic_simple` (`src/GaugeDiagnostics.jl`).
 - CTM local bond norm diagnostics, `ctm_ready_for_gauge_updates`,
   `pepskit_private_full_update_available`, and transactional `fix_bond_gauge!`
@@ -360,6 +364,44 @@ bond-dimension/truncation pressure; large `log_norm_delta_abs` or reversibility
 drifts point at persistence or round-trip stability. These are audit signals
 only, not physics-grade claims.
 
+### M3 larger-D PXP ED benchmark
+
+Use `run_pxp_larger_d_benchmark` for larger-D sweeps against finite PBC ED:
+
+```julia
+config = PXPLargerDBenchmarkConfig(;
+    n_values = [3],
+    total_time = 0.02,
+    dt_values = [0.02, 0.01],
+    D_values = [1, 2, 3, 4],
+    cutoff_values = [1e-12],
+    exact_finite_observables = true,
+    exact_finite_max_sites = 9,
+)
+report = run_pxp_larger_d_benchmark(config)
+write_pxp_larger_d_benchmark_json(report, "artifacts/m3-larger-d.json")
+write_pxp_larger_d_benchmark_csv(report, "artifacts/m3-larger-d.csv")
+```
+
+or from the shell:
+
+```bash
+SQUAREPXP_LARGERD_N=3 \
+SQUAREPXP_LARGERD_DT=0.02,0.01 \
+SQUAREPXP_LARGERD_D=1,2,3,4 \
+SQUAREPXP_LARGERD_CUTOFF=1e-12 \
+SQUAREPXP_LARGERD_TOTAL_TIME=0.02 \
+SQUAREPXP_LARGERD_EXACT_FINITE=true \
+SQUAREPXP_LARGERD_EXACT_FINITE_MAX_SITES=9 \
+julia --project=. scripts/pxp_larger_d_ed_benchmark.jl
+```
+
+The ED reference is finite periodic and symmetry-reduced. Its density is a
+global site average in the selected symmetric sector. It is not a central 3x3
+or local-window observable. For D>1, `density_error_simple` remains a simple
+environment diagnostic; use `density_error_exact_finite` for 3x3 finite
+validation and CTM-trusted fields only when finite-`chi` trust sweeps were run.
+
 ## Development
 
 Instantiate the package environment:
@@ -385,6 +427,14 @@ Run the slower extended CTM tests locally:
 ```bash
 SQUAREPXP_EXTENDED_TESTS=1 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
+
+Run the optional PXP ED benchmark smoke:
+
+```bash
+SQUAREPXP_EXTENDED_PXP_ED_TESTS=1 julia --project=. test/runtests.jl test_pxp_larger_d_ed_benchmark.jl
+```
+
+This does not run 7x7. Large 7x7 probes are manual benchmark commands.
 
 The same extended CTM suite is available in GitHub Actions through the
 `Extended CTM` manual workflow and its weekly scheduled run.
