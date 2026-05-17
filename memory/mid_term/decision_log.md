@@ -28,6 +28,76 @@ Source:
 
 Status: active
 
+## 2026-05-17 - Add Opt-In Exact Finite Observable References For Tiny Cells
+
+Decision:
+
+Add a size-limited exact finite iPEPS observable path for tiny periodic cells
+and wire exact finite density into PXP validation/audit as an opt-in reference.
+Keep simple/local observables unchanged.
+
+Reason:
+
+The D=2 PXP anomaly was localized to treating simple/local D>1 observables as
+exact finite observables on a loopy periodic PEPS. Exact finite contraction is
+useful for tiny debug cells, while simple/local and CTM measurements have
+separate contracts.
+
+Consequences:
+
+No-CTM D>1 audit summaries can report both simple diagnostic error and exact
+finite density error when requested. The exact path is dense and size-limited;
+CTM Stage 2, CTM-aware/full-update design, new CTM observables, and tensor
+persistence remain postponed.
+
+Source:
+
+`src/FiniteIPEPSObservables.jl`; `src/PXPValidation.jl`;
+`test/test_finite_ipeps_observables.jl`; `test/test_pxp_validation.jl`
+
+Status: active
+
+## 2026-05-17 - D2 Audit Anomaly Localizes To Simple Measurement Path
+
+Decision:
+
+Treat the first no-CTM `3 x 3` all-down short-time PXP D=2 anomaly as a
+simple/local measurement-path limitation unless a later exactness requirement
+for `density_simple` is adopted and implemented.
+
+Reason:
+
+A focused dense serial-star harness shows that grow-on-demand D=2
+`project_star!` matches the exact dense serial-star reference after every star,
+including the final density `0.0003996269892620211` versus reference
+`0.0003996269892620213`. The first divergence is between the exact finite
+contraction and `measure_simple` at star 3, where the dense D=2 density is
+`0.00013326224449912625` but `measure_simple` reports
+`0.000111054099003352`. Follow-up exact finite observable helpers confirm the
+boundary: after star 3, site `SquareCoord(2, 1)` has exact finite `<n>` of
+`0.0003997867121725804` while `local_density_simple` reports
+`0.0001999133387617944`; a generic `ZZ` bond and an embedded star-center
+density operator also show simple/local patch mismatches. The exact
+dense-contracted iPEPS state still matches the dense serial-star reference, so
+the evidence points at expected simple-environment limitations on a loopy
+finite D>1 PEPS rather than a concrete lambda-counting bug.
+
+Consequences:
+
+Do not use the no-CTM simple/local D>1 audit density as an exact finite-system
+PXP density. Keep `density_simple` interpreted as a cheap simple-update local
+environment diagnostic unless the project explicitly decides to replace or
+augment it with an exact finite contraction path for tiny validation cells.
+CTM Stage 2, CTM-aware/full-update design, new CTM observables, and tensor
+persistence remain postponed.
+
+Source:
+
+`test/test_pxp_d2_localization.jl`;
+`docs/superpowers/notes/2026-05-17-d2-measurement-localization.md`
+
+Status: active
+
 ## 2026-05-17 - M2 First Audit Stops Before CTM On D2 Anomaly
 
 Decision:
