@@ -115,6 +115,7 @@ using .FiniteIPEPSObservables:
     exact_pxp_energy_density_finite
 using .PEPSKitMeasurements: PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
 using .PEPSKitMeasurements: CTMObservableSummary, CTMValidationPoint
+using .PEPSKitMeasurements: configure_ctm_threading!, configure_ctm_threading_from_env!
 using .PEPSKitMeasurements: to_pepskit_infinitepeps
 using .PEPSKitMeasurements: pepskit_ctmrg_context, local_density_ctm
 using .PEPSKitMeasurements: nearest_neighbor_density_ctm, blockade_violation_ctm
@@ -269,6 +270,7 @@ export exact_all_down_return_probability_finite
 export exact_blockade_violation_finite, exact_pxp_energy_density_finite
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics, CTMObservableSummary
 export CTMValidationPoint
+export configure_ctm_threading!, configure_ctm_threading_from_env!
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export local_density_ctm, nearest_neighbor_density_ctm
 export blockade_violation_ctm, star_expectation_ctm, pxp_energy_density_ctm, measure_ctm

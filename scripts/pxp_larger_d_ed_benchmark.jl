@@ -7,6 +7,8 @@ Pkg.activate(project_root; io = devnull)
 
 using SquarePXPDynamics
 
+ctm_threading = configure_ctm_threading_from_env!()
+
 function _env_value(name::String, default::AbstractString)
     value = get(ENV, name, "")
     return isempty(value) ? String(default) : value
@@ -85,5 +87,6 @@ report = run_pxp_larger_d_benchmark(config)
 write_pxp_larger_d_benchmark_json(report, json_out)
 write_pxp_larger_d_benchmark_csv(report, csv_out)
 
+println("CTM threading: ", ctm_threading)
 println(json_out)
 println(csv_out)

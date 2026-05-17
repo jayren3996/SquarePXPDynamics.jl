@@ -30,6 +30,26 @@
 - Source: `src/ScarFinder.jl`
 - Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 
+## M3 ED And iPEPS/CTM Benchmark Cleanup
+
+- Confirmed: The M3 systematic ED/iPEPS campaign used all-down/all-zero,
+  translationally symmetric PBC dynamics and symmetry-reduced ED global
+  excitation density/return probability only.
+- Confirmed: ED trajectories/artifacts exist through `3x3..6x6`; `7x7` did
+  not produce a useful artifact in the stopped capacity probe and was
+  deprioritized by user direction.
+- Confirmed: For `3x3`, exact finite iPEPS density shows strong improvement
+  from `D=1` to `D=2`, while `D=3/4` are not monotone improvements over `D=2`.
+- Confirmed: D>1 simple/local density is not an exact finite or thermodynamic
+  observable. A direct CTM probe at `3x3`, `t = 0.02`, `chi = 2` showed D=2
+  CTM density matches exact finite density while simple density does not.
+- Confirmed: Current iPEPS+CTM performance investigation found that PEPSKit
+  CTMRG needs Julia threads for its `dtmap` parallel regions; BLAS thread
+  settings alone do not maximize CTM CPU utilization.
+- Source: `docs/superpowers/notes/2026-05-17-m3-systematic-larger-d-results.md`
+- Source: `artifacts/m3-systematic/ctm-direct-3x3-t002.json`
+- Source: `src/PEPSKitMeasurements.jl`
+
 ## TFIM Benchmark Branch Verification
 
 - Confirmed: Branch `codex/infinite-tfim-benchmark` was verified with focused

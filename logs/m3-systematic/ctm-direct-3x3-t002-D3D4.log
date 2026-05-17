@@ -1,0 +1,5 @@
+(D = 3, simple_density = 0.00021094978264191464, exact_density = 0.0003996269892620247, ctm_density = 0.0003996270318281492, ctm_blockade = -6.5996337308480046e-24, ctm_energy = 1.2422547558522802e-16, ctm_seconds = 323.524291053, ctm_iterations = nothing, ctm_residual = 0.0, ctm_accepted = true)
+(D = 4, simple_density = 0.0002109497826419297, exact_density = 0.0003996269892620256, ctm_density = 0.0003996270318282296, ctm_blockade = -2.2784444491308414e-24, ctm_energy = -1.628110262349066e-16, ctm_seconds = 0.149101468, ctm_iterations = nothing, ctm_residual = 0.0, ctm_accepted = true)
+real 416.15
+user 427.89
+sys 8.63

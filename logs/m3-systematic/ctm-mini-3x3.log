@@ -1,0 +1,152 @@
+
+[78938] signal 15: Terminated
+in expression starting at /data/djxg096/SquarePXPDynamics.jl/scripts/pxp_larger_d_ed_benchmark.jl:84
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+#wait#398 at ./condition.jl:141
+_trywait at ./asyncevent.jl:163
+profile_printing_listener at ./Base.jl:332
+#start_profile_listener##0 at ./Base.jl:352
+jfptr_YY.start_profile_listenerYY.YY.0_6779.1 at /localhome/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1252
+unknown function (ip: (nil)) at (unknown file)
+gc_sweep_pool_parallel at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:1262
+gc_sweep_pool at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:1393 [inlined]
+_jl_gc_collect at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3183
+ijl_gc_collect at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3471
+maybe_collect at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:350 [inlined]
+jl_gc_small_alloc_inner at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:726 [inlined]
+ijl_gc_small_alloc at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:775
+Array at ./boot.jl:648 [inlined]
+Array at ./boot.jl:660 [inlined]
+similar at ./abstractarray.jl:867 [inlined]
+similar at ./abstractarray.jl:866 [inlined]
+_array_for_inner at ./array.jl:670 [inlined]
+collect at ./array.jl:795
++ at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/poly.jl:114 [inlined]
++ at ./operators.jl:642 [inlined]
+addcost at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/optimaltree.jl:63 [inlined]
+#_optimaltree#67 at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/optimaltree.jl:223
+_optimaltree at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/optimaltree.jl:110
+unknown function (ip: 0x7f23eda458b6) at (unknown file)
+#optimaltree#63 at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/optimaltree.jl:24
+optimaltree at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/optimaltree.jl:1 [inlined]
+#tensorparser##12 at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/tensormacros.jl:97
+unknown function (ip: 0x7f23ee317d72) at (unknown file)
+insertcontractiontrees! at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/contractiontrees.jl:101
+insertcontractiontrees! at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/contractiontrees.jl:65 [inlined]
+_processcontractions at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/contractiontrees.jl:53 [inlined]
+processcontractions at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/contractiontrees.jl:30
+#processcontractions##0 at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/contractiontrees.jl:19
+iterate at ./generator.jl:48 [inlined]
+collect_to! at ./array.jl:848
+collect_to_with_first! at ./array.jl:826
+unknown function (ip: 0x7f23ee3157e5) at (unknown file)
+_collect at ./array.jl:820
+collect_similar at ./array.jl:732
+unknown function (ip: 0x7f23ee3155c6) at (unknown file)
+map at ./abstractarray.jl:3372
+processcontractions at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/contractiontrees.jl:19
+TensorParser at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/parser.jl:32
+unknown function (ip: 0x7f23ee2db4d2) at (unknown file)
+@tensor at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/indexnotation/tensormacros.jl:47
+jl_invoke_julia_macro at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/ast.c:1138
+jl_expand_macros at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/ast.c:1200
+jl_expand_macros at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/ast.c:1212 [inlined]
+ijl_macroexpand at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/ast.c:1261
+#macroexpand#22 at ./expr.jl:126 [inlined]
+macroexpand at ./expr.jl:124 [inlined]
+macro expansion at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/contractions/localoperator.jl:534 [inlined]
+#s175#394 at ./none:0
+GeneratedFunctionStub at ./expr.jl:1694
+jl_call_staged at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/method.c:662
+ijl_code_for_staged at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/method.c:735
+call_get_staged at ./../usr/share/julia/Compiler/src/utilities.jl:103 [inlined]
+get_staged at ./../usr/share/julia/Compiler/src/utilities.jl:88
+jfptr_get_staged_1818.1 at /localhome/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+tojlinvoke85081.1 at /localhome/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+j_get_staged_76768.1 at /localhome/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+retrieve_code_info at ./../usr/share/julia/Compiler/src/utilities.jl:121
+InferenceState at ./../usr/share/julia/Compiler/src/inferencestate.jl:602
+InferenceState at ./../usr/share/julia/Compiler/src/inferencestate.jl:607 [inlined]
+typeinf_ext at ./../usr/share/julia/Compiler/src/typeinfer.jl:1248
+typeinf_ext_toplevel at ./../usr/share/julia/Compiler/src/typeinfer.jl:1437 [inlined]
+typeinf_ext_toplevel at ./../usr/share/julia/Compiler/src/typeinfer.jl:1446
+jfptr_typeinf_ext_toplevel_82377.1 at /localhome/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_type_infer at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gf.c:466
+jl_compile_method_internal at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gf.c:3516
+_jl_invoke at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gf.c:4006 [inlined]
+ijl_apply_generic at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gf.c:4214
+reduced_densitymatrix at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/contractions/localoperator.jl:316
+#572 at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/toolbox.jl:16
+iterate at ./generator.jl:48 [inlined]
+collect_to! at ./array.jl:848
+collect_to_with_first! at ./array.jl:826
+unknown function (ip: 0x7f23ed059515) at (unknown file)
+_collect at ./array.jl:820
+collect_similar at ./array.jl:732
+unknown function (ip: 0x7f23eda43ca6) at (unknown file)
+map at ./abstractarray.jl:3372
+#tmap#64 at /localhome/djxg096/.julia/packages/OhMyThreads/qVAdL/src/implementation.jl:453 [inlined]
+tmap at /localhome/djxg096/.julia/packages/OhMyThreads/qVAdL/src/implementation.jl:420
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_f__apply_iterate at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/builtins.c:868
+#dtmap#21 at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/utility/diffable_threads.jl:9
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_f__apply_iterate at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/builtins.c:868
+dtmap at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/utility/diffable_threads.jl:9
+expectation_value at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/toolbox.jl:15
+expectation_value at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/toolbox.jl:21
+unknown function (ip: 0x7f23eda4329f) at (unknown file)
+_expectation at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:708
+unknown function (ip: 0x7f23eda3d312) at (unknown file)
+pxp_energy_density_ctm at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:853
+#measure_ctm#23 at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:890
+measure_ctm at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:885 [inlined]
+#26 at ./none (unknown line) [inlined]
+iterate at ./generator.jl:48 [inlined]
+collect at ./array.jl:790
+#validate_ctm_sweep#24 at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:918
+validate_ctm_sweep at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:910
+unknown function (ip: 0x7f23ee27ef97) at (unknown file)
+#measure_ctm_trusted#1 at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:82
+measure_ctm_trusted at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:75 [inlined]
+_maybe_trusted_ctm at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:970 [inlined]
+#_validate_pxp_ipeps_against_ed#53 at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1055
+_validate_pxp_ipeps_against_ed at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1031
+unknown function (ip: 0x7f2456aa3c66) at (unknown file)
+macro expansion at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1528 [inlined]
+macro expansion at ./timing.jl:461 [inlined]
+#run_pxp_larger_d_benchmark#103 at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1527
+run_pxp_larger_d_benchmark at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1511
+unknown function (ip: 0x7f2456a54eac) at (unknown file)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+do_call at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_value at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:243
+eval_stmt_value at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:194 [inlined]
+eval_body at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:707
+jl_interpret_toplevel_thunk at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1047
+ijl_toplevel_eval_in at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:306
+exec_options at ./client.jl:317
+_start at ./client.jl:550
+jfptr__start_74358.1 at /localhome/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+true_main at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jlapi.c:971
+jl_repl_entrypoint at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jlapi.c:1139
+main at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/cli/loader_exe.c:58
+__libc_start_main at /lib64/libc.so.6 (unknown line)
+unknown function (ip: 0x4010b8) at /workspace/srcdir/glibc-2.17/csu/../sysdeps/x86_64/start.S
+unknown function (ip: (nil)) at (unknown file)
+Allocations: 882997437 (Pool: 882989389; Big: 8048); GC: 172

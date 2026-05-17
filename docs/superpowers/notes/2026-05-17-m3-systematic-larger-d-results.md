@@ -233,7 +233,14 @@ and campaign settings. No short `7x7` dynamics were run.
 
 ## Recommended Next Campaign
 
-Use `3x3` exact finite contraction to investigate why `D=2` dominates `D=3`
-and `D=4`, with particular attention to log-normalization growth and
-split/truncation diagnostics. For larger sizes, add a reusable ED-reference
-cache or snapshotable iPEPS-observable path before repeating expensive sweeps.
+Superseding update from later on 2026-05-17: for D>1 local-density comparisons,
+use CTM/environment observables rather than simple/local observables. A direct
+CTM probe at `3x3`, `t = 0.02`, `chi = 2` showed D=2 CTM density matching exact
+finite density while `density_simple` did not. The active next campaign is
+therefore CTM observable throughput and warmed iPEPS+CTM timing, not larger ED.
+
+Use `3x3` exact finite contraction and CTM density to investigate why `D=2`
+dominates `D=3` and `D=4`, with particular attention to log-normalization
+growth, split/truncation diagnostics, and CTM finite-chi diagnostics. For larger
+sizes, add a reusable ED-reference cache or snapshotable iPEPS-observable path
+before repeating expensive sweeps.

@@ -1,0 +1,117 @@
+
+[75662] signal 15: Terminated
+in expression starting at /data/djxg096/SquarePXPDynamics.jl/scripts/pxp_larger_d_ed_benchmark.jl:84
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+#wait#398 at ./condition.jl:141
+_trywait at ./asyncevent.jl:163
+profile_printing_listener at ./Base.jl:332
+#start_profile_listener##0 at ./Base.jl:352
+jfptr_YY.start_profile_listenerYY.YY.0_6779.1 at /localhome/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1252
+unknown function (ip: (nil)) at (unknown file)
+_setindex! at ./genericmemory.jl:253 [inlined]
+setindex! at ./genericmemory.jl:260 [inlined]
+setindex! at /localhome/djxg096/.julia/packages/StridedViews/AaOf5/src/stridedview.jl:165 [inlined]
+macro expansion at /localhome/djxg096/.julia/packages/Strided/Owqd4/src/mapreduce.jl:381 [inlined]
+macro expansion at ./simdloop.jl:77 [inlined]
+macro expansion at /localhome/djxg096/.julia/packages/Strided/Owqd4/src/mapreduce.jl:380 [inlined]
+_mapreduce_kernel! at /localhome/djxg096/.julia/packages/Strided/Owqd4/src/mapreduce.jl:247
+_mapreduce_block! at /localhome/djxg096/.julia/packages/Strided/Owqd4/src/mapreduce.jl:160
+_mapreduce_order! at /localhome/djxg096/.julia/packages/Strided/Owqd4/src/mapreduce.jl:144
+_mapreduce_fuse! at /localhome/djxg096/.julia/packages/Strided/Owqd4/src/mapreduce.jl:120
+_mapreducedim! at /localhome/djxg096/.julia/packages/Strided/Owqd4/src/mapreduce.jl:95
+stridedtensoradd! at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/implementation/strided.jl:128
+tensoradd! at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/implementation/strided.jl:55 [inlined]
+tensoradd! at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/interface.jl:48 [inlined]
+tensoradd! at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/interface.jl:37 [inlined]
+tensoradd! at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/interface.jl:29 [inlined]
+_add_trivial_kernel! at /localhome/djxg096/.julia/packages/TensorKit/PfyGW/src/tensors/indexmanipulations.jl:502
+add_transform! at /localhome/djxg096/.julia/packages/TensorKit/PfyGW/src/tensors/indexmanipulations.jl:469
+unknown function (ip: 0x7fba71cc59f9) at (unknown file)
+add_permute! at /localhome/djxg096/.julia/packages/TensorKit/PfyGW/src/tensors/indexmanipulations.jl:411 [inlined]
+_contract! at /localhome/djxg096/.julia/packages/TensorKit/PfyGW/src/tensors/tensoroperations.jl:348
+contract! at /localhome/djxg096/.julia/packages/TensorKit/PfyGW/src/tensors/tensoroperations.jl:294
+tensorcontract! at /localhome/djxg096/.julia/packages/TensorKit/PfyGW/src/tensors/tensoroperations.jl:116
+tensorcontract! at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/interface.jl:166 [inlined]
+tensorcontract! at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/interface.jl:155 [inlined]
+macro expansion at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/contractions/localoperator.jl:535 [inlined]
+_contract_densitymatrix at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/contractions/localoperator.jl:509
+unknown function (ip: 0x7fba71cf945b) at (unknown file)
+reduced_densitymatrix at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/contractions/localoperator.jl:316
+#572 at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/toolbox.jl:16
+iterate at ./generator.jl:48 [inlined]
+collect_to! at ./array.jl:848
+collect_to_with_first! at ./array.jl:826
+unknown function (ip: 0x7fba71cecad5) at (unknown file)
+_collect at ./array.jl:820
+collect_similar at ./array.jl:732
+unknown function (ip: 0x7fba73e36b36) at (unknown file)
+map at ./abstractarray.jl:3372
+#tmap#64 at /localhome/djxg096/.julia/packages/OhMyThreads/qVAdL/src/implementation.jl:453 [inlined]
+tmap at /localhome/djxg096/.julia/packages/OhMyThreads/qVAdL/src/implementation.jl:420
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_f__apply_iterate at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/builtins.c:868
+#dtmap#21 at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/utility/diffable_threads.jl:9
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_f__apply_iterate at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/builtins.c:868
+dtmap at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/utility/diffable_threads.jl:9
+expectation_value at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/toolbox.jl:15
+expectation_value at /localhome/djxg096/.julia/packages/PEPSKit/zz9BS/src/algorithms/toolbox.jl:21
+unknown function (ip: 0x7fba73e35cbf) at (unknown file)
+_expectation at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:708
+unknown function (ip: 0x7fba73e2fd32) at (unknown file)
+pxp_energy_density_ctm at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:853
+#measure_ctm#23 at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:890
+measure_ctm at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:885 [inlined]
+#26 at ./none (unknown line) [inlined]
+iterate at ./generator.jl:48 [inlined]
+collect_to! at ./array.jl:848 [inlined]
+collect_to_with_first! at ./array.jl:826 [inlined]
+collect at ./array.jl:800
+#validate_ctm_sweep#24 at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:918
+validate_ctm_sweep at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitMeasurements.jl:910
+unknown function (ip: 0x7fba74273f97) at (unknown file)
+#measure_ctm_trusted#1 at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:82
+measure_ctm_trusted at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:75 [inlined]
+_maybe_trusted_ctm at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:970 [inlined]
+#_validate_pxp_ipeps_against_ed#53 at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1055
+_validate_pxp_ipeps_against_ed at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1031
+unknown function (ip: 0x7fba7d7f6d36) at (unknown file)
+macro expansion at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1528 [inlined]
+macro expansion at ./timing.jl:461 [inlined]
+#run_pxp_larger_d_benchmark#103 at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1527
+run_pxp_larger_d_benchmark at /data/djxg096/SquarePXPDynamics.jl/src/PXPValidation.jl:1511
+unknown function (ip: 0x7fba7d79638c) at (unknown file)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+do_call at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_value at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:243
+eval_stmt_value at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:194 [inlined]
+eval_body at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:707
+jl_interpret_toplevel_thunk at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1047
+ijl_toplevel_eval_in at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:306
+exec_options at ./client.jl:317
+_start at ./client.jl:550
+jfptr__start_74358.1 at /localhome/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+true_main at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jlapi.c:971
+jl_repl_entrypoint at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jlapi.c:1139
+main at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/cli/loader_exe.c:58
+__libc_start_main at /lib64/libc.so.6 (unknown line)
+unknown function (ip: 0x4010b8) at /workspace/srcdir/glibc-2.17/csu/../sysdeps/x86_64/start.S
+unknown function (ip: (nil)) at (unknown file)
+Allocations: 1442274974 (Pool: 1442205142; Big: 69832); GC: 920
+Precompiling packages...
+   6187.6 ms  ✓ SquarePXPDynamics
+  1 dependency successfully precompiled in 7 seconds. 216 already precompiled.
