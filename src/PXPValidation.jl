@@ -5,6 +5,7 @@ using JSON3
 using ..SquareIPEPS: SquareIPEPSState, copy_state, log_norm, product_square_ipeps
 using ..SquareUnitCells: PeriodicSquareUnitCell
 using ..Observables: SimpleObservableSummary, measure_simple
+using ..FiniteIPEPSObservables: exact_density_finite
 using ..PEPSKitMeasurements:
     CTMObservableSummary,
     CTMValidationPoint,
@@ -129,6 +130,8 @@ struct PXPValidationConfig
     maxdim::Int
     cutoff::Float64
     schedule::Symbol
+    exact_finite_observables::Bool
+    exact_finite_max_sites::Int
 
     function PXPValidationConfig(
         n::Integer;
@@ -146,6 +149,8 @@ struct PXPValidationConfig
         maxdim::Integer = 1,
         cutoff::Real = 1e-12,
         schedule::Symbol = :serial,
+        exact_finite_observables::Bool = false,
+        exact_finite_max_sites::Integer = 12,
     )
         n_int = _positive_int(n, "n")
         total = _finite_nonnegative(total_time, "total_time")
@@ -166,6 +171,9 @@ struct PXPValidationConfig
             throw(ArgumentError("schedule must be :serial or :five_color"))
         schedule === :five_color && n_int % 5 != 0 &&
             throw(ArgumentError("five_color validation requires n divisible by 5"))
+        exact_limit = _positive_int(exact_finite_max_sites, "exact_finite_max_sites")
+        exact_finite_observables && n_int^2 > exact_limit &&
+            throw(ArgumentError("exact finite observables require n^2 <= exact_finite_max_sites"))
 
         PXPEEDBenchmarkConfig(
             n_int;
@@ -198,6 +206,8 @@ struct PXPValidationConfig
             dim,
             trunc_cutoff,
             schedule,
+            exact_finite_observables,
+            exact_limit,
         )
     end
 end
@@ -229,6 +239,11 @@ struct PXPIPEPSSample
     evolution::Union{Nothing,EvolutionLog}
     ctm::Union{Nothing,TrustedCTMMeasurement}
     log_norm::Float64
+    exact_finite_density::Union{Nothing,Float64}
+end
+
+function PXPIPEPSSample(step, time, simple, evolution, ctm, log_norm)
+    return PXPIPEPSSample(step, time, simple, evolution, ctm, log_norm, nothing)
 end
 
 """
@@ -236,6 +251,8 @@ end
 
 Observable comparison at one matched ED/iPEPS sample time. Density errors are
 reported as `iPEPS - ED`; CTM fields are `nothing` when no CTM sweep was run.
+For D>1 no-CTM runs, `density_error_simple` is a simple/local-environment
+diagnostic offset, not an exact finite-PEPS validation error.
 """
 struct PXPEDComparisonSample
     step::Int
@@ -244,12 +261,46 @@ struct PXPEDComparisonSample
     ed_excitation_density::Float64
     ipeps_simple_density::Float64
     ipeps_ctm_density::Union{Nothing,Float64}
+    ipeps_exact_finite_density::Union{Nothing,Float64}
     density_error_simple::Float64
     density_error_ctm::Union{Nothing,Float64}
+    density_error_exact_finite::Union{Nothing,Float64}
     simple_blockade_violation::Float64
     ctm_blockade_violation::Union{Nothing,Float64}
     ctm_trusted::Union{Nothing,Bool}
     ctm_reason::Union{Nothing,Symbol}
+end
+
+function PXPEDComparisonSample(
+    step,
+    time,
+    ed_return_probability,
+    ed_excitation_density,
+    ipeps_simple_density,
+    ipeps_ctm_density,
+    density_error_simple,
+    density_error_ctm,
+    simple_blockade_violation,
+    ctm_blockade_violation,
+    ctm_trusted,
+    ctm_reason,
+)
+    return PXPEDComparisonSample(
+        step,
+        time,
+        ed_return_probability,
+        ed_excitation_density,
+        ipeps_simple_density,
+        ipeps_ctm_density,
+        nothing,
+        density_error_simple,
+        density_error_ctm,
+        nothing,
+        simple_blockade_violation,
+        ctm_blockade_violation,
+        ctm_trusted,
+        ctm_reason,
+    )
 end
 
 """
@@ -311,14 +362,34 @@ Machine-readable convergence/error-budget report containing every validation
 run in a `dt x D x cutoff` sweep, the maximum absolute simple-density error,
 and optional CTM density-error and trust summaries when finite-`chi` CTM trust
 sweeps were requested. CTM density error is aggregated across all validation
-points in each trust sweep, not just the final `chi`.
+points in each trust sweep, not just the final `chi`. Simple-density errors are
+cheap local-environment audit signals; they are not exact finite contractions
+for D>1 loopy periodic PEPS.
 """
 struct PXPConvergenceReport
     config::PXPConvergenceConfig
     runs::Vector{PXPValidationReport}
     max_abs_density_error_simple::Float64
     max_abs_density_error_ctm::Union{Nothing,Float64}
+    max_abs_density_error_exact_finite::Union{Nothing,Float64}
     all_ctm_trusted::Union{Nothing,Bool}
+end
+
+function PXPConvergenceReport(
+    config,
+    runs,
+    max_abs_density_error_simple,
+    max_abs_density_error_ctm,
+    all_ctm_trusted,
+)
+    return PXPConvergenceReport(
+        config,
+        runs,
+        max_abs_density_error_simple,
+        max_abs_density_error_ctm,
+        nothing,
+        all_ctm_trusted,
+    )
 end
 
 """
@@ -364,6 +435,8 @@ struct PXPAuditConfig
     ctm_maxiter::Int
     ctm_verbosity::Int
     ctm_seed::Union{Nothing,Int}
+    exact_finite_observables::Bool
+    exact_finite_max_sites::Int
 
     function PXPAuditConfig(;
         n_values = [3],
@@ -379,6 +452,8 @@ struct PXPAuditConfig
         ctm_maxiter::Integer = 100,
         ctm_verbosity::Integer = 0,
         ctm_seed = 0,
+        exact_finite_observables::Bool = false,
+        exact_finite_max_sites::Integer = 12,
     )
         n_grid = [_positive_int(n, "n_values entry") for n in n_values]
         dt_grid = [_finite_positive(dt, "dt_values entry") for dt in dt_values]
@@ -399,6 +474,7 @@ struct PXPAuditConfig
         verbosity = _nonnegative_int(ctm_verbosity, "ctm_verbosity")
         seed = ctm_seed === nothing ? nothing : _nonnegative_int(ctm_seed, "ctm_seed")
         total = _finite_nonnegative(total_time, "total_time")
+        exact_limit = _positive_int(exact_finite_max_sites, "exact_finite_max_sites")
 
         for n in n_grid, dt in dt_grid, D in D_grid, cutoff in cutoff_grid
             PXPValidationConfig(
@@ -410,6 +486,8 @@ struct PXPAuditConfig
                 maxdim = D,
                 cutoff,
                 schedule,
+                exact_finite_observables,
+                exact_finite_max_sites = exact_limit,
             )
         end
 
@@ -427,6 +505,8 @@ struct PXPAuditConfig
             maxiter,
             verbosity,
             seed,
+            exact_finite_observables,
+            exact_limit,
         )
     end
 end
@@ -436,7 +516,8 @@ end
 
 Flat per-run audit row intended for JSON and CSV bottleneck triage. CTM fields
 are `nothing` or `:not_run` when the audit configuration does not request a
-finite-`chi` CTM sweep.
+finite-`chi` CTM sweep. The simple fields summarize no-CTM local diagnostics,
+not exact finite-PEPS observables for D>1.
 """
 struct PXPAuditSummary
     n::Int
@@ -448,6 +529,7 @@ struct PXPAuditSummary
     chi_values::Vector{Int}
     max_abs_density_error_simple::Float64
     max_abs_density_error_ctm::Union{Nothing,Float64}
+    max_abs_density_error_exact_finite::Union{Nothing,Float64}
     max_blockade_violation_simple::Float64
     max_blockade_violation_ctm::Union{Nothing,Float64}
     pxp_energy_drift_simple::Float64
@@ -466,6 +548,67 @@ struct PXPAuditSummary
     reversibility_density_drift::Float64
     reversibility_blockade_drift::Float64
     reversibility_energy_drift::Float64
+end
+
+function PXPAuditSummary(
+    n,
+    total_time,
+    dt,
+    D,
+    cutoff,
+    schedule,
+    chi_values,
+    max_abs_density_error_simple,
+    max_abs_density_error_ctm,
+    max_blockade_violation_simple,
+    max_blockade_violation_ctm,
+    pxp_energy_drift_simple,
+    pxp_energy_drift_ctm,
+    ctm_trust_status,
+    ctm_trust_reason,
+    finite_chi_density_delta,
+    finite_chi_blockade_delta,
+    finite_chi_energy_delta,
+    finite_chi_max_residual,
+    max_truncerr,
+    log_norm_initial,
+    log_norm_final,
+    log_norm_delta,
+    log_norm_delta_abs,
+    reversibility_density_drift,
+    reversibility_blockade_drift,
+    reversibility_energy_drift,
+)
+    return PXPAuditSummary(
+        n,
+        total_time,
+        dt,
+        D,
+        cutoff,
+        schedule,
+        chi_values,
+        max_abs_density_error_simple,
+        max_abs_density_error_ctm,
+        nothing,
+        max_blockade_violation_simple,
+        max_blockade_violation_ctm,
+        pxp_energy_drift_simple,
+        pxp_energy_drift_ctm,
+        ctm_trust_status,
+        ctm_trust_reason,
+        finite_chi_density_delta,
+        finite_chi_blockade_delta,
+        finite_chi_energy_delta,
+        finite_chi_max_residual,
+        max_truncerr,
+        log_norm_initial,
+        log_norm_final,
+        log_norm_delta,
+        log_norm_delta_abs,
+        reversibility_density_drift,
+        reversibility_blockade_drift,
+        reversibility_energy_drift,
+    )
 end
 
 """
@@ -532,6 +675,8 @@ function _copy_config(
         maxdim,
         cutoff,
         schedule = base.schedule,
+        exact_finite_observables = base.exact_finite_observables,
+        exact_finite_max_sites = base.exact_finite_max_sites,
     )
 end
 
@@ -652,6 +797,7 @@ end
 
 function _comparison(ed::PXPEEDSample, sample::PXPIPEPSSample)
     ctm_density = _ctm_density(sample.ctm)
+    exact_density = sample.exact_finite_density
     return PXPEDComparisonSample(
         ed.step,
         ed.time,
@@ -659,8 +805,10 @@ function _comparison(ed::PXPEEDSample, sample::PXPIPEPSSample)
         ed.excitation_density,
         sample.simple.density,
         ctm_density,
+        exact_density,
         sample.simple.density - ed.excitation_density,
         ctm_density === nothing ? nothing : ctm_density - ed.excitation_density,
+        exact_density === nothing ? nothing : exact_density - ed.excitation_density,
         sample.simple.blockade_violation,
         _ctm_blockade(sample.ctm),
         _ctm_trusted(sample.ctm),
@@ -700,6 +848,8 @@ function validate_pxp_ed_ipeps(
         last_time = ed_sample.time
 
         simple = measure_simple(psi)
+        exact_finite_density = config.exact_finite_observables ?
+            exact_density_finite(psi; max_sites = config.exact_finite_max_sites) : nothing
         ctm = _maybe_trusted_ctm(psi, ctm_params, trust_policy, ctm_measure)
         push!(
             samples,
@@ -710,6 +860,7 @@ function validate_pxp_ed_ipeps(
                 evolution,
                 ctm,
                 log_norm(psi),
+                exact_finite_density,
             ),
         )
     end
@@ -759,6 +910,10 @@ function validate_pxp_convergence(
     end
 
     simple_errors = [abs(c.density_error_simple) for r in runs for c in r.comparisons]
+    exact_errors = [
+        abs(c.density_error_exact_finite) for r in runs for c in r.comparisons if
+        c.density_error_exact_finite !== nothing
+    ]
     ctm_errors = Float64[]
     trust_flags = Bool[]
     for run in runs
@@ -776,6 +931,7 @@ function validate_pxp_convergence(
         runs,
         maximum(simple_errors),
         isempty(ctm_errors) ? nothing : maximum(ctm_errors),
+        _finite_max_or_nothing(exact_errors),
         isempty(trust_flags) ? nothing : all(==(true), trust_flags),
     )
 end
@@ -816,6 +972,8 @@ function _audit_validation_config(
         maxdim = D,
         cutoff,
         schedule = config.schedule,
+        exact_finite_observables = config.exact_finite_observables,
+        exact_finite_max_sites = config.exact_finite_max_sites,
     )
 end
 
@@ -865,6 +1023,10 @@ function _audit_summary(
     ctm_density_errors = [
         abs(c.density_error_ctm) for c in validation.comparisons if c.density_error_ctm !== nothing
     ]
+    exact_density_errors = [
+        abs(c.density_error_exact_finite) for c in validation.comparisons if
+        c.density_error_exact_finite !== nothing
+    ]
     simple_blockade = [c.simple_blockade_violation for c in validation.comparisons]
     ctm_blockade = [
         c.ctm_blockade_violation for c in validation.comparisons if c.ctm_blockade_violation !== nothing
@@ -897,6 +1059,7 @@ function _audit_summary(
         chi_values,
         _maximum_or_zero(simple_density_errors),
         _finite_max_or_nothing(ctm_density_errors),
+        _finite_max_or_nothing(exact_density_errors),
         _maximum_or_zero(simple_blockade),
         _finite_max_or_nothing(ctm_blockade),
         _maximum_or_zero(simple_energy) - _minimum_or_zero(simple_energy),
@@ -983,6 +1146,8 @@ function _config_data(config::PXPValidationConfig)
         maxdim = config.maxdim,
         cutoff = config.cutoff,
         schedule = String(config.schedule),
+        exact_finite_observables = config.exact_finite_observables,
+        exact_finite_max_sites = config.exact_finite_max_sites,
     )
 end
 
@@ -1155,6 +1320,7 @@ function _ipeps_sample_data(sample::PXPIPEPSSample)
         evolution = _evolution_data(sample.evolution),
         ctm = _trusted_ctm_data(sample.ctm),
         log_norm = sample.log_norm,
+        exact_finite_density = sample.exact_finite_density,
     )
 end
 
@@ -1166,8 +1332,10 @@ function _comparison_data(sample::PXPEDComparisonSample)
         ed_excitation_density = sample.ed_excitation_density,
         ipeps_simple_density = sample.ipeps_simple_density,
         ipeps_ctm_density = sample.ipeps_ctm_density,
+        ipeps_exact_finite_density = sample.ipeps_exact_finite_density,
         density_error_simple = sample.density_error_simple,
         density_error_ctm = sample.density_error_ctm,
+        density_error_exact_finite = sample.density_error_exact_finite,
         simple_blockade_violation = sample.simple_blockade_violation,
         ctm_blockade_violation = sample.ctm_blockade_violation,
         ctm_trusted = sample.ctm_trusted,
@@ -1201,6 +1369,7 @@ function _convergence_report_data(report::PXPConvergenceReport)
         summary = (;
             max_abs_density_error_simple = report.max_abs_density_error_simple,
             max_abs_density_error_ctm = report.max_abs_density_error_ctm,
+            max_abs_density_error_exact_finite = report.max_abs_density_error_exact_finite,
             all_ctm_trusted = report.all_ctm_trusted,
         ),
         runs = _report_data.(report.runs),
@@ -1222,6 +1391,8 @@ function _audit_config_data(config::PXPAuditConfig)
         ctm_maxiter = config.ctm_maxiter,
         ctm_verbosity = config.ctm_verbosity,
         ctm_seed = config.ctm_seed,
+        exact_finite_observables = config.exact_finite_observables,
+        exact_finite_max_sites = config.exact_finite_max_sites,
     )
 end
 
@@ -1249,6 +1420,7 @@ function _audit_summary_data(summary::PXPAuditSummary)
         chi_values = summary.chi_values,
         max_abs_density_error_simple = summary.max_abs_density_error_simple,
         max_abs_density_error_ctm = summary.max_abs_density_error_ctm,
+        max_abs_density_error_exact_finite = summary.max_abs_density_error_exact_finite,
         max_blockade_violation_simple = summary.max_blockade_violation_simple,
         max_blockade_violation_ctm = summary.max_blockade_violation_ctm,
         pxp_energy_drift_simple = summary.pxp_energy_drift_simple,
@@ -1341,6 +1513,7 @@ const PXP_AUDIT_CSV_HEADER = [
     "chi_values",
     "max_abs_density_error_simple",
     "max_abs_density_error_ctm",
+    "max_abs_density_error_exact_finite",
     "max_blockade_violation_simple",
     "max_blockade_violation_ctm",
     "pxp_energy_drift_simple",
@@ -1392,6 +1565,7 @@ function _audit_csv_row(summary::PXPAuditSummary)
         summary.chi_values,
         summary.max_abs_density_error_simple,
         summary.max_abs_density_error_ctm,
+        summary.max_abs_density_error_exact_finite,
         summary.max_blockade_violation_simple,
         summary.max_blockade_violation_ctm,
         summary.pxp_energy_drift_simple,
