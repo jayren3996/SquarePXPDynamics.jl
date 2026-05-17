@@ -28,6 +28,68 @@ Source:
 
 Status: active
 
+## 2026-05-17 - M2 First Audit Stops Before CTM On D2 Anomaly
+
+Decision:
+
+Treat the first no-CTM M2 audit as the current decision instrument and do not
+run the requested CTM-attached `D = [1, 2]` grid until the D=2 simple-update
+anomaly is understood.
+
+Reason:
+
+The `3 x 3`, all-down, `total_time = 0.02` no-CTM audit found that D=1 tracks
+ED density closely, while D=2 has roughly two orders of magnitude larger density
+error and large log-norm increments despite tiny truncation and reversibility
+drift. That points first at update/normalization behavior in the existing D=2
+simple-update path, not CTM finite-chi drift.
+
+Consequences:
+
+The M2 artifact set currently includes `artifacts/pxp_audit_noctm.csv`,
+`artifacts/pxp_audit_noctm.json`, and a decision note. The CTM-attached audit
+should be rerun after a focused D=2 update/log-norm investigation; otherwise CTM
+trust diagnostics would be mixed with a known pre-CTM baseline issue.
+
+Source:
+
+`artifacts/pxp_audit_noctm.csv`; `artifacts/pxp_audit_noctm.json`;
+`docs/superpowers/notes/2026-05-17-m2-first-pxp-audit.md`
+
+Status: active
+
+## 2026-05-17 - Add M1 PXP Audit Campaign As Report Composition Layer
+
+Decision:
+
+Implement the M1 PXP audit campaign as a thin composition layer over existing
+PXP validation, trusted CTM measurement, and reversibility APIs rather than as
+new physics logic.
+
+Reason:
+
+The milestone needs machine-readable bottleneck triage across small all-down
+ED/iPEPS runs, optional finite-`chi` CTM trust, truncation/log-norm diagnostics,
+and reverse-evolution drift. The trusted measurement stack already provides the
+correct primitives, so the new API should aggregate and serialize them.
+
+Consequences:
+
+`PXPAuditConfig` defaults to a deliberately small serial `3 x 3` grid without
+CTMRG, while `chi_values` or `SQUAREPXP_AUDIT_CHI=8,12` opt into CTM-attached
+audits. The JSON artifact keeps nested validation and reversibility reports;
+the CSV artifact exposes flat summary fields for deciding whether the next
+bottleneck is update/Trotter error, finite-`chi` drift, objective
+insufficiency, truncation pressure, or persistence. CTM-aware/full-update
+evolution remains out of scope.
+
+Source:
+
+`src/PXPValidation.jl`; `scripts/pxp_audit_campaign.jl`; `README.md`;
+`test/test_pxp_validation.jl`
+
+Status: active
+
 ## 2026-05-16 - ScarFinder Uses Trusted Measurement Backends
 
 Decision:
