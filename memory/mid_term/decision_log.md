@@ -28,6 +28,40 @@ Source:
 
 Status: active
 
+## 2026-05-17 - D2 Audit Anomaly Localizes To Simple Measurement Path
+
+Decision:
+
+Treat the first no-CTM `3 x 3` all-down short-time PXP D=2 anomaly as a
+simple/local measurement-path limitation unless a later exactness requirement
+for `density_simple` is adopted and implemented.
+
+Reason:
+
+A focused dense serial-star harness shows that grow-on-demand D=2
+`project_star!` matches the exact dense serial-star reference after every star,
+including the final density `0.0003996269892620211` versus reference
+`0.0003996269892620213`. The first divergence is between the exact finite
+contraction and `measure_simple` at star 3, where the dense D=2 density is
+`0.00013326224449912625` but `measure_simple` reports
+`0.000111054099003352`.
+
+Consequences:
+
+Do not use the no-CTM simple/local D>1 audit density as an exact finite-system
+PXP density. Keep `density_simple` interpreted as a cheap simple-update local
+environment diagnostic unless the project explicitly decides to replace or
+augment it with an exact finite contraction path for tiny validation cells.
+CTM Stage 2, CTM-aware/full-update design, new CTM observables, and tensor
+persistence remain postponed.
+
+Source:
+
+`test/test_pxp_d2_localization.jl`;
+`docs/superpowers/notes/2026-05-17-d2-measurement-localization.md`
+
+Status: active
+
 ## 2026-05-17 - M2 First Audit Stops Before CTM On D2 Anomaly
 
 Decision:
