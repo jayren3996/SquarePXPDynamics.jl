@@ -8,8 +8,14 @@ Source artifacts:
 Requested Stage 2 CTM artifacts were intentionally not generated because the
 Stage 1 no-CTM gate was not clean. The no-CTM audit already exposed a
 short-time D=2/simple-update pathology, so running the CTM grid with
-`D_values = [1, 2]` would mix finite-chi diagnostics with an update/normalization
-problem visible before CTMRG.
+`D_values = [1, 2]` would mix finite-chi diagnostics with a pre-CTM
+simple/local diagnostic boundary.
+
+Update: follow-up localization in
+`docs/superpowers/notes/2026-05-17-d2-measurement-localization.md` showed that
+the D=2 star update itself matches the exact dense serial-star reference under
+full finite contraction. The no-CTM density anomaly comes from treating
+`density_simple` as an exact finite observable on a loopy D>1 PEPS.
 
 ## Command
 
@@ -48,8 +54,11 @@ Key values:
 
 ## Bottleneck Classification
 
-Dominant bottleneck at this scale: D=2 update/normalization behavior in the
-simple-update path, not CTM finite-chi and not reversibility.
+Superseded classification: this note originally called the dominant bottleneck
+D=2 update/normalization behavior in the simple-update path. Follow-up exact
+finite contractions localized the issue more narrowly to the D>1 no-CTM
+simple/local measurement interpretation, not the QR/SVD star-update path, CTM
+finite-chi, or reversibility.
 
 Evidence:
 
@@ -60,18 +69,18 @@ Evidence:
 - D=2 truncation error is tiny (`~1e-28` to `~1e-15`), so the problem is not
   ordinary truncation pressure.
 - D=2 log-norm deltas are large (`7.28`, `25.99`, `63.42`) and grow as `dt`
-  is refined because more update intervals are applied.
+  is refined because more update intervals are applied, but a prior scalar
+  normalization trial did not change the density anomaly.
 - Reversibility drift is tiny for D=2, so the forward/reverse path is internally
   round-tripping despite producing a poor ED density match.
 
 ## Follow-Up
 
-Before running the CTM-attached audit, debug the D=2 simple-update
-normalization/update path on the same `3 x 3`, all-down, `total_time = 0.02`
-case. A focused follow-up should compare D=1 and D=2 after one serial star
-sweep, inspecting local tensors, link weights, `log_norm`, and `EvolutionLog`
-increments to determine why D=2 accumulates large log-norm increments and
-suppresses density growth while reversibility remains nearly exact.
+Before using no-CTM D>1 audit density as a finite validation signal, use exact
+finite contractions for tiny cells or trusted CTM observables for production
+diagnostics. The current `max_abs_density_error_simple` field should be read as
+a simple/local diagnostic offset, not as an exact finite PEPS density error.
 
 Do not start CTM-aware/full-update design yet. The first bottleneck is a
-short-time D=2 audit anomaly in the existing simple-update stack.
+short-time D=2 audit interpretation issue in the existing no-CTM simple
+measurement stack.

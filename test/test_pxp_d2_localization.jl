@@ -109,6 +109,61 @@ function _d2_dense_contract_ipeps(psi)
     return state
 end
 
+function _d2_exact_local_expectation(psi, coords, O::AbstractMatrix)
+    cell = psi.unitcell
+    sites = Tuple(wrap(cell, c) for c in coords)
+    positions = Tuple(findfirst(==(site), cell.reps) for site in sites)
+    all(!isnothing, positions) || throw(ArgumentError("observable sites must be in cell reps"))
+    length(Set(positions)) == length(positions) ||
+        throw(ArgumentError("observable sites must be distinct in the wrapped unit cell"))
+    size(O) == (2^length(sites), 2^length(sites)) ||
+        throw(ArgumentError("operator size does not match observable support"))
+
+    state = _d2_dense_contract_ipeps(psi)
+    normsq = sum(abs2, state)
+    normsq > 0 || throw(ArgumentError("dense state has zero norm"))
+
+    value = 0.0 + 0.0im
+    for in_values in Iterators.product((1:2 for _ = 1:length(cell.reps))...)
+        in_idx = _d2_dense_index(in_values)
+        amplitude = state[in_idx]
+        iszero(amplitude) && continue
+        local_in = ntuple(site -> in_values[positions[site]], length(sites))
+        local_in_idx = _d2_dense_index(local_in)
+        for local_out in Iterators.product((1:2 for _ = 1:length(sites))...)
+            local_out_idx = _d2_dense_index(local_out)
+            out_values = collect(in_values)
+            for site = 1:length(sites)
+                out_values[positions[site]] = local_out[site]
+            end
+            out_idx = _d2_dense_index(Tuple(out_values))
+            value += conj(state[out_idx]) * O[local_out_idx, local_in_idx] * amplitude
+        end
+    end
+    return value / normsq
+end
+
+function exact_one_site_expectation(psi, c, O)
+    return _d2_exact_local_expectation(psi, (c,), O)
+end
+
+function exact_nearest_neighbor_expectation(psi, c, dir, O)
+    return _d2_exact_local_expectation(psi, (c, neighbor(psi.unitcell, c, dir)), O)
+end
+
+function exact_star_expectation(psi, center, O)
+    coords = _d2_star_coords(psi.unitcell, center)
+    return _d2_exact_local_expectation(
+        psi,
+        (coords.center, coords.right, coords.up, coords.left, coords.down),
+        O,
+    )
+end
+
+function _d2_first_mismatch(rows; atol = 5e-8)
+    return findfirst(row -> !isapprox(row.simple, row.exact; atol, rtol = 0), rows)
+end
+
 function _d2_trace_serial_star(; maxdim_d2 = 2, step = 0.02, cutoff = 1e-12)
     cell = PeriodicSquareUnitCell(3, 3)
     reference = _d2_dense_all_down(cell)
@@ -242,4 +297,92 @@ end
     @test dense_density ≈ 0.00013326224449912612 atol = 5e-15
     @test simple_density ≈ 0.000111054099003352 atol = 5e-15
     @test_broken simple_density ≈ dense_density atol = 5e-8
+end
+
+@testset "D2 first divergent state exact finite observables" begin
+    psi, _ = _d2_ipeps_after_serial_stars(3)
+    n = projector_up()
+    nn = kron(n, n)
+    zz = kron(pauli_z(), pauli_z())
+    Hstar = square_pxp_star_hamiltonian()
+    star_center_density = embed_one_site(n, 1, SQUARE_STAR_SITES)
+
+    one_site_rows = [
+        (
+            coord = c,
+            exact = real(exact_one_site_expectation(psi, c, n)),
+            simple = local_density_simple(psi, c),
+        ) for c in psi.unitcell.reps
+    ]
+    first_one_site = _d2_first_mismatch(one_site_rows)
+    @test first_one_site == 2
+    @test one_site_rows[first_one_site].coord == SquareCoord(2, 1)
+    @test one_site_rows[first_one_site].exact ≈ 0.0003997867121725804 atol = 5e-15
+    @test one_site_rows[first_one_site].simple ≈ 0.0001999133387617944 atol = 5e-15
+    @test one_site_rows[first_one_site].simple - one_site_rows[first_one_site].exact ≈
+          -0.000199873373410786 atol = 5e-15
+    @test sum(row.exact for row in one_site_rows) / length(one_site_rows) ≈
+          _d2_dense_density(_d2_dense_contract_ipeps(psi), psi.unitcell) atol = 5e-15
+    @test_broken all(row -> isapprox(row.simple, row.exact; atol = 5e-8, rtol = 0), one_site_rows)
+
+    density_bond_rows = [
+        (
+            coord = c,
+            dir,
+            exact = real(exact_nearest_neighbor_expectation(psi, c, dir, nn)),
+            simple = nearest_neighbor_density_simple(psi, c, dir),
+        ) for c in psi.unitcell.reps for dir in (:right, :up)
+    ]
+    @test all(row -> isapprox(row.simple, row.exact; atol = 5e-8, rtol = 0), density_bond_rows)
+
+    zz_bond_rows = [
+        (
+            coord = c,
+            dir,
+            exact = real(exact_nearest_neighbor_expectation(psi, c, dir, zz)),
+            simple = real(
+                SquarePXPDynamics.Observables._nearest_neighbor_expectation_simple(
+                    psi,
+                    c,
+                    dir,
+                    zz,
+                ),
+            ),
+        ) for c in psi.unitcell.reps for dir in (:right, :up)
+    ]
+    first_zz_bond = _d2_first_mismatch(zz_bond_rows)
+    @test first_zz_bond == 1
+    @test zz_bond_rows[first_zz_bond].coord == SquareCoord(1, 1)
+    @test zz_bond_rows[first_zz_bond].dir == :right
+    @test zz_bond_rows[first_zz_bond].exact ≈ 0.9984005332366328 atol = 5e-15
+    @test zz_bond_rows[first_zz_bond].simple ≈ 0.9988001200421318 atol = 5e-15
+    @test zz_bond_rows[first_zz_bond].simple - zz_bond_rows[first_zz_bond].exact ≈
+          0.00039958680549900816 atol = 5e-15
+    @test_broken all(row -> isapprox(row.simple, row.exact; atol = 5e-8, rtol = 0), zz_bond_rows)
+
+    star_density_rows = [
+        (
+            coord = c,
+            exact = real(exact_star_expectation(psi, c, star_center_density)),
+            simple = real(star_expectation_simple(psi, c, star_center_density)),
+        ) for c in psi.unitcell.reps
+    ]
+    first_star_density = _d2_first_mismatch(star_density_rows)
+    @test first_star_density == 1
+    @test star_density_rows[first_star_density].coord == SquareCoord(1, 1)
+    @test star_density_rows[first_star_density].exact ≈ 0.00039994666951102603 atol =
+        5e-15
+    @test star_density_rows[first_star_density].simple ≈ 0.00040006586165461806 atol =
+        5e-15
+    @test star_density_rows[first_star_density].simple -
+          star_density_rows[first_star_density].exact ≈ 1.1919214359202906e-7 atol = 5e-15
+    @test_broken all(
+        row -> isapprox(row.simple, row.exact; atol = 5e-8, rtol = 0),
+        star_density_rows,
+    )
+
+    for c in psi.unitcell.reps
+        @test star_expectation_simple(psi, c, Hstar) ≈ exact_star_expectation(psi, c, Hstar) atol =
+            5e-8
+    end
 end
