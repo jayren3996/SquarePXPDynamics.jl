@@ -21,6 +21,14 @@ function _validation_fake_ctm_summary(params; density, blockade, energy, accepte
     )
 end
 
+function _validation_csv_cell(csv, name)
+    header = split(csv[1], ','; keepempty = true)
+    row = split(csv[2], ','; keepempty = true)
+    index = findfirst(==(name), header)
+    index === nothing && error("missing CSV column $name")
+    return row[index]
+end
+
 @testset "trusted CTM measurement composes finite chi sweep and trust policy" begin
     cell = PeriodicSquareUnitCell(3, 3)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
@@ -120,6 +128,48 @@ end
     @test report.metadata.julia_version == string(VERSION)
 end
 
+@testset "PXP validation can attach exact finite tiny-cell density" begin
+    config = PXPValidationConfig(
+        3;
+        total_time = 0.02,
+        dt = 0.02,
+        measure_every = 1,
+        maxdim = 2,
+        cutoff = 1e-12,
+        exact_finite_observables = true,
+        exact_finite_max_sites = 12,
+    )
+    report = validate_pxp_ed_ipeps(config; ctm_params = nothing)
+
+    @test report.config.exact_finite_observables === true
+    @test all(sample -> sample.exact_finite_density !== nothing, report.ipeps_samples)
+    @test all(comparison -> comparison.ipeps_exact_finite_density !== nothing, report.comparisons)
+    @test all(comparison -> comparison.density_error_exact_finite !== nothing, report.comparisons)
+    @test report.comparisons[end].ipeps_exact_finite_density ≈
+          0.0003996269892620211 atol = 1e-12
+    @test abs(report.comparisons[end].density_error_exact_finite) < 1e-6
+    @test abs(report.comparisons[end].density_error_simple) > 1e-4
+end
+
+@testset "PXP validation rejects exact finite contraction above configured max sites" begin
+    @test_throws ArgumentError PXPValidationConfig(
+        3;
+        total_time = 0.02,
+        dt = 0.02,
+        maxdim = 1,
+        exact_finite_observables = true,
+        exact_finite_max_sites = 8,
+    )
+    @test_throws ArgumentError PXPValidationConfig(
+        4;
+        total_time = 0.02,
+        dt = 0.02,
+        maxdim = 1,
+        exact_finite_observables = true,
+        exact_finite_max_sites = 12,
+    )
+end
+
 @testset "PXP validation metadata uses package checkout git commit" begin
     config = PXPValidationConfig(3; total_time = 0.0, dt = 0.01, measure_every = 1)
     package_root = abspath(joinpath(@__DIR__, ".."))
@@ -207,6 +257,36 @@ end
     @test length(parsed.ed_result.diagnostics.accepted_intervals) >= 0
     @test parsed.ipeps_samples[1].ctm === nothing
     @test parsed.comparisons[1].ctm_reason === nothing
+    @test haskey(parsed.config, :exact_finite_observables)
+    @test parsed.config.exact_finite_observables === false
+    @test parsed.config.exact_finite_max_sites == 12
+    @test parsed.ipeps_samples[1].exact_finite_density === nothing
+    @test parsed.comparisons[1].ipeps_exact_finite_density === nothing
+    @test parsed.comparisons[1].density_error_exact_finite === nothing
+end
+
+@testset "PXP validation JSON preserves opt-in exact finite density" begin
+    config = PXPValidationConfig(
+        3;
+        total_time = 0.02,
+        dt = 0.02,
+        measure_every = 1,
+        maxdim = 2,
+        cutoff = 1e-12,
+        exact_finite_observables = true,
+        exact_finite_max_sites = 9,
+    )
+    report = validate_pxp_ed_ipeps(config; ctm_params = nothing)
+    path = tempname() * ".json"
+
+    write_pxp_validation_json(report, path)
+    parsed = JSON3.read(read(path, String))
+
+    @test parsed.config.exact_finite_observables === true
+    @test parsed.config.exact_finite_max_sites == 9
+    @test parsed.ipeps_samples[end].exact_finite_density ≈ 0.0003996269892620211 atol =
+        1e-12
+    @test abs(parsed.comparisons[end].density_error_exact_finite) < 1e-6
 end
 
 @testset "PXP validation report writes CTM trust policy JSON" begin
@@ -280,6 +360,34 @@ end
     @test isfinite(report.max_abs_density_error_simple)
 end
 
+@testset "PXP convergence propagates exact finite density opt-in" begin
+    base = PXPValidationConfig(
+        3;
+        total_time = 0.02,
+        dt = 0.02,
+        measure_every = 1,
+        maxdim = 2,
+        cutoff = 1e-12,
+        exact_finite_observables = true,
+        exact_finite_max_sites = 9,
+    )
+    sweep = PXPConvergenceConfig(
+        base;
+        dt_values = [0.02],
+        D_values = [2],
+        chi_values = Int[],
+        cutoff_values = [1e-12],
+    )
+
+    report = validate_pxp_convergence(sweep)
+
+    @test report.runs[1].config.exact_finite_observables === true
+    @test report.runs[1].config.exact_finite_max_sites == 9
+    @test report.runs[1].ipeps_samples[end].exact_finite_density !== nothing
+    @test report.max_abs_density_error_exact_finite !== nothing
+    @test report.max_abs_density_error_exact_finite < 1e-6
+end
+
 @testset "PXP convergence report aggregates CTM chi sweep" begin
     base = PXPValidationConfig(3; total_time = 0.01, dt = 0.01, measure_every = 1)
     sweep = PXPConvergenceConfig(
@@ -329,6 +437,7 @@ end
     @test collect(parsed.config.chi_values) == Int[]
     @test collect(parsed.config.cutoff_values) == [1e-12]
     @test haskey(parsed.summary, :max_abs_density_error_simple)
+    @test haskey(parsed.summary, :max_abs_density_error_exact_finite)
     @test parsed.summary.max_abs_density_error_ctm === nothing
     @test parsed.summary.all_ctm_trusted === nothing
     @test length(parsed.runs) == 2
@@ -360,6 +469,7 @@ end
     @test summary.ctm_trust_reason === :not_run
     @test summary.max_abs_density_error_simple >= 0
     @test summary.max_abs_density_error_ctm === nothing
+    @test summary.max_abs_density_error_exact_finite === nothing
     @test summary.max_blockade_violation_simple >= 0
     @test summary.pxp_energy_drift_simple >= 0
     @test summary.max_truncerr >= 0
@@ -367,6 +477,28 @@ end
     @test summary.reversibility_density_drift >= 0
     @test summary.reversibility_blockade_drift >= 0
     @test summary.reversibility_energy_drift >= 0
+end
+
+@testset "PXP audit campaign can opt into exact finite density summaries" begin
+    config = PXPAuditConfig(;
+        n_values = [3],
+        total_time = 0.02,
+        dt_values = [0.02],
+        D_values = [2],
+        cutoff_values = [1e-12],
+        chi_values = Int[],
+        exact_finite_observables = true,
+        exact_finite_max_sites = 9,
+    )
+    report = run_pxp_audit_campaign(config; ctm_measure = _validation_fake_ctm_summary)
+    summary = report.runs[1].summary
+
+    @test report.config.exact_finite_observables === true
+    @test report.config.exact_finite_max_sites == 9
+    @test report.runs[1].validation.config.exact_finite_max_sites == 9
+    @test summary.max_abs_density_error_exact_finite !== nothing
+    @test summary.max_abs_density_error_exact_finite < 1e-6
+    @test summary.max_abs_density_error_simple > 1e-4
 end
 
 @testset "PXP audit campaign records CTM trust summaries with fake CTM" begin
@@ -426,6 +558,37 @@ end
     @test haskey(parsed.runs[1].summary, :max_abs_density_error_simple)
     @test haskey(parsed.runs[1].summary, :reversibility_energy_drift)
     @test startswith(csv[1], "n,total_time,dt,D,cutoff")
+    @test occursin("max_abs_density_error_exact_finite", csv[1])
+    @test _validation_csv_cell(csv, "max_abs_density_error_exact_finite") == ""
     @test length(csv) == 2
     @test occursin(",not_run,not_run,", csv[2])
+end
+
+@testset "PXP audit JSON and CSV preserve opt-in exact finite summaries" begin
+    config = PXPAuditConfig(;
+        n_values = [3],
+        total_time = 0.02,
+        dt_values = [0.02],
+        D_values = [2],
+        cutoff_values = [1e-12],
+        chi_values = Int[],
+        exact_finite_observables = true,
+        exact_finite_max_sites = 9,
+    )
+    report = run_pxp_audit_campaign(config)
+    json_path = tempname() * ".json"
+    csv_path = tempname() * ".csv"
+
+    write_pxp_audit_json(report, json_path)
+    write_pxp_audit_csv(report, csv_path)
+    parsed = JSON3.read(read(json_path, String))
+    csv = split(chomp(read(csv_path, String)), '\n')
+
+    @test parsed.config.exact_finite_observables === true
+    @test parsed.config.exact_finite_max_sites == 9
+    @test parsed.runs[1].validation.config.exact_finite_max_sites == 9
+    @test parsed.runs[1].summary.max_abs_density_error_exact_finite < 1e-6
+    @test occursin("max_abs_density_error_exact_finite", csv[1])
+    @test parse(Float64, _validation_csv_cell(csv, "max_abs_density_error_exact_finite")) < 1e-6
+    @test occursin("not_run,not_run", csv[2])
 end
