@@ -202,7 +202,9 @@ the updated tensors are written back to the Gamma-lambda iPEPS state.
 The first production-facing validation path is
 `validate_pxp_ed_ipeps(PXPValidationConfig(...))`. It runs a finite periodic
 PXP ED trajectory, evolves a matched all-down iPEPS trajectory on the same
-unit cell, and reports density differences at shared sample times. Passing
+unit cell, and reports density differences at shared sample times. Without CTM,
+the simple-density difference is a local-environment diagnostic; for D>1 loopy
+periodic PEPS it is not an exact finite contraction. Passing
 `ctm_params = (...)` attaches `measure_ctm_trusted` output at every sample:
 the final CTM measurement, the finite-`chi` sweep points, and the
 `assess_ctm_trust` result.
@@ -214,6 +216,26 @@ config = PXPValidationConfig(3; total_time = 0.02, dt = 0.01)
 report = validate_pxp_ed_ipeps(config; ctm_params = nothing)
 write_pxp_validation_json(report, "artifacts/pxp_validation_report.json")
 ```
+
+For tiny periodic cells, validation can attach an exact finite contraction
+density alongside simple/local and CTM fields:
+
+```julia
+config = PXPValidationConfig(
+    3;
+    total_time = 0.02,
+    dt = 0.02,
+    maxdim = 2,
+    exact_finite_observables = true,
+    exact_finite_max_sites = 12,
+)
+report = validate_pxp_ed_ipeps(config; ctm_params = nothing)
+```
+
+The exact finite path is intentionally size-limited and uses dense `2^N`
+contractions of the supplied `SquareIPEPSState`. It is a debugging and
+tiny-cell validation reference, not exact ED dynamics and not a replacement for
+CTM-backed thermodynamic measurements.
 
 or from the shell:
 
@@ -310,11 +332,13 @@ Other useful overrides are `SQUAREPXP_AUDIT_N=3,4`,
 `SQUAREPXP_AUDIT_JSON=...`, and `SQUAREPXP_AUDIT_CSV=...`.
 
 The CSV summary is for bottleneck triage. Large `max_abs_density_error_simple`
-with small reversibility drift points first at ED/iPEPS update or Trotter
-error; CTM density error or rejected `ctm_trust_status` points at finite-`chi`
-drift; large `max_truncerr` points at bond-dimension/truncation pressure; large
-`log_norm_delta_abs` or reversibility drifts point at persistence or
-round-trip stability. These are audit signals only, not physics-grade claims.
+with small reversibility drift means the simple/local no-CTM diagnostic has
+separated from the ED density; for D>1 this may be a local-environment effect,
+not an exact finite PEPS update error. CTM density error or rejected
+`ctm_trust_status` points at finite-`chi` drift; large `max_truncerr` points at
+bond-dimension/truncation pressure; large `log_norm_delta_abs` or reversibility
+drifts point at persistence or round-trip stability. These are audit signals
+only, not physics-grade claims.
 
 ## Development
 

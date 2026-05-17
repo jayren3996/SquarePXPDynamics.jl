@@ -57,6 +57,51 @@ At star `9`, center `SquareCoord(3, 3)`:
 - D=2 `log_norm`: `7.278045395879476`
 - D=2 max truncation error: `3.651022102560827e-29`
 
+## Exact Observable Boundary
+
+Added test-only exact finite observable helpers, later promoted as public
+`_finite` APIs:
+
+- `exact_one_site_expectation_finite(psi, c, O)`;
+- `exact_nearest_neighbor_expectation_finite(psi, c, dir, O)`;
+- `exact_star_expectation_finite(psi, center, O)`.
+
+Each helper contracts the full `3 x 3` network through the dense-vector path
+after absorbing each periodic link weight exactly once.
+
+For the first divergent D=2 state after star `3`, the first per-site one-site
+density mismatch is:
+
+- site: `SquareCoord(2, 1)`
+- exact finite `<n>`: `0.0003997867121725804`
+- `local_density_simple`: `0.0001999133387617944`
+- simple minus exact: `-0.000199873373410786`
+
+The average exact finite one-site density remains
+`0.00013326224449912612`, matching the dense serial-star reference, while the
+average `density_simple` is `0.000111054099003352`.
+
+Nearest-neighbor blockade density `<n_i n_j>` stays zero within tolerance on
+canonical bonds for this state, so it does not expose the boundary. A generic
+two-site ZZ observable does:
+
+- bond: `SquareCoord(1, 1)` `:right`
+- exact finite `<ZZ>`: `0.9984005332366328`
+- simple local `<ZZ>`: `0.9988001200421318`
+- simple minus exact: `0.00039958680549900816`
+
+The first star-patch mismatch found with a center-density operator embedded in
+star order `(center, right, up, left, down)` is:
+
+- center: `SquareCoord(1, 1)`
+- exact finite star-center density: `0.00039994666951102603`
+- `star_expectation_simple` value: `0.00040006586165461806`
+- simple minus exact: `1.1919214359202906e-7`
+
+The square-PXP star Hamiltonian expectation itself still agrees within the
+diagnostic tolerance on this state; it is less sensitive than the local density
+and ZZ probes here.
+
 ## Conclusion
 
 Confirmed: the D=2 QR/SVD star-update path is not the source of this tiny-run
@@ -64,16 +109,17 @@ density anomaly as measured by exact finite contraction. The D=2 state produced
 by grow-on-demand serial `project_star!` matches the exact dense serial-star
 circuit through all nine stars to tight tolerance.
 
-Confirmed: the no-CTM audit anomaly is in the D>1 simple/local measurement
-path or, more precisely, in treating `density_simple` as an exact finite `3 x 3`
-observable after overlapping D=2 serial updates. The current `Observables.jl`
-documentation already describes simple/local observables as cheap
-simple-update local-environment diagnostics, not CTMRG-quality measurements.
+Confirmed: the no-CTM audit anomaly is in treating D>1 simple/local
+measurements as exact finite `3 x 3` observables after overlapping D=2 serial
+updates. The exact observable helpers show mismatches in one-site, generic
+two-site, and star-patch probes. This is expected for simple/local environments
+on a loopy finite PEPS and is not evidence of a concrete lambda-counting bug in
+`Observables.jl`.
 
-No production observable was changed in this slice. The regression keeps the
-exact `density_simple == dense contraction` expectation as `@test_broken`, so
-future work can either make the intended exactness contract true or keep audit
-interpretation conservative.
+No production observable formula was changed in this slice. The regression
+keeps exact simple-environment equality expectations as `@test_broken`, and
+the README / validation docstrings now state that D>1 no-CTM simple-density
+errors are local diagnostic offsets, not exact finite-PEPS validation errors.
 
 Postponed:
 
@@ -81,3 +127,10 @@ Postponed:
 - CTM-aware/full-update design;
 - new CTM observables;
 - tensor persistence.
+
+## Follow-Up Implementation Plan
+
+Plan `docs/superpowers/plans/2026-05-17-d2-exact-finite-observables.md`
+promotes the test-only exact finite helpers into a size-limited module and
+wires exact finite density into PXP validation/audit as an opt-in field. The
+plan keeps simple/local observable formulas unchanged.
