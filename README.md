@@ -141,6 +141,26 @@ The script writes JSON by default to `scripts/pxp-ed-7x7.json`. Runtime knobs
 are environment variables, for example
 `PXP_ED_TOTAL_TIME=0.05 PXP_ED_M_MAX=40 julia --project=. scripts/pxp_ed_7x7_benchmark.jl`.
 
+For the M3 larger-D benchmark path, run the manual `7 x 7` capacity-boundary
+probe with:
+
+```bash
+SQUAREPXP_LARGERD_N=7 \
+SQUAREPXP_LARGERD_DT=0.01 \
+SQUAREPXP_LARGERD_D=1 \
+SQUAREPXP_LARGERD_TOTAL_TIME=0.0 \
+SQUAREPXP_LARGERD_USE_SPARSE=false \
+SQUAREPXP_LARGERD_JSON=artifacts/m3-7x7-capacity.json \
+SQUAREPXP_LARGERD_CSV=artifacts/m3-7x7-capacity.csv \
+julia --project=. scripts/pxp_larger_d_ed_benchmark.jl
+```
+
+`7 x 7` is the largest square PBC size supported by the current `UInt64`
+basis. This command is a capacity boundary probe, not a default test. If it is
+too slow or memory-heavy, use `scripts/pxp_ed_7x7_benchmark.jl` with
+`PXP_ED_USE_SPARSE=false` for ED-only diagnosis and record the runtime boundary
+in the M3 note.
+
 An experimental PEPSKit CTMRG measurement adapter is present as `measure_ctm`,
 with CTMRG density, blockade, sublattice imbalance, checkerboard structure
 factor, and five-site PXP energy diagnostics. Check the raw CTMRG convergence

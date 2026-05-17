@@ -160,3 +160,45 @@ end
     @test occursin("write_pxp_larger_d_benchmark_json", text)
     @test occursin("write_pxp_larger_d_benchmark_csv", text)
 end
+
+@testset "PXP symmetric PBC ED capacity includes 5x5 smoke metadata" begin
+    config = PXPLargerDBenchmarkConfig(;
+        n_values = [5],
+        total_time = 0.0,
+        dt_values = [0.01],
+        D_values = [1],
+        cutoff_values = [1e-12],
+        exact_finite_observables = true,
+        exact_finite_max_sites = 9,
+    )
+
+    report = run_pxp_larger_d_benchmark(config)
+    summary = only(report.runs).summary
+
+    @test summary.n == 5
+    @test summary.ed_basis_dimension == 188
+    @test summary.ed_constrained_dimension == 25_531
+    @test summary.ed_group_order == 8 * 5^2
+    @test summary.observable_mode === :symmetric_pbc_ed_global
+    @test summary.density_error_exact_finite === nothing
+    @test summary.return_probability_error === nothing
+    @test any(w -> occursin("exact finite", w), summary.warnings)
+end
+
+if RUN_EXTENDED_PXP_ED_TESTS
+    @testset "extended PXP larger-D benchmark smoke" begin
+        config = PXPLargerDBenchmarkConfig(;
+            n_values = [3],
+            total_time = 0.02,
+            dt_values = [0.02],
+            D_values = [1, 2, 3, 4],
+            cutoff_values = [1e-12],
+            exact_finite_observables = true,
+            exact_finite_max_sites = 9,
+        )
+        report = run_pxp_larger_d_benchmark(config)
+        @test length(report.runs) == 4
+        @test all(run -> run.summary.density_error_exact_finite !== nothing, report.runs)
+        @test all(run -> isfinite(run.summary.log_norm_delta_abs), report.runs)
+    end
+end
