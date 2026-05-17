@@ -279,6 +279,43 @@ report = validate_pxp_convergence(config)
 write_pxp_convergence_json(report, "artifacts/pxp_convergence_report.json")
 ```
 
+For the M1 PXP audit campaign, use `run_pxp_audit_campaign`. It runs the
+small all-down ED/iPEPS validation grid, adds a reversibility report per grid
+point, and writes both nested JSON and a flat CSV summary:
+
+```julia
+config = PXPAuditConfig(;
+    n_values = [3],
+    total_time = 0.02,
+    dt_values = [0.02, 0.01],
+    D_values = [1, 2],
+    cutoff_values = [1e-12],
+    chi_values = Int[],
+)
+report = run_pxp_audit_campaign(config)
+write_pxp_audit_json(report, "artifacts/pxp_audit_report.json")
+write_pxp_audit_csv(report, "artifacts/pxp_audit_summary.csv")
+```
+
+or from the shell:
+
+```bash
+julia --project=. scripts/pxp_audit_campaign.jl
+```
+
+Set `SQUAREPXP_AUDIT_CHI=8,12` to attach trusted CTM finite-`chi` sweeps.
+Other useful overrides are `SQUAREPXP_AUDIT_N=3,4`,
+`SQUAREPXP_AUDIT_DT=0.02,0.01,0.005`, `SQUAREPXP_AUDIT_D=1,2`,
+`SQUAREPXP_AUDIT_CUTOFF=1e-10,1e-12`, `SQUAREPXP_AUDIT_TOTAL_TIME=0.02`,
+`SQUAREPXP_AUDIT_JSON=...`, and `SQUAREPXP_AUDIT_CSV=...`.
+
+The CSV summary is for bottleneck triage. Large `max_abs_density_error_simple`
+with small reversibility drift points first at ED/iPEPS update or Trotter
+error; CTM density error or rejected `ctm_trust_status` points at finite-`chi`
+drift; large `max_truncerr` points at bond-dimension/truncation pressure; large
+`log_norm_delta_abs` or reversibility drifts point at persistence or
+round-trip stability. These are audit signals only, not physics-grade claims.
+
 ## Development
 
 Instantiate the package environment:

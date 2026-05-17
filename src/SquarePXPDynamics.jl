@@ -175,7 +175,14 @@ using .PXPValidation:
     validate_pxp_convergence,
     write_pxp_convergence_json,
     PXPReversibilityReport,
-    validate_pxp_reversibility
+    validate_pxp_reversibility,
+    PXPAuditConfig,
+    PXPAuditSummary,
+    PXPAuditRun,
+    PXPAuditReport,
+    run_pxp_audit_campaign,
+    write_pxp_audit_json,
+    write_pxp_audit_csv
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -266,6 +273,8 @@ export write_pxp_validation_json
 export PXPConvergenceConfig, PXPConvergenceReport, validate_pxp_convergence
 export write_pxp_convergence_json
 export PXPReversibilityReport, validate_pxp_reversibility
+export PXPAuditConfig, PXPAuditSummary, PXPAuditRun, PXPAuditReport
+export run_pxp_audit_campaign, write_pxp_audit_json, write_pxp_audit_csv
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
 export CandidateStore, NoCandidateStore, JSONCandidateStore
