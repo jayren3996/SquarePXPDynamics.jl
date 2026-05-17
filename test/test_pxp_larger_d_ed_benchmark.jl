@@ -150,3 +150,13 @@ end
     @test length(csv) == 3
     @test parse(Float64, _csv_cell(csv, "density_error_exact_finite")) < 1e-5
 end
+
+@testset "larger-D PXP benchmark script exists" begin
+    script = joinpath(dirname(@__DIR__), "scripts", "pxp_larger_d_ed_benchmark.jl")
+    @test isfile(script)
+    text = read(script, String)
+    @test occursin("SQUAREPXP_LARGERD_N", text)
+    @test occursin("SQUAREPXP_LARGERD_EXACT_FINITE", text)
+    @test occursin("write_pxp_larger_d_benchmark_json", text)
+    @test occursin("write_pxp_larger_d_benchmark_csv", text)
+end
