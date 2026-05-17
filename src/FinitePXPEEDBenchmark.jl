@@ -9,6 +9,8 @@ import EDKit
 export PXPSquareSpaceGroupBasis
 export PXPEEDBenchmarkConfig, PXPEEDSample, PXPEEDBenchmarkResult
 export pxp_ed_space_group_basis, pxp_ed_constrained_count, pxp_ed_group_order
+export pxp_ed_boundary_condition, pxp_ed_symmetry_sector, pxp_ed_observable_scope
+export pxp_ed_reference_label, pxp_ed_site_density_operator, pxp_ed_region_density_operator
 export pxp_ed_initial_state, pxp_ed_hamiltonian_operator, sparse_pxp_ed_hamiltonian
 export run_pxp_ed_benchmark, write_pxp_ed_benchmark_json
 
@@ -409,6 +411,61 @@ pxp_ed_constrained_count(basis::PXPSquareSpaceGroupBasis) = basis.constrained_co
 Return the finite symmetry-group order used by a PXP ED basis.
 """
 pxp_ed_group_order(basis::PXPSquareSpaceGroupBasis) = length(basis.perms)
+
+"""
+    pxp_ed_boundary_condition(basis)
+
+Return the boundary condition represented by a PXP ED basis.
+"""
+pxp_ed_boundary_condition(::PXPSquareSpaceGroupBasis) = :periodic
+
+"""
+    pxp_ed_symmetry_sector(basis)
+
+Return the symmetry sector represented by a PXP ED basis.
+"""
+pxp_ed_symmetry_sector(basis::PXPSquareSpaceGroupBasis) =
+    basis.point_group ? :fully_symmetric_space_group : :translation_symmetric
+
+"""
+    pxp_ed_observable_scope(basis)
+
+Return the observable scope supported by the current PBC symmetry-reduced ED
+basis. The value is global because local and central-region observables do not
+preserve the selected symmetric sector.
+"""
+pxp_ed_observable_scope(::PXPSquareSpaceGroupBasis) = :pbc_global_site_average
+
+"""
+    pxp_ed_reference_label(basis)
+
+Return a stable machine-readable label for the ED reference observable.
+"""
+pxp_ed_reference_label(::PXPSquareSpaceGroupBasis) = "finite_pbc_global_density"
+
+"""
+    pxp_ed_site_density_operator(basis, site)
+
+Construct a site-density operator when the supplied basis supports local
+observables. The current symmetry-reduced PBC basis rejects this request because
+it would be a projected group average, not a site observable.
+"""
+function pxp_ed_site_density_operator(::PXPSquareSpaceGroupBasis, site::Integer)
+    site >= 1 || throw(ArgumentError("site must be positive"))
+    throw(ArgumentError("site density is not available in the symmetry-reduced PBC ED basis"))
+end
+
+"""
+    pxp_ed_region_density_operator(basis, sites)
+
+Construct a region-density operator when the supplied basis supports local
+regions. The current symmetry-reduced PBC basis rejects this request because
+there is no central region in a fully symmetric periodic basis.
+"""
+function pxp_ed_region_density_operator(::PXPSquareSpaceGroupBasis, sites)
+    isempty(collect(sites)) && throw(ArgumentError("region sites must be nonempty"))
+    throw(ArgumentError("region density is not available in the symmetry-reduced PBC ED basis"))
+end
 
 function EDKit.index(basis::PXPSquareSpaceGroupBasis, dgt::AbstractVector)
     _is_constrained_digits(dgt, basis.n) || return 0.0, 1

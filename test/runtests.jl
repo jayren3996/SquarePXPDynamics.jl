@@ -26,6 +26,7 @@ const TEST_FILES = [
     "test_tfim_finite_reference.jl",
     "test_finite_mps_tfim_reference.jl",
     "test_pxp_ed_benchmark.jl",
+    "test_pxp_larger_d_ed_benchmark.jl",
     "test_benchmarks.jl",
     "test_ctm_trust.jl",
     "test_pepskit_measurements.jl",

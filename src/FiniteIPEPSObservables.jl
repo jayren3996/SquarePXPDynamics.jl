@@ -12,6 +12,7 @@ using ..SquareIPEPS
 export dense_state_finite
 export exact_one_site_expectation_finite, exact_nearest_neighbor_expectation_finite
 export exact_star_expectation_finite, exact_density_finite
+export exact_all_down_return_probability_finite
 export exact_blockade_violation_finite, exact_pxp_energy_density_finite
 
 const _DIRECTIONS = (:right, :up, :left, :down)
@@ -209,6 +210,25 @@ function exact_density_finite(psi::SquareIPEPSState; max_sites::Integer = 12)::F
         c in psi.unitcell.reps
     ]
     return sum(values) / length(values)
+end
+
+"""
+    exact_all_down_return_probability_finite(psi; max_sites = 12)
+
+Return the normalized finite-contraction probability of the all-down product
+state in the supplied periodic `SquareIPEPSState`. This is available only for
+tiny cells accepted by [`dense_state_finite`](@ref).
+"""
+function exact_all_down_return_probability_finite(
+    psi::SquareIPEPSState;
+    max_sites::Integer = 12,
+)::Float64
+    nsites = _check_tiny_finite_cell(psi, max_sites)
+    state = dense_state_finite(psi; max_sites)
+    normsq = sum(abs2, state)
+    normsq > 0 || throw(ArgumentError("dense finite state has zero norm"))
+    all_down_index = 2^nsites
+    return abs2(state[all_down_index]) / normsq
 end
 
 """
