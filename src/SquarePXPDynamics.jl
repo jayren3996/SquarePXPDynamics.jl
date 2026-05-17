@@ -19,6 +19,7 @@ include("SquareIPEPS.jl")
 include("GaugeDiagnostics.jl")
 include("StarModels.jl")
 include("Observables.jl")
+include("FiniteIPEPSObservables.jl")
 include("PEPSKitMeasurements.jl")
 include("CTMTrust.jl")
 include("CTMGaugeReadiness.jl")
@@ -103,6 +104,14 @@ using .Observables: local_x_simple, local_y_simple, local_z_simple
 using .Observables: nearest_neighbor_zz_simple
 using .Observables: tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
 using .Observables: TFIMObservableSummary, measure_tfim_simple
+using .FiniteIPEPSObservables:
+    dense_state_finite,
+    exact_one_site_expectation_finite,
+    exact_nearest_neighbor_expectation_finite,
+    exact_star_expectation_finite,
+    exact_density_finite,
+    exact_blockade_violation_finite,
+    exact_pxp_energy_density_finite
 using .PEPSKitMeasurements: PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
 using .PEPSKitMeasurements: CTMObservableSummary, CTMValidationPoint
 using .PEPSKitMeasurements: to_pepskit_infinitepeps
@@ -239,6 +248,10 @@ export local_x_simple, local_y_simple, local_z_simple
 export nearest_neighbor_zz_simple
 export tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
 export TFIMObservableSummary, measure_tfim_simple
+export dense_state_finite
+export exact_one_site_expectation_finite, exact_nearest_neighbor_expectation_finite
+export exact_star_expectation_finite, exact_density_finite
+export exact_blockade_violation_finite, exact_pxp_energy_density_finite
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics, CTMObservableSummary
 export CTMValidationPoint
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
