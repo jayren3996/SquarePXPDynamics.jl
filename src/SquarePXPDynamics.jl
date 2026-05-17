@@ -203,7 +203,9 @@ using .PXPValidation:
     PXPLargerDBenchmarkSummary,
     PXPLargerDBenchmarkRun,
     PXPLargerDBenchmarkReport,
-    run_pxp_larger_d_benchmark
+    run_pxp_larger_d_benchmark,
+    write_pxp_larger_d_benchmark_json,
+    write_pxp_larger_d_benchmark_csv
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -306,6 +308,7 @@ export run_pxp_audit_campaign, write_pxp_audit_json, write_pxp_audit_csv
 export PXPLargerDBenchmarkConfig, PXPLargerDBenchmarkSummary
 export PXPLargerDBenchmarkRun, PXPLargerDBenchmarkReport
 export run_pxp_larger_d_benchmark
+export write_pxp_larger_d_benchmark_json, write_pxp_larger_d_benchmark_csv
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
 export CandidateStore, NoCandidateStore, JSONCandidateStore

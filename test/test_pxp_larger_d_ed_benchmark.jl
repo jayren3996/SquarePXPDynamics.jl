@@ -89,3 +89,64 @@ end
     @test abs(d2.summary.density_error_exact_finite) < 1e-6
     @test abs(d2.summary.density_error_simple) > 1e-4
 end
+
+@testset "larger-D PXP benchmark JSON and CSV preserve required schema" begin
+    config = PXPLargerDBenchmarkConfig(;
+        n_values = [3],
+        total_time = 0.02,
+        dt_values = [0.02],
+        D_values = [1, 2],
+        cutoff_values = [1e-12],
+        exact_finite_observables = true,
+        exact_finite_max_sites = 9,
+    )
+    report = run_pxp_larger_d_benchmark(config)
+    json_path = tempname() * ".json"
+    csv_path = tempname() * ".csv"
+
+    @test write_pxp_larger_d_benchmark_json(report, json_path) == json_path
+    @test write_pxp_larger_d_benchmark_csv(report, csv_path) == csv_path
+
+    parsed = JSON3.read(read(json_path, String))
+    @test parsed.schema_version == 1
+    @test parsed.config.ed_mode == "symmetric_pbc"
+    @test parsed.config.observable_mode == "auto"
+    @test length(parsed.runs) == 2
+    @test parsed.runs[1].summary.ed_observable_scope == "pbc_global_site_average"
+    @test parsed.runs[1].summary.observable_mode == "exact_finite"
+    @test parsed.runs[2].summary.D == 2
+    @test !any(k -> occursin("central", lowercase(String(k))), keys(parsed.runs[1].summary))
+
+    csv = split(chomp(read(csv_path, String)), '\n')
+    header = split(csv[1], ','; keepempty = true)
+    required = [
+        "n",
+        "D",
+        "dt",
+        "cutoff",
+        "total_time",
+        "ed_basis_dimension",
+        "ed_constrained_dimension",
+        "ed_group_order",
+        "ed_runtime_seconds",
+        "ipeps_runtime_seconds",
+        "observable_mode",
+        "density_error_simple",
+        "density_error_exact_finite",
+        "density_error_ctm",
+        "return_probability_error",
+        "max_truncerr",
+        "log_norm_initial",
+        "log_norm_final",
+        "log_norm_delta_abs",
+        "reversibility_density_drift",
+        "ctm_trust_status",
+        "ctm_trust_reason",
+        "notes",
+        "warnings",
+    ]
+    @test all(name -> name in header, required)
+    @test !any(name -> occursin("central", lowercase(name)), header)
+    @test length(csv) == 3
+    @test parse(Float64, _csv_cell(csv, "density_error_exact_finite")) < 1e-5
+end

@@ -32,6 +32,7 @@ export run_pxp_audit_campaign, write_pxp_audit_json, write_pxp_audit_csv
 export PXPLargerDBenchmarkConfig, PXPLargerDBenchmarkSummary
 export PXPLargerDBenchmarkRun, PXPLargerDBenchmarkReport
 export run_pxp_larger_d_benchmark
+export write_pxp_larger_d_benchmark_json, write_pxp_larger_d_benchmark_csv
 
 """
     TrustedCTMMeasurement(measurement, points, trust, policy = CTMTrustPolicy())
@@ -1900,6 +1901,93 @@ function _audit_report_data(report::PXPAuditReport)
     )
 end
 
+function _larger_d_config_data(config::PXPLargerDBenchmarkConfig)
+    return (;
+        n_values = config.n_values,
+        total_time = config.total_time,
+        dt_values = config.dt_values,
+        D_values = config.D_values,
+        cutoff_values = config.cutoff_values,
+        measure_every = config.measure_every,
+        order = config.order,
+        schedule = String(config.schedule),
+        initial_state = String(config.initial_state),
+        point_group = config.point_group,
+        use_sparse = config.use_sparse,
+        ed_tol = config.ed_tol,
+        ed_m_init = config.ed_m_init,
+        ed_m_max = config.ed_m_max,
+        ed_extend_step = config.ed_extend_step,
+        ed_mode = String(config.ed_mode),
+        observable_mode = String(config.observable_mode),
+        chi_values = config.chi_values,
+        ctm_tol = config.ctm_tol,
+        ctm_maxiter = config.ctm_maxiter,
+        ctm_verbosity = config.ctm_verbosity,
+        ctm_seed = config.ctm_seed,
+        exact_finite_observables = config.exact_finite_observables,
+        exact_finite_max_sites = config.exact_finite_max_sites,
+    )
+end
+
+function _larger_d_summary_data(summary::PXPLargerDBenchmarkSummary)
+    return (;
+        n = summary.n,
+        D = summary.D,
+        dt = summary.dt,
+        cutoff = summary.cutoff,
+        total_time = summary.total_time,
+        ed_mode = String(summary.ed_mode),
+        observable_mode = String(summary.observable_mode),
+        ed_boundary_condition = String(summary.ed_boundary_condition),
+        ed_symmetry_sector = String(summary.ed_symmetry_sector),
+        ed_observable_scope = String(summary.ed_observable_scope),
+        ed_reference_label = summary.ed_reference_label,
+        ed_basis_dimension = summary.ed_basis_dimension,
+        ed_constrained_dimension = summary.ed_constrained_dimension,
+        ed_group_order = summary.ed_group_order,
+        ed_hamiltonian_nnz = summary.ed_hamiltonian_nnz,
+        ed_runtime_seconds = summary.ed_runtime_seconds,
+        ipeps_runtime_seconds = summary.ipeps_runtime_seconds,
+        reversibility_runtime_seconds = summary.reversibility_runtime_seconds,
+        density_error_simple = summary.density_error_simple,
+        density_error_exact_finite = summary.density_error_exact_finite,
+        density_error_ctm = summary.density_error_ctm,
+        return_probability_error = summary.return_probability_error,
+        ed_return_probability = summary.ed_return_probability,
+        ed_excitation_density = summary.ed_excitation_density,
+        ipeps_simple_density = summary.ipeps_simple_density,
+        ipeps_exact_finite_density = summary.ipeps_exact_finite_density,
+        ipeps_ctm_density = summary.ipeps_ctm_density,
+        max_truncerr = summary.max_truncerr,
+        log_norm_initial = summary.log_norm_initial,
+        log_norm_final = summary.log_norm_final,
+        log_norm_delta_abs = summary.log_norm_delta_abs,
+        reversibility_density_drift = summary.reversibility_density_drift,
+        ctm_trust_status = String(summary.ctm_trust_status),
+        ctm_trust_reason = String(summary.ctm_trust_reason),
+        notes = summary.notes,
+        warnings = summary.warnings,
+    )
+end
+
+function _larger_d_run_data(run::PXPLargerDBenchmarkRun)
+    return (;
+        summary = _larger_d_summary_data(run.summary),
+        validation = _report_data(run.validation),
+        reversibility = _reversibility_data(run.reversibility),
+    )
+end
+
+function _larger_d_report_data(report::PXPLargerDBenchmarkReport)
+    return (;
+        schema_version = 1,
+        config = _larger_d_config_data(report.config),
+        metadata = _metadata_data(report.metadata),
+        runs = _larger_d_run_data.(report.runs),
+    )
+end
+
 """
     write_pxp_validation_json(report, path)
 
@@ -1940,6 +2028,22 @@ reversibility reports.
 function write_pxp_audit_json(report::PXPAuditReport, path::AbstractString)
     open(path, "w") do io
         JSON3.write(io, _audit_report_data(report))
+        write(io, '\n')
+    end
+    return path
+end
+
+"""
+    write_pxp_larger_d_benchmark_json(report, path)
+
+Write a nested M3 larger-D PXP ED benchmark report as JSON.
+"""
+function write_pxp_larger_d_benchmark_json(
+    report::PXPLargerDBenchmarkReport,
+    path::AbstractString,
+)
+    open(path, "w") do io
+        JSON3.write(io, _larger_d_report_data(report))
         write(io, '\n')
     end
     return path
@@ -2042,6 +2146,111 @@ function write_pxp_audit_csv(report::PXPAuditReport, path::AbstractString)
         println(io, join(PXP_AUDIT_CSV_HEADER, ","))
         for run in report.runs
             println(io, _audit_csv_row(run.summary))
+        end
+    end
+    return path
+end
+
+const PXP_LARGER_D_CSV_HEADER = [
+    "n",
+    "D",
+    "dt",
+    "cutoff",
+    "total_time",
+    "ed_mode",
+    "observable_mode",
+    "ed_boundary_condition",
+    "ed_symmetry_sector",
+    "ed_observable_scope",
+    "ed_reference_label",
+    "ed_basis_dimension",
+    "ed_constrained_dimension",
+    "ed_group_order",
+    "ed_hamiltonian_nnz",
+    "ed_runtime_seconds",
+    "ipeps_runtime_seconds",
+    "reversibility_runtime_seconds",
+    "density_error_simple",
+    "density_error_exact_finite",
+    "density_error_ctm",
+    "return_probability_error",
+    "ed_return_probability",
+    "ed_excitation_density",
+    "ipeps_simple_density",
+    "ipeps_exact_finite_density",
+    "ipeps_ctm_density",
+    "max_truncerr",
+    "log_norm_initial",
+    "log_norm_final",
+    "log_norm_delta_abs",
+    "reversibility_density_drift",
+    "ctm_trust_status",
+    "ctm_trust_reason",
+    "notes",
+    "warnings",
+]
+
+function _larger_d_csv_cell(xs::Vector{String})
+    return _audit_csv_cell(join(xs, ";"))
+end
+
+_larger_d_csv_cell(x) = _audit_csv_cell(x)
+
+function _larger_d_csv_row(summary::PXPLargerDBenchmarkSummary)
+    values = (
+        summary.n,
+        summary.D,
+        summary.dt,
+        summary.cutoff,
+        summary.total_time,
+        summary.ed_mode,
+        summary.observable_mode,
+        summary.ed_boundary_condition,
+        summary.ed_symmetry_sector,
+        summary.ed_observable_scope,
+        summary.ed_reference_label,
+        summary.ed_basis_dimension,
+        summary.ed_constrained_dimension,
+        summary.ed_group_order,
+        summary.ed_hamiltonian_nnz,
+        summary.ed_runtime_seconds,
+        summary.ipeps_runtime_seconds,
+        summary.reversibility_runtime_seconds,
+        summary.density_error_simple,
+        summary.density_error_exact_finite,
+        summary.density_error_ctm,
+        summary.return_probability_error,
+        summary.ed_return_probability,
+        summary.ed_excitation_density,
+        summary.ipeps_simple_density,
+        summary.ipeps_exact_finite_density,
+        summary.ipeps_ctm_density,
+        summary.max_truncerr,
+        summary.log_norm_initial,
+        summary.log_norm_final,
+        summary.log_norm_delta_abs,
+        summary.reversibility_density_drift,
+        summary.ctm_trust_status,
+        summary.ctm_trust_reason,
+        summary.notes,
+        summary.warnings,
+    )
+    return join(_larger_d_csv_cell.(values), ",")
+end
+
+"""
+    write_pxp_larger_d_benchmark_csv(report, path)
+
+Write the flat M3 benchmark summary rows as CSV.
+"""
+function write_pxp_larger_d_benchmark_csv(
+    report::PXPLargerDBenchmarkReport,
+    path::AbstractString,
+)
+    open(path, "w") do io
+        println(io, join(PXP_LARGER_D_CSV_HEADER, ","))
+        for run in report.runs
+            println(io, _larger_d_csv_row(run.summary))
         end
     end
     return path
