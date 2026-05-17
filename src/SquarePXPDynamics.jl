@@ -110,10 +110,12 @@ using .FiniteIPEPSObservables:
     exact_nearest_neighbor_expectation_finite,
     exact_star_expectation_finite,
     exact_density_finite,
+    exact_all_down_return_probability_finite,
     exact_blockade_violation_finite,
     exact_pxp_energy_density_finite
 using .PEPSKitMeasurements: PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
 using .PEPSKitMeasurements: CTMObservableSummary, CTMValidationPoint
+using .PEPSKitMeasurements: configure_ctm_threading!, configure_ctm_threading_from_env!
 using .PEPSKitMeasurements: to_pepskit_infinitepeps
 using .PEPSKitMeasurements: pepskit_ctmrg_context, local_density_ctm
 using .PEPSKitMeasurements: nearest_neighbor_density_ctm, blockade_violation_ctm
@@ -164,6 +166,12 @@ using .FinitePXPEEDBenchmark:
     pxp_ed_space_group_basis,
     pxp_ed_constrained_count,
     pxp_ed_group_order,
+    pxp_ed_boundary_condition,
+    pxp_ed_symmetry_sector,
+    pxp_ed_observable_scope,
+    pxp_ed_reference_label,
+    pxp_ed_site_density_operator,
+    pxp_ed_region_density_operator,
     pxp_ed_initial_state,
     pxp_ed_hamiltonian_operator,
     sparse_pxp_ed_hamiltonian,
@@ -191,7 +199,14 @@ using .PXPValidation:
     PXPAuditReport,
     run_pxp_audit_campaign,
     write_pxp_audit_json,
-    write_pxp_audit_csv
+    write_pxp_audit_csv,
+    PXPLargerDBenchmarkConfig,
+    PXPLargerDBenchmarkSummary,
+    PXPLargerDBenchmarkRun,
+    PXPLargerDBenchmarkReport,
+    run_pxp_larger_d_benchmark,
+    write_pxp_larger_d_benchmark_json,
+    write_pxp_larger_d_benchmark_csv
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
@@ -251,9 +266,11 @@ export TFIMObservableSummary, measure_tfim_simple
 export dense_state_finite
 export exact_one_site_expectation_finite, exact_nearest_neighbor_expectation_finite
 export exact_star_expectation_finite, exact_density_finite
+export exact_all_down_return_probability_finite
 export exact_blockade_violation_finite, exact_pxp_energy_density_finite
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics, CTMObservableSummary
 export CTMValidationPoint
+export configure_ctm_threading!, configure_ctm_threading_from_env!
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export local_density_ctm, nearest_neighbor_density_ctm
 export blockade_violation_ctm, star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
@@ -277,6 +294,8 @@ export run_finite_mps_tfim_reference
 export PXPSquareSpaceGroupBasis
 export PXPEEDBenchmarkConfig, PXPEEDSample, PXPEEDBenchmarkResult
 export pxp_ed_space_group_basis, pxp_ed_constrained_count, pxp_ed_group_order
+export pxp_ed_boundary_condition, pxp_ed_symmetry_sector, pxp_ed_observable_scope
+export pxp_ed_reference_label, pxp_ed_site_density_operator, pxp_ed_region_density_operator
 export pxp_ed_initial_state, pxp_ed_hamiltonian_operator, sparse_pxp_ed_hamiltonian
 export run_pxp_ed_benchmark, write_pxp_ed_benchmark_json
 export TrustedCTMMeasurement, measure_ctm_trusted
@@ -288,6 +307,10 @@ export write_pxp_convergence_json
 export PXPReversibilityReport, validate_pxp_reversibility
 export PXPAuditConfig, PXPAuditSummary, PXPAuditRun, PXPAuditReport
 export run_pxp_audit_campaign, write_pxp_audit_json, write_pxp_audit_csv
+export PXPLargerDBenchmarkConfig, PXPLargerDBenchmarkSummary
+export PXPLargerDBenchmarkRun, PXPLargerDBenchmarkReport
+export run_pxp_larger_d_benchmark
+export write_pxp_larger_d_benchmark_json, write_pxp_larger_d_benchmark_csv
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
 export CandidateStore, NoCandidateStore, JSONCandidateStore

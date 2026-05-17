@@ -1,5 +1,6 @@
 using PEPSKit
 using TensorKit
+using LinearAlgebra
 
 const RUN_EXTENDED_CTM_TESTS = get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") == "1"
 
@@ -12,6 +13,33 @@ end
 @testset "PEPSKit CTMRG measurement adapter" begin
     @testset "PEPSKit loads" begin
         @test isdefined(SquarePXPDynamics, :PEPSKitCTMRGParams)
+    end
+
+    @testset "CTM tensor threading controls are configurable" begin
+        original_blas = BLAS.get_num_threads()
+        try
+            config = configure_ctm_threading!(
+                blas_threads = 1,
+                strided_threads = 1,
+                strided_threaded_mul = false,
+                pepskit_scheduler = :default,
+            )
+
+            @test config.julia_threads == Threads.nthreads()
+            @test config.blas_threads == 1
+            @test config.strided_threads == 1
+            @test config.strided_threaded_mul === false
+            @test config.pepskit_scheduler === :default
+            @test BLAS.get_num_threads() == 1
+        finally
+            BLAS.set_num_threads(original_blas)
+            configure_ctm_threading!(
+                blas_threads = original_blas,
+                strided_threads = 1,
+                strided_threaded_mul = false,
+                pepskit_scheduler = :default,
+            )
+        end
     end
 
     @testset "CTMRG parameter validation" begin

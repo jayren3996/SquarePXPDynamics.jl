@@ -4,7 +4,8 @@
 
 - Confirmed: The package is named `SquarePXPDynamics` and targets Julia `1.12`.
 - Confirmed: Main dependencies are `ITensors`, `LinearAlgebra`, `PEPSKit`,
-  `Random`, and `TensorKit`; tests additionally use `Aqua` and `Test`.
+  `Random`, `Strided`, and `TensorKit`; tests additionally use `Aqua` and
+  `Test`.
 - Source: `Project.toml`
 - Source: `test/Project.toml`
 
@@ -34,7 +35,8 @@
   diagnostics.
 - `src/PEPSKitMeasurements.jl`: experimental PEPSKit/TensorKit CTMRG
   measurement adapter, diagnostics, validation sweeps, trusted CTM measurement
-  summaries, reproducible seeded CTMRG initialization, and CSV output.
+  summaries, reproducible seeded CTMRG initialization, CTM threading controls,
+  and CSV output.
 - `src/CTMTrust.jl`: finite-chi CTM trust policy and trust CSV output.
 - `src/CTMGaugeReadiness.jl`: S7b CTM bond norm diagnostics, gauge-readiness
   checks, PEPSKit full-update helper compatibility checks, and transactional
@@ -68,6 +70,10 @@
   consumes CTM sweep records, while S7b gauge conditioning additionally
   requires fresh contexts, finite-chi trust, and local CTM bond norm diagnostics
   before mutating the Gamma-lambda state.
+- Confirmed: CTM measurement throughput now has explicit runtime controls for
+  PEPSKit scheduler selection, Strided thread count, Strided threaded matrix
+  splitting, and BLAS thread count. These controls require Julia to be started
+  with `JULIA_NUM_THREADS > 1` to expose PEPSKit/Strided worker threads.
 - Source: `src/SquarePXPDynamics.jl`
 - Source: `src/StarSimpleUpdate.jl`
 - Source: `src/IPEPSEvolution.jl`

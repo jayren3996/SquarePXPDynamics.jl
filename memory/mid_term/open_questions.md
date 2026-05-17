@@ -36,6 +36,20 @@
 - Source: `src/CTMGaugeReadiness.jl`
 - Source: `src/ScarFinder.jl`
 
+## CTM Throughput Tuning
+
+- Open question: What CTM threading layout gives the best throughput on the
+  current multi-core server for representative iPEPS+CTM observable runs?
+- Current hypothesis: use Julia threads for PEPSKit `dtmap` parallel regions
+  and Strided/TensorOperations work, keep BLAS threads small initially, and
+  test Strided threaded matrix splitting explicitly.
+- Required evidence: a warmed timing matrix that avoids first-compile noise and
+  records wall time, CPU percentage, `JULIA_NUM_THREADS`,
+  `SQUAREPXP_CTM_BLAS_THREADS`, `SQUAREPXP_CTM_STRIDED_THREADS`,
+  `SQUAREPXP_CTM_STRIDED_THREADED_MUL`, and PEPSKit scheduler.
+- Source: `src/PEPSKitMeasurements.jl`
+- Source: current 2026-05-17 session
+
 ## Production ScarFinder Validation
 
 - Partially resolved: ScarFinder now has explicit objective objects,
@@ -85,6 +99,20 @@
   not yet having production Simple Update, evolution, or ScarFinder scaffolding.
   Current `README.md` and source show the S0-S7 prototype now exists, including
   S7b CTM gauge-readiness and conditioning APIs.
+- Superseded/problematic: Older short-term memory claimed the active workspace
+  was `/Users/ren/Codex/iPEPS`, local `main`, clean, and ready for milestone
+  selection. Current work is `/data/djxg096/SquarePXPDynamics.jl` on
+  `codex/m3-larger-d-pxp-ed-benchmark`, with active iPEPS+CTM performance
+  changes.
+- Superseded/problematic: Older guidance to stop before CTM because of the D=2
+  simple-density anomaly is no longer the active interpretation. The anomaly is
+  a simple/local measurement limitation for D>1; CTM/environment observables
+  are now the correct path for local-density comparisons.
+- Superseded/problematic: Older 7x7 ED target language should not drive current
+  work. The user explicitly redirected to stop at `6x6` and improve iPEPS+CTM
+  observables/performance.
 - Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `README.md`
 - Source: `src/SquarePXPDynamics.jl`
+- Source: `memory/short_term/current_state.md`
+- Source: `docs/superpowers/notes/2026-05-17-m3-systematic-larger-d-results.md`

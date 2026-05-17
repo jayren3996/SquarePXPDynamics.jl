@@ -28,6 +28,71 @@ Source:
 
 Status: active
 
+## 2026-05-17 - Use Symmetric PBC ED Only For Global M3 Observables
+
+Decision:
+
+M3 larger-D PXP dynamics benchmarks compare against the current symmetry-reduced
+finite PBC ED path only through global sector-preserving observables: ED return
+probability and global site-averaged excitation density. Exact finite iPEPS
+contraction is used for tiny 3x3 validation when enabled. Central-region
+observables are not claimed for symmetric PBC ED.
+
+Reason:
+
+The current ED basis is reduced by translations and, by default, the square
+point group. A local or central-region operator does not preserve that basis as
+a literal local observable; after projection it becomes a group average. PBC
+also has no physical center.
+
+Consequences:
+
+Completed M3 ED/iPEPS comparisons through `6x6` are scientifically honest
+global comparisons. Literal central 3x3 comparisons require a future
+unreduced/open-boundary ED path and are outside M3. The stopped `7x7` capacity
+probe did not produce a usable artifact and should not be treated as a current
+campaign requirement.
+
+Source:
+
+`src/FinitePXPEEDBenchmark.jl`; `src/PXPValidation.jl`;
+`docs/superpowers/notes/2026-05-17-m3-larger-d-pxp-ed-benchmark.md`;
+`docs/superpowers/notes/2026-05-17-m3-systematic-larger-d-results.md`
+
+Status: active
+
+## 2026-05-17 - Use CTM/Environment Observables For D>1 iPEPS Density
+
+Decision:
+
+For D>1 local-density comparisons, use CTM/environment quantities rather than
+simple/local observables. Keep simple/local observables as cheap diagnostics
+and regression signals only.
+
+Reason:
+
+The D=2 short-time anomaly was localized to the measurement path: exact finite
+contraction and direct CTM measurement agree for the evolved `3x3` D=2 state at
+`t = 0.02`, while `density_simple` reports a substantially different value.
+This confirms that the simple/local environment is not the right quantitative
+observable for D>1 loopy iPEPS density comparisons.
+
+Consequences:
+
+The active performance work should focus on making iPEPS+CTM observable runs
+efficient. Older guidance to stop before CTM because of the D=2 anomaly is
+superseded. Future benchmark conclusions should prefer `ipeps_ctm_density`
+when finite-chi diagnostics are acceptable, or exact finite density only for
+tiny validation cells.
+
+Source:
+
+`artifacts/m3-systematic/ctm-direct-3x3-t002.json`;
+`src/PEPSKitMeasurements.jl`;
+current 2026-05-17 session.
+
+Status: active
+
 ## 2026-05-17 - Add Opt-In Exact Finite Observable References For Tiny Cells
 
 Decision:
@@ -121,12 +186,18 @@ The M2 artifact set currently includes `artifacts/pxp_audit_noctm.csv`,
 should be rerun after a focused D=2 update/log-norm investigation; otherwise CTM
 trust diagnostics would be mixed with a known pre-CTM baseline issue.
 
+Superseding update on 2026-05-17: the D=2 issue is now understood as a
+simple/local observable limitation for D>1 loopy iPEPS, and direct CTM density
+matches exact finite density in the focused `3x3`, `t = 0.02` probe. This
+older "stop before CTM" instruction should not block current CTM/environment
+observable work.
+
 Source:
 
 `artifacts/pxp_audit_noctm.csv`; `artifacts/pxp_audit_noctm.json`;
 `docs/superpowers/notes/2026-05-17-m2-first-pxp-audit.md`
 
-Status: active
+Status: superseded by "2026-05-17 - Use CTM/Environment Observables For D>1 iPEPS Density"
 
 ## 2026-05-17 - D2 Audit Anomaly Is Not Padded-Product Only
 
@@ -674,6 +745,39 @@ Source:
 Current EDKit feasibility investigation; EDKit `0.5.1` source/docs;
 periodic hard-square independent-set and orbit-count calculations in this
 thread.
+
+Status: superseded for the current campaign. The current M3 campaign stops at
+`6x6`; the stopped `7x7` capacity probe produced no usable artifact, and the
+active priority is iPEPS+CTM performance rather than larger ED dynamics.
+
+## 2026-05-17 - Expose CTM Tensor Threading Controls
+
+Decision:
+
+Expose runtime controls for PEPSKit/CTM tensor-operation threading:
+`configure_ctm_threading!`, `configure_ctm_threading_from_env!`, and
+`SQUAREPXP_CTM_*` environment variables consumed by the benchmark script.
+
+Reason:
+
+The active performance issue is iPEPS+CTM CPU underutilization. PEPSKit CTMRG
+parallel sections use Julia threads through `dtmap`/OhMyThreads, while
+Strided/TensorOperations can also use Julia-threaded work. Setting BLAS threads
+alone does not make CTM saturate the server when Julia starts with one thread.
+
+Consequences:
+
+CTM-heavy benchmark commands should start Julia with `JULIA_NUM_THREADS` and
+record the applied CTM threading tuple. Initial full-server experiments should
+prefer small BLAS thread counts and explicit Strided/PEPSKit threading, then
+measure warmed wall time and CPU utilization before larger CTM sweeps.
+
+Source:
+
+`src/PEPSKitMeasurements.jl`;
+`scripts/pxp_larger_d_ed_benchmark.jl`;
+`test/test_pepskit_measurements.jl`;
+current 2026-05-17 session.
 
 Status: active
 

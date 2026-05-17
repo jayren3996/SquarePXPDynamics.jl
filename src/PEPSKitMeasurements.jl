@@ -1,8 +1,10 @@
 module PEPSKitMeasurements
 
 using ITensors
+using LinearAlgebra
 using PEPSKit
 using Random
+using Strided
 using TensorKit
 using ..SquareGeometry: SquareCoord
 using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
@@ -13,6 +15,7 @@ using ..SquareIPEPS:
 
 export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
 export CTMObservableSummary, CTMValidationPoint
+export configure_ctm_threading!, configure_ctm_threading_from_env!
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export assert_fresh_pepskit_context
 export local_density_ctm, nearest_neighbor_density_ctm, blockade_violation_ctm
@@ -20,6 +23,94 @@ export star_expectation_ctm, pxp_energy_density_ctm, measure_ctm, ctm_diagnostic
 export validate_ctm_sweep, write_ctm_validation_csv
 
 const _DIRECTIONS = (:right, :up, :left, :down)
+
+function _positive_thread_count(value::Integer, name::AbstractString)
+    count = Int(value)
+    count >= 1 || throw(ArgumentError("$name must be at least 1"))
+    return count
+end
+
+function _set_pepskit_scheduler!(scheduler::Symbol)
+    if scheduler === :default
+        PEPSKit.set_scheduler!()
+    elseif scheduler in (:serial, :dynamic, :static, :greedy)
+        PEPSKit.set_scheduler!(scheduler)
+    else
+        throw(ArgumentError("pepskit_scheduler must be :default, :serial, :dynamic, :static, or :greedy"))
+    end
+    return scheduler
+end
+
+"""
+    configure_ctm_threading!(; blas_threads = nothing, strided_threads = Threads.nthreads(),
+                              strided_threaded_mul = false,
+                              pepskit_scheduler = :default)
+
+Configure CPU threading used by PEPSKit CTMRG measurements. PEPSKit parallel
+regions use Julia threads, so Julia must be started with `JULIA_NUM_THREADS > 1`
+for this to expose additional workers. `strided_threaded_mul = true` enables
+Strided.jl's Julia-threaded splitting of BLAS matrix multiplications; this is
+usually paired with a small BLAS thread count to avoid oversubscription.
+"""
+function configure_ctm_threading!(;
+    blas_threads::Union{Nothing,Integer} = nothing,
+    strided_threads::Integer = Threads.nthreads(),
+    strided_threaded_mul::Bool = false,
+    pepskit_scheduler::Symbol = :default,
+)
+    if blas_threads !== nothing
+        LinearAlgebra.BLAS.set_num_threads(_positive_thread_count(blas_threads, "blas_threads"))
+    end
+    Strided.set_num_threads(_positive_thread_count(strided_threads, "strided_threads"))
+    strided_threaded_mul ? Strided.enable_threaded_mul() : Strided.disable_threaded_mul()
+    scheduler = _set_pepskit_scheduler!(pepskit_scheduler)
+    return (;
+        julia_threads = Threads.nthreads(),
+        blas_threads = LinearAlgebra.BLAS.get_num_threads(),
+        strided_threads = Strided.get_num_threads(),
+        strided_threaded_mul = Strided.use_threaded_mul(),
+        pepskit_scheduler = scheduler,
+    )
+end
+
+function _env_value(name::AbstractString)
+    value = get(ENV, String(name), "")
+    return isempty(strip(value)) ? nothing : strip(value)
+end
+
+function _env_optional_int(name::AbstractString)
+    value = _env_value(name)
+    return value === nothing ? nothing : parse(Int, value)
+end
+
+function _env_bool(name::AbstractString, default::Bool)
+    value = _env_value(name)
+    value === nothing && return default
+    normalized = lowercase(value)
+    normalized in ("1", "true", "yes", "on") && return true
+    normalized in ("0", "false", "no", "off") && return false
+    throw(ArgumentError("$name must be one of 1,true,yes,on,0,false,no,off"))
+end
+
+"""
+    configure_ctm_threading_from_env!(; prefix = "SQUAREPXP_CTM")
+
+Apply [`configure_ctm_threading!`](@ref) from environment variables:
+`<prefix>_BLAS_THREADS`, `<prefix>_STRIDED_THREADS`,
+`<prefix>_STRIDED_THREADED_MUL`, and `<prefix>_PEPSKIT_SCHEDULER`.
+"""
+function configure_ctm_threading_from_env!(; prefix::AbstractString = "SQUAREPXP_CTM")
+    blas = _env_optional_int("$(prefix)_BLAS_THREADS")
+    strided = something(_env_optional_int("$(prefix)_STRIDED_THREADS"), Threads.nthreads())
+    threaded_mul = _env_bool("$(prefix)_STRIDED_THREADED_MUL", false)
+    scheduler = Symbol(something(_env_value("$(prefix)_PEPSKIT_SCHEDULER"), "default"))
+    return configure_ctm_threading!(
+        blas_threads = blas,
+        strided_threads = strided,
+        strided_threaded_mul = threaded_mul,
+        pepskit_scheduler = scheduler,
+    )
+end
 
 """
     PEPSKitCTMRGParams(chi, tol, maxiter, verbosity; seed = nothing)
