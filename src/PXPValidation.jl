@@ -944,15 +944,20 @@ function _validation_initial_state(config::PXPValidationConfig)
 end
 
 function _git_commit()
-    try
-        package_root = abspath(joinpath(@__DIR__, ".."))
-        command = pipeline(`git -C $package_root rev-parse HEAD`; stderr = devnull)
-        commit = chomp(read(command, String))
-        isempty(commit) && return nothing
-        return commit
-    catch
-        return nothing
+    package_root = abspath(joinpath(@__DIR__, ".."))
+    git_dir = joinpath(package_root, ".git")
+    for git_command in (
+        `git -C $package_root rev-parse HEAD`,
+        `git --git-dir $git_dir --work-tree $package_root rev-parse HEAD`,
+    )
+        try
+            command = pipeline(git_command; stderr = devnull)
+            commit = chomp(read(command, String))
+            isempty(commit) || return commit
+        catch
+        end
     end
+    return nothing
 end
 
 function _validation_metadata()

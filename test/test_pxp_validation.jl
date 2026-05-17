@@ -173,7 +173,10 @@ end
 @testset "PXP validation metadata uses package checkout git commit" begin
     config = PXPValidationConfig(3; total_time = 0.0, dt = 0.01, measure_every = 1)
     package_root = abspath(joinpath(@__DIR__, ".."))
-    expected_commit = chomp(read(`git -C $package_root rev-parse HEAD`, String))
+    git_dir = joinpath(package_root, ".git")
+    expected_commit = chomp(
+        read(`git --git-dir $git_dir --work-tree $package_root rev-parse HEAD`, String),
+    )
 
     cd(mktempdir()) do
         report = validate_pxp_ed_ipeps(config; ctm_params = nothing)
