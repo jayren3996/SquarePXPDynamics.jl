@@ -58,6 +58,39 @@ Source:
 
 Status: active
 
+## 2026-05-17 - D2 Audit Anomaly Is Not Padded-Product Only
+
+Decision:
+
+Do not treat initial padded product states as the sole root cause of the M2
+D=2 simple-update anomaly. Continue debugging the D=2 QR/SVD star split and
+D>1 simple-observable path before CTM Stage 2.
+
+Reason:
+
+The focused `3 x 3`, all-down, `total_time = 0.02`, `dt = 0.02` diagnostic
+compared D=1 baseline, grow-on-demand D=2 from an initial `maxdim = 1` product
+state, and padded D=2 from an initial `maxdim = 2` product state. Grow-on-demand
+D=2 and padded D=2 agreed to roundoff in density and log-norm, while D=1
+tracked the dense serial-star circuit. A split-scale experiment reduced the
+D=2 log-norm but left the D=2 density unchanged, so scale recycling alone is
+not a sufficient fix.
+
+Consequences:
+
+Validation may still eventually decouple initial product dimension from update
+cap for hygiene, but that will not fix the observed D=2 audit row. The next
+implementation/debug branch should isolate whether the remaining problem is
+inside `project_star!`'s D=2 QR/SVD split under overlapping serial updates or
+inside the D>1 simple-observable local environment.
+
+Source:
+
+`docs/superpowers/notes/2026-05-17-d2-simple-update-debug.md`;
+current diagnostic commands in this thread.
+
+Status: active
+
 ## 2026-05-17 - Add M1 PXP Audit Campaign As Report Composition Layer
 
 Decision:
