@@ -28,6 +28,36 @@ Source:
 
 Status: active
 
+## 2026-05-17 - M2 First Audit Stops Before CTM On D2 Anomaly
+
+Decision:
+
+Treat the first no-CTM M2 audit as the current decision instrument and do not
+run the requested CTM-attached `D = [1, 2]` grid until the D=2 simple-update
+anomaly is understood.
+
+Reason:
+
+The `3 x 3`, all-down, `total_time = 0.02` no-CTM audit found that D=1 tracks
+ED density closely, while D=2 has roughly two orders of magnitude larger density
+error and large log-norm increments despite tiny truncation and reversibility
+drift. That points first at update/normalization behavior in the existing D=2
+simple-update path, not CTM finite-chi drift.
+
+Consequences:
+
+The M2 artifact set currently includes `artifacts/pxp_audit_noctm.csv`,
+`artifacts/pxp_audit_noctm.json`, and a decision note. The CTM-attached audit
+should be rerun after a focused D=2 update/log-norm investigation; otherwise CTM
+trust diagnostics would be mixed with a known pre-CTM baseline issue.
+
+Source:
+
+`artifacts/pxp_audit_noctm.csv`; `artifacts/pxp_audit_noctm.json`;
+`docs/superpowers/notes/2026-05-17-m2-first-pxp-audit.md`
+
+Status: active
+
 ## 2026-05-17 - Add M1 PXP Audit Campaign As Report Composition Layer
 
 Decision:
