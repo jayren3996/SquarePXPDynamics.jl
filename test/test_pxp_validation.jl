@@ -334,3 +334,98 @@ end
     @test length(parsed.runs) == 2
     @test parsed.runs[1].config.dt == 0.01
 end
+
+@testset "PXP audit campaign produces machine-readable summaries" begin
+    config = PXPAuditConfig(;
+        n_values = [3],
+        total_time = 0.01,
+        dt_values = [0.01],
+        D_values = [1],
+        cutoff_values = [1e-12],
+        chi_values = Int[],
+    )
+
+    report = run_pxp_audit_campaign(config)
+
+    @test report isa PXPAuditReport
+    @test length(report.runs) == 1
+    @test report.runs[1].validation isa PXPValidationReport
+    @test report.runs[1].reversibility isa PXPReversibilityReport
+    summary = report.runs[1].summary
+    @test summary.n == 3
+    @test summary.dt == 0.01
+    @test summary.D == 1
+    @test summary.cutoff == 1e-12
+    @test summary.ctm_trust_status === :not_run
+    @test summary.ctm_trust_reason === :not_run
+    @test summary.max_abs_density_error_simple >= 0
+    @test summary.max_abs_density_error_ctm === nothing
+    @test summary.max_blockade_violation_simple >= 0
+    @test summary.pxp_energy_drift_simple >= 0
+    @test summary.max_truncerr >= 0
+    @test summary.log_norm_delta_abs >= 0
+    @test summary.reversibility_density_drift >= 0
+    @test summary.reversibility_blockade_drift >= 0
+    @test summary.reversibility_energy_drift >= 0
+end
+
+@testset "PXP audit campaign records CTM trust summaries with fake CTM" begin
+    config = PXPAuditConfig(;
+        n_values = [3],
+        total_time = 0.0,
+        dt_values = [0.01],
+        D_values = [1],
+        cutoff_values = [1e-12],
+        chi_values = [2, 4],
+    )
+
+    report = run_pxp_audit_campaign(
+        config;
+        ctm_measure = (state; params) -> begin
+            simple = measure_simple(state)
+            return _validation_fake_ctm_summary(
+                params;
+                density = simple.density + params.chi * 1e-5,
+                blockade = simple.blockade_violation + params.chi * 1e-6,
+                energy = simple.pxp_energy_density - params.chi * 1e-5,
+            )
+        end,
+    )
+
+    summary = only(report.runs).summary
+    @test summary.max_abs_density_error_ctm !== nothing
+    @test summary.max_blockade_violation_ctm !== nothing
+    @test summary.ctm_trust_status === :trusted
+    @test summary.ctm_trust_reason === :trusted
+    @test summary.finite_chi_density_delta !== nothing
+    @test summary.finite_chi_energy_delta !== nothing
+end
+
+@testset "PXP audit campaign writes JSON and CSV artifacts" begin
+    config = PXPAuditConfig(;
+        n_values = [3],
+        total_time = 0.01,
+        dt_values = [0.01],
+        D_values = [1],
+        cutoff_values = [1e-12],
+        chi_values = Int[],
+    )
+    report = run_pxp_audit_campaign(config)
+    json_path = tempname() * ".json"
+    csv_path = tempname() * ".csv"
+
+    written_json = write_pxp_audit_json(report, json_path)
+    written_csv = write_pxp_audit_csv(report, csv_path)
+    parsed = JSON3.read(read(json_path, String))
+    csv = split(chomp(read(csv_path, String)), '\n')
+
+    @test written_json == json_path
+    @test written_csv == csv_path
+    @test parsed.config.total_time == 0.01
+    @test length(parsed.runs) == 1
+    @test haskey(parsed.runs[1].summary, :max_abs_density_error_simple)
+    @test haskey(parsed.runs[1].summary, :reversibility_energy_drift)
+    @test startswith(csv[1], "n,total_time,dt,D,cutoff")
+    @test length(csv) == 2
+    @test occursin(",not_run,not_run,", csv[2])
+end

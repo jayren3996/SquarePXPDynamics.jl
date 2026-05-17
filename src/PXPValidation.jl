@@ -26,6 +26,8 @@ export write_pxp_validation_json
 export PXPConvergenceConfig, PXPConvergenceReport, validate_pxp_convergence
 export write_pxp_convergence_json
 export PXPReversibilityReport, validate_pxp_reversibility
+export PXPAuditConfig, PXPAuditSummary, PXPAuditRun, PXPAuditReport
+export run_pxp_audit_campaign, write_pxp_audit_json, write_pxp_audit_csv
 
 """
     TrustedCTMMeasurement(measurement, points, trust, policy = CTMTrustPolicy())
@@ -339,6 +341,159 @@ struct PXPReversibilityReport
     energy_drift::Float64
 end
 
+"""
+    PXPAuditConfig(; kwargs...)
+
+Small PXP audit-campaign grid for ED/iPEPS, optional trusted CTM attachment,
+and reversibility diagnostics. Defaults are deliberately short-time and
+serial-schedule oriented: `n_values = [3]`, `total_time = 0.02`,
+`dt_values = [0.02, 0.01]`, `D_values = [1, 2]`,
+`cutoff_values = [1e-12]`, and no CTM sweep unless `chi_values` is supplied.
+"""
+struct PXPAuditConfig
+    n_values::Vector{Int}
+    total_time::Float64
+    dt_values::Vector{Float64}
+    D_values::Vector{Int}
+    cutoff_values::Vector{Float64}
+    chi_values::Vector{Int}
+    measure_every::Int
+    order::Int
+    schedule::Symbol
+    ctm_tol::Float64
+    ctm_maxiter::Int
+    ctm_verbosity::Int
+    ctm_seed::Union{Nothing,Int}
+
+    function PXPAuditConfig(;
+        n_values = [3],
+        total_time::Real = 0.02,
+        dt_values = [0.02, 0.01],
+        D_values = [1, 2],
+        cutoff_values = [1e-12],
+        chi_values = Int[],
+        measure_every::Integer = 1,
+        order::Integer = 1,
+        schedule::Symbol = :serial,
+        ctm_tol::Real = 1e-8,
+        ctm_maxiter::Integer = 100,
+        ctm_verbosity::Integer = 0,
+        ctm_seed = 0,
+    )
+        n_grid = [_positive_int(n, "n_values entry") for n in n_values]
+        dt_grid = [_finite_positive(dt, "dt_values entry") for dt in dt_values]
+        D_grid = [_positive_int(D, "D_values entry") for D in D_values]
+        cutoff_grid = [_finite_positive(cutoff, "cutoff_values entry") for cutoff in cutoff_values]
+        chi_grid = [_positive_int(chi, "chi_values entry") for chi in chi_values]
+        isempty(n_grid) && throw(ArgumentError("n_values must be nonempty"))
+        isempty(dt_grid) && throw(ArgumentError("dt_values must be nonempty"))
+        isempty(D_grid) && throw(ArgumentError("D_values must be nonempty"))
+        isempty(cutoff_grid) && throw(ArgumentError("cutoff_values must be nonempty"))
+        cadence = _positive_int(measure_every, "measure_every")
+        ord = _positive_int(order, "order")
+        ord in (1, 2) || throw(ArgumentError("order must be 1 or 2"))
+        schedule in (:serial, :five_color) ||
+            throw(ArgumentError("schedule must be :serial or :five_color"))
+        tol = _finite_positive(ctm_tol, "ctm_tol")
+        maxiter = _positive_int(ctm_maxiter, "ctm_maxiter")
+        verbosity = _nonnegative_int(ctm_verbosity, "ctm_verbosity")
+        seed = ctm_seed === nothing ? nothing : _nonnegative_int(ctm_seed, "ctm_seed")
+        total = _finite_nonnegative(total_time, "total_time")
+
+        for n in n_grid, dt in dt_grid, D in D_grid, cutoff in cutoff_grid
+            PXPValidationConfig(
+                n;
+                total_time = total,
+                dt,
+                measure_every = cadence,
+                order = ord,
+                maxdim = D,
+                cutoff,
+                schedule,
+            )
+        end
+
+        return new(
+            n_grid,
+            total,
+            dt_grid,
+            D_grid,
+            cutoff_grid,
+            chi_grid,
+            cadence,
+            ord,
+            schedule,
+            tol,
+            maxiter,
+            verbosity,
+            seed,
+        )
+    end
+end
+
+"""
+    PXPAuditSummary
+
+Flat per-run audit row intended for JSON and CSV bottleneck triage. CTM fields
+are `nothing` or `:not_run` when the audit configuration does not request a
+finite-`chi` CTM sweep.
+"""
+struct PXPAuditSummary
+    n::Int
+    total_time::Float64
+    dt::Float64
+    D::Int
+    cutoff::Float64
+    schedule::Symbol
+    chi_values::Vector{Int}
+    max_abs_density_error_simple::Float64
+    max_abs_density_error_ctm::Union{Nothing,Float64}
+    max_blockade_violation_simple::Float64
+    max_blockade_violation_ctm::Union{Nothing,Float64}
+    pxp_energy_drift_simple::Float64
+    pxp_energy_drift_ctm::Union{Nothing,Float64}
+    ctm_trust_status::Symbol
+    ctm_trust_reason::Symbol
+    finite_chi_density_delta::Union{Nothing,Float64}
+    finite_chi_blockade_delta::Union{Nothing,Float64}
+    finite_chi_energy_delta::Union{Nothing,Float64}
+    finite_chi_max_residual::Union{Nothing,Float64}
+    max_truncerr::Float64
+    log_norm_initial::Float64
+    log_norm_final::Float64
+    log_norm_delta::Float64
+    log_norm_delta_abs::Float64
+    reversibility_density_drift::Float64
+    reversibility_blockade_drift::Float64
+    reversibility_energy_drift::Float64
+end
+
+"""
+    PXPAuditRun
+
+One audit-grid point containing the full ED/iPEPS validation report, the
+matched reversibility report, and the flattened [`PXPAuditSummary`](@ref).
+"""
+struct PXPAuditRun
+    validation::PXPValidationReport
+    reversibility::PXPReversibilityReport
+    summary::PXPAuditSummary
+end
+
+"""
+    PXPAuditReport
+
+Machine-readable PXP audit-campaign artifact containing the campaign
+configuration, per-run validation and reversibility reports, and reproducibility
+metadata. Use [`write_pxp_audit_json`](@ref) for nested JSON and
+[`write_pxp_audit_csv`](@ref) for the flat summary table.
+"""
+struct PXPAuditReport
+    config::PXPAuditConfig
+    runs::Vector{PXPAuditRun}
+    metadata::PXPValidationMetadata
+end
+
 function _validation_ed_config(config::PXPValidationConfig)
     return PXPEEDBenchmarkConfig(
         config.n;
@@ -625,6 +780,184 @@ function validate_pxp_convergence(
     )
 end
 
+function _audit_ctm_params(config::PXPAuditConfig)
+    isempty(config.chi_values) && return nothing
+    if config.ctm_seed === nothing
+        return Tuple(
+            PEPSKitCTMRGParams(chi, config.ctm_tol, config.ctm_maxiter, config.ctm_verbosity)
+            for chi in config.chi_values
+        )
+    else
+        return Tuple(
+            PEPSKitCTMRGParams(
+                chi,
+                config.ctm_tol,
+                config.ctm_maxiter,
+                config.ctm_verbosity;
+                seed = config.ctm_seed,
+            ) for chi in config.chi_values
+        )
+    end
+end
+
+function _audit_validation_config(
+    config::PXPAuditConfig,
+    n::Int,
+    dt::Float64,
+    D::Int,
+    cutoff::Float64,
+)
+    return PXPValidationConfig(
+        n;
+        total_time = config.total_time,
+        dt,
+        measure_every = config.measure_every,
+        order = config.order,
+        maxdim = D,
+        cutoff,
+        schedule = config.schedule,
+    )
+end
+
+function _maximum_or_zero(values)
+    isempty(values) && return 0.0
+    return maximum(values)
+end
+
+function _minimum_or_zero(values)
+    isempty(values) && return 0.0
+    return minimum(values)
+end
+
+function _finite_max_or_nothing(values)
+    isempty(values) && return nothing
+    return maximum(values)
+end
+
+function _finite_chi_max(samples, field::Symbol)
+    values = Float64[]
+    for sample in samples
+        sample.ctm === nothing && continue
+        value = getfield(sample.ctm.trust, field)
+        value === nothing && continue
+        push!(values, value)
+    end
+    return _finite_max_or_nothing(values)
+end
+
+function _audit_trust_status(samples)
+    trust_values = [sample.ctm.trust.trusted for sample in samples if sample.ctm !== nothing]
+    isempty(trust_values) && return (:not_run, :not_run)
+    all(==(true), trust_values) && return (:trusted, :trusted)
+    for sample in samples
+        sample.ctm === nothing && continue
+        sample.ctm.trust.trusted || return (:rejected, sample.ctm.trust.reason)
+    end
+    return (:rejected, :unknown)
+end
+
+function _audit_summary(
+    validation::PXPValidationReport,
+    reversibility::PXPReversibilityReport,
+)::PXPAuditSummary
+    config = validation.config
+    simple_density_errors = [abs(c.density_error_simple) for c in validation.comparisons]
+    ctm_density_errors = [
+        abs(c.density_error_ctm) for c in validation.comparisons if c.density_error_ctm !== nothing
+    ]
+    simple_blockade = [c.simple_blockade_violation for c in validation.comparisons]
+    ctm_blockade = [
+        c.ctm_blockade_violation for c in validation.comparisons if c.ctm_blockade_violation !== nothing
+    ]
+    simple_energy = [sample.simple.pxp_energy_density for sample in validation.ipeps_samples]
+    ctm_energy = [
+        sample.ctm.measurement.pxp_energy_density for
+        sample in validation.ipeps_samples if sample.ctm !== nothing
+    ]
+    evolutions = [
+        sample.evolution for sample in validation.ipeps_samples if sample.evolution !== nothing
+    ]
+    log_norms = [sample.log_norm for sample in validation.ipeps_samples]
+    trust_status, trust_reason = _audit_trust_status(validation.ipeps_samples)
+    chi_values = Int[]
+    for sample in validation.ipeps_samples
+        sample.ctm === nothing && continue
+        for point in sample.ctm.points
+            point.params.chi in chi_values || push!(chi_values, point.params.chi)
+        end
+    end
+
+    return PXPAuditSummary(
+        config.n,
+        config.total_time,
+        config.dt,
+        config.maxdim,
+        config.cutoff,
+        config.schedule,
+        chi_values,
+        _maximum_or_zero(simple_density_errors),
+        _finite_max_or_nothing(ctm_density_errors),
+        _maximum_or_zero(simple_blockade),
+        _finite_max_or_nothing(ctm_blockade),
+        _maximum_or_zero(simple_energy) - _minimum_or_zero(simple_energy),
+        isempty(ctm_energy) ? nothing : maximum(ctm_energy) - minimum(ctm_energy),
+        trust_status,
+        trust_reason,
+        _finite_chi_max(validation.ipeps_samples, :finite_chi_density_delta),
+        _finite_chi_max(validation.ipeps_samples, :finite_chi_blockade_delta),
+        _finite_chi_max(validation.ipeps_samples, :finite_chi_energy_delta),
+        _finite_chi_max(validation.ipeps_samples, :observed_max_residual),
+        _maximum_or_zero([evolution.max_truncerr for evolution in evolutions]),
+        isempty(log_norms) ? 0.0 : first(log_norms),
+        isempty(log_norms) ? 0.0 : last(log_norms),
+        isempty(log_norms) ? 0.0 : last(log_norms) - first(log_norms),
+        isempty(log_norms) ? 0.0 : abs(last(log_norms) - first(log_norms)),
+        reversibility.density_drift,
+        reversibility.blockade_drift,
+        reversibility.energy_drift,
+    )
+end
+
+"""
+    run_pxp_audit_campaign(config = PXPAuditConfig(); trust_policy = CTMTrustPolicy(),
+                           ctm_measure = measure_ctm)
+
+Run the small M1 PXP audit grid. Each grid point runs
+[`validate_pxp_ed_ipeps`](@ref) for the all-down initial state, optionally
+attaches trusted finite-`chi` CTM sweeps when `config.chi_values` is nonempty,
+then runs [`validate_pxp_reversibility`](@ref) with matching Trotter controls.
+The result is an audit report with full nested reports and one flat summary row
+per grid point.
+"""
+function run_pxp_audit_campaign(
+    config::PXPAuditConfig = PXPAuditConfig();
+    trust_policy::CTMTrustPolicy = CTMTrustPolicy(),
+    ctm_measure = measure_ctm,
+)::PXPAuditReport
+    ctm_params = _audit_ctm_params(config)
+    runs = PXPAuditRun[]
+
+    for n in config.n_values, dt in config.dt_values, D in config.D_values,
+        cutoff in config.cutoff_values
+        validation_config = _audit_validation_config(config, n, dt, D, cutoff)
+        validation = validate_pxp_ed_ipeps(
+            validation_config;
+            ctm_params,
+            trust_policy,
+            ctm_measure,
+        )
+        psi = _validation_initial_state(validation_config)
+        reversibility = validate_pxp_reversibility(
+            psi,
+            validation_config.total_time;
+            params = _validation_trotter(validation_config),
+        )
+        push!(runs, PXPAuditRun(validation, reversibility, _audit_summary(validation, reversibility)))
+    end
+
+    return PXPAuditReport(config, runs, _validation_metadata())
+end
+
 function _json_value(value::Nothing)
     return nothing
 end
@@ -874,6 +1207,85 @@ function _convergence_report_data(report::PXPConvergenceReport)
     )
 end
 
+function _audit_config_data(config::PXPAuditConfig)
+    return (;
+        n_values = config.n_values,
+        total_time = config.total_time,
+        dt_values = config.dt_values,
+        D_values = config.D_values,
+        cutoff_values = config.cutoff_values,
+        chi_values = config.chi_values,
+        measure_every = config.measure_every,
+        order = config.order,
+        schedule = String(config.schedule),
+        ctm_tol = config.ctm_tol,
+        ctm_maxiter = config.ctm_maxiter,
+        ctm_verbosity = config.ctm_verbosity,
+        ctm_seed = config.ctm_seed,
+    )
+end
+
+function _reversibility_data(report::PXPReversibilityReport)
+    return (;
+        before = _simple_data(report.before),
+        after_forward = _simple_data(report.after_forward),
+        after_reverse = _simple_data(report.after_reverse),
+        forward_log = _evolution_data(report.forward_log),
+        reverse_log = _evolution_data(report.reverse_log),
+        density_drift = report.density_drift,
+        blockade_drift = report.blockade_drift,
+        energy_drift = report.energy_drift,
+    )
+end
+
+function _audit_summary_data(summary::PXPAuditSummary)
+    return (;
+        n = summary.n,
+        total_time = summary.total_time,
+        dt = summary.dt,
+        D = summary.D,
+        cutoff = summary.cutoff,
+        schedule = String(summary.schedule),
+        chi_values = summary.chi_values,
+        max_abs_density_error_simple = summary.max_abs_density_error_simple,
+        max_abs_density_error_ctm = summary.max_abs_density_error_ctm,
+        max_blockade_violation_simple = summary.max_blockade_violation_simple,
+        max_blockade_violation_ctm = summary.max_blockade_violation_ctm,
+        pxp_energy_drift_simple = summary.pxp_energy_drift_simple,
+        pxp_energy_drift_ctm = summary.pxp_energy_drift_ctm,
+        ctm_trust_status = String(summary.ctm_trust_status),
+        ctm_trust_reason = String(summary.ctm_trust_reason),
+        finite_chi_density_delta = summary.finite_chi_density_delta,
+        finite_chi_blockade_delta = summary.finite_chi_blockade_delta,
+        finite_chi_energy_delta = summary.finite_chi_energy_delta,
+        finite_chi_max_residual = summary.finite_chi_max_residual,
+        max_truncerr = summary.max_truncerr,
+        log_norm_initial = summary.log_norm_initial,
+        log_norm_final = summary.log_norm_final,
+        log_norm_delta = summary.log_norm_delta,
+        log_norm_delta_abs = summary.log_norm_delta_abs,
+        reversibility_density_drift = summary.reversibility_density_drift,
+        reversibility_blockade_drift = summary.reversibility_blockade_drift,
+        reversibility_energy_drift = summary.reversibility_energy_drift,
+    )
+end
+
+function _audit_run_data(run::PXPAuditRun)
+    return (;
+        summary = _audit_summary_data(run.summary),
+        validation = _report_data(run.validation),
+        reversibility = _reversibility_data(run.reversibility),
+    )
+end
+
+function _audit_report_data(report::PXPAuditReport)
+    return (;
+        config = _audit_config_data(report.config),
+        metadata = _metadata_data(report.metadata),
+        runs = _audit_run_data.(report.runs),
+    )
+end
+
 """
     write_pxp_validation_json(report, path)
 
@@ -900,6 +1312,121 @@ function write_pxp_convergence_json(report::PXPConvergenceReport, path::Abstract
     open(path, "w") do io
         JSON3.write(io, _convergence_report_data(report))
         write(io, '\n')
+    end
+    return path
+end
+
+"""
+    write_pxp_audit_json(report, path)
+
+Write a [`PXPAuditReport`](@ref) as nested JSON containing campaign
+configuration, per-run flat summaries, full validation reports, and
+reversibility reports.
+"""
+function write_pxp_audit_json(report::PXPAuditReport, path::AbstractString)
+    open(path, "w") do io
+        JSON3.write(io, _audit_report_data(report))
+        write(io, '\n')
+    end
+    return path
+end
+
+const PXP_AUDIT_CSV_HEADER = [
+    "n",
+    "total_time",
+    "dt",
+    "D",
+    "cutoff",
+    "schedule",
+    "chi_values",
+    "max_abs_density_error_simple",
+    "max_abs_density_error_ctm",
+    "max_blockade_violation_simple",
+    "max_blockade_violation_ctm",
+    "pxp_energy_drift_simple",
+    "pxp_energy_drift_ctm",
+    "ctm_trust_status",
+    "ctm_trust_reason",
+    "finite_chi_density_delta",
+    "finite_chi_blockade_delta",
+    "finite_chi_energy_delta",
+    "finite_chi_max_residual",
+    "max_truncerr",
+    "log_norm_initial",
+    "log_norm_final",
+    "log_norm_delta",
+    "log_norm_delta_abs",
+    "reversibility_density_drift",
+    "reversibility_blockade_drift",
+    "reversibility_energy_drift",
+]
+
+function _audit_csv_cell(x::Real)
+    isfinite(Float64(x)) || throw(ArgumentError("audit CSV values must be finite"))
+    return string(x)
+end
+
+_audit_csv_cell(x::Symbol) = String(x)
+_audit_csv_cell(::Nothing) = ""
+
+function _audit_csv_cell(xs::Vector{Int})
+    return isempty(xs) ? "" : join(xs, ";")
+end
+
+function _audit_csv_cell(x::AbstractString)
+    if occursin(r"[,\n\"]", x)
+        return "\"" * replace(x, "\"" => "\"\"") * "\""
+    else
+        return x
+    end
+end
+
+function _audit_csv_row(summary::PXPAuditSummary)
+    values = (
+        summary.n,
+        summary.total_time,
+        summary.dt,
+        summary.D,
+        summary.cutoff,
+        summary.schedule,
+        summary.chi_values,
+        summary.max_abs_density_error_simple,
+        summary.max_abs_density_error_ctm,
+        summary.max_blockade_violation_simple,
+        summary.max_blockade_violation_ctm,
+        summary.pxp_energy_drift_simple,
+        summary.pxp_energy_drift_ctm,
+        summary.ctm_trust_status,
+        summary.ctm_trust_reason,
+        summary.finite_chi_density_delta,
+        summary.finite_chi_blockade_delta,
+        summary.finite_chi_energy_delta,
+        summary.finite_chi_max_residual,
+        summary.max_truncerr,
+        summary.log_norm_initial,
+        summary.log_norm_final,
+        summary.log_norm_delta,
+        summary.log_norm_delta_abs,
+        summary.reversibility_density_drift,
+        summary.reversibility_blockade_drift,
+        summary.reversibility_energy_drift,
+    )
+    return join(_audit_csv_cell.(values), ",")
+end
+
+"""
+    write_pxp_audit_csv(report, path)
+
+Write the flat [`PXPAuditSummary`](@ref) rows from a [`PXPAuditReport`](@ref)
+as CSV. Nested validation, CTM, and reversibility details remain available in
+the JSON artifact.
+"""
+function write_pxp_audit_csv(report::PXPAuditReport, path::AbstractString)
+    open(path, "w") do io
+        println(io, join(PXP_AUDIT_CSV_HEADER, ","))
+        for run in report.runs
+            println(io, _audit_csv_row(run.summary))
+        end
     end
     return path
 end

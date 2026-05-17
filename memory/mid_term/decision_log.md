@@ -28,6 +28,38 @@ Source:
 
 Status: active
 
+## 2026-05-17 - Add M1 PXP Audit Campaign As Report Composition Layer
+
+Decision:
+
+Implement the M1 PXP audit campaign as a thin composition layer over existing
+PXP validation, trusted CTM measurement, and reversibility APIs rather than as
+new physics logic.
+
+Reason:
+
+The milestone needs machine-readable bottleneck triage across small all-down
+ED/iPEPS runs, optional finite-`chi` CTM trust, truncation/log-norm diagnostics,
+and reverse-evolution drift. The trusted measurement stack already provides the
+correct primitives, so the new API should aggregate and serialize them.
+
+Consequences:
+
+`PXPAuditConfig` defaults to a deliberately small serial `3 x 3` grid without
+CTMRG, while `chi_values` or `SQUAREPXP_AUDIT_CHI=8,12` opt into CTM-attached
+audits. The JSON artifact keeps nested validation and reversibility reports;
+the CSV artifact exposes flat summary fields for deciding whether the next
+bottleneck is update/Trotter error, finite-`chi` drift, objective
+insufficiency, truncation pressure, or persistence. CTM-aware/full-update
+evolution remains out of scope.
+
+Source:
+
+`src/PXPValidation.jl`; `scripts/pxp_audit_campaign.jl`; `README.md`;
+`test/test_pxp_validation.jl`
+
+Status: active
+
 ## 2026-05-16 - ScarFinder Uses Trusted Measurement Backends
 
 Decision:
