@@ -2,17 +2,21 @@
 
 - Confirmed: Current workspace is `/Users/ren/Codex/iPEPS`.
 - Confirmed: Current checkout is local `main`.
-- Confirmed: `codex/s0-s7-completion` was fast-forward merged into `main` on
-  2026-05-16. Local `main` is ahead of `origin/main` by the merged S0-S7
-  completion commits plus this memory-refresh work until pushed.
-- Confirmed: S0-S7 is complete for the current architecture: S7a CTM trust and
-  S7b CTM local bond norm diagnostics/readiness/transactional gauge
-  conditioning are present on `main`.
-- Confirmed: The merged `codex/s0-s7-completion` worktree was removed and the
-  local branch was deleted after merge.
-- Confirmed: The old short-term TFIM-only handoff has been superseded by the
-  S0-S7 completion audit and this current-state file.
+- Confirmed: Local `main` is aligned with `origin/main` at
+  `98e1ad7 Merge GPT PXP roadmap completion`.
+- Confirmed: The worktree is clean, the only local branch is `main`, and the
+  only registered worktree is `/Users/ren/Codex/iPEPS`.
+- Confirmed: The GPT PXP roadmap completion work was merged to `main` and
+  pushed to GitHub on 2026-05-17 after full-suite verification.
+- Confirmed: S0-S7 remains complete for the current architecture, and the
+  follow-on GPT roadmap pass adds trusted ScarFinder measurement backends,
+  objective-based ranking, candidate metadata persistence, reproducible CTMRG
+  seeding, PXP validation/convergence reports, reverse-evolution validation,
+  projection-semantics clarification, and PEPSKit helper compatibility guards.
+- Confirmed: The merged GPT roadmap feature worktree was removed, and merged
+  local cleanup branches were deleted.
 - Source: `git status`
 - Source: `git log`
 - Source: `README.md`
-- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- Source: `docs/superpowers/plans/2026-05-16-complete-gpt-pxp-roadmap.md`
+- Source: `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`

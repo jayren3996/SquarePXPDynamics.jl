@@ -25,7 +25,8 @@
 ## CTMRG Trust Policy
 
 - Partially resolved: S7a provides a software trust policy over finite-chi CTM
-  sweep records, and S7b requires that trust before gauge-changing updates.
+  sweep records, S7b requires that trust before gauge-changing updates, and
+  ScarFinder can now require trusted CTM measurements for candidate ranking.
 - Open question: What physics-facing convergence thresholds, finite-chi
   sensitivity policy, and benchmark evidence are sufficient before CTM values
   can drive energy-oriented ScarFinder ranking or external physics claims?
@@ -33,22 +34,50 @@
 - Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 - Source: `src/CTMTrust.jl`
 - Source: `src/CTMGaugeReadiness.jl`
+- Source: `src/ScarFinder.jl`
 
 ## Production ScarFinder Validation
 
-- Open question: How should the completed S0-S7 infrastructure be assembled
-  into production ScarFinder validation runs with CTM-trusted energy/ranking,
-  finite-chi sweeps, benchmark comparisons, and acceptance criteria?
+- Partially resolved: ScarFinder now has explicit objective objects,
+  `TrustedCTMBackend`, `require_trusted_ctm`, scar-oriented observables,
+  candidate metadata persistence, and convergence-report infrastructure.
+- Open question: What first production/audit campaign should be run, and what
+  acceptance thresholds should define a publishable candidate trajectory?
+- Open question: Should the next implementation milestone prioritize full
+  tensor snapshot persistence, expanded CTM observables, or CTM-aware/full
+  updates?
 - Source: `README.md`
 - Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
 - Source: `docs/superpowers/notes/2026-05-16-s7b-gauge-fixing-handoff.md`
+- Source: `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`
+
+## ScarFinder Candidate Persistence
+
+- Partially resolved: `JSONCandidateStore` writes candidate metadata, scores,
+  trust fields, and rejection reasons.
+- Open question: What tensor snapshot format should be used for exact candidate
+  reruns: JLD2/HDF5, ITensors-native serialization, or a custom JSON metadata
+  plus binary tensor payload layout?
+- Source: `src/ScarFinder.jl`
+- Source: `README.md`
+
+## CTM Observable Roadmap
+
+- Open question: Which CTM-backed observables should be implemented next:
+  return/fidelity proxy, two-point correlations, transfer-matrix correlation
+  length, structure-factor variants, or energy-variance-quality diagnostics?
+- Source: `README.md`
+- Source: `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`
 
 ## PEPSKit Public API Boundary
 
+- Partially resolved: Private/helper PEPSKit full-update names are now guarded
+  by `pepskit_private_full_update_available()`.
 - Open question: Should PEPSKit/TensorKit-facing code remain core public API,
   become experimental-but-exported API, or move behind a package extension once
   project boundaries settle?
 - Source: `notes/2026-05-15-code-quality-audit.md`
+- Source: `src/CTMGaugeReadiness.jl`
 
 ## Superseded Context To Watch
 

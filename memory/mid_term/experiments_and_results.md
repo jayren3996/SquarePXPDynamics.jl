@@ -53,3 +53,18 @@
   `98/98`, and extended S7b tests passed `102/102`.
 - Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
 - Source: `test/test_ctm_gauge_readiness.jl`
+
+## GPT PXP Roadmap Completion Verification
+
+- Confirmed: The GPT PXP roadmap completion branch was verified before merge
+  with `julia --project=. -e 'using Pkg; Pkg.test()'` passing `65356/65356`
+  in `7m28.3s`.
+- Confirmed: After merging to `main`,
+  `julia --project=. -e 'using Pkg; Pkg.test()'` passed `65356/65356` in
+  `4m57.8s`.
+- Confirmed: `git diff --check HEAD~1 HEAD` passed.
+- Confirmed: `main` was pushed to GitHub, and `origin/main` points to
+  `98e1ad7 Merge GPT PXP roadmap completion`.
+- Source: `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`
+- Source: `git log`
+- Source: `README.md`

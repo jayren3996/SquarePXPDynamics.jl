@@ -2,17 +2,16 @@
 
 ## Current Objective
 
-Integrate the completed S0-S7/S7b work into local `main`, refresh project
-memory, verify the merged result, and tidy the S0-S7 worktree.
+No active implementation branch. The repo is ready for the next
+research/engineering milestone selection after the GPT PXP roadmap completion
+was merged, pushed, verified, and branch-cleaned.
 
 ## What Was Just Done
 
-Fast-forward merged `codex/s0-s7-completion` into local `main` after rerunning
-the focused S7b gauge-readiness test in the feature worktree. Refreshed
-mid-term architecture/goals/milestones/open-questions/results and short-term
-state/task/handoff files so memory reflects S0-S7 completion on `main`.
-Removed the merged S0-S7 worktree and deleted the local
-`codex/s0-s7-completion` branch.
+Merged the GPT PXP roadmap completion branch into `main`, pushed `main` to
+GitHub, verified the merged tree, removed the feature worktree, and deleted
+merged cleanup branches. Then refreshed short-term and mid-term memory plus a
+new completion note so future sessions start from the current pushed state.
 
 ## Important Files Touched
 
@@ -22,41 +21,48 @@ Removed the merged S0-S7 worktree and deleted the local
 - `memory/mid_term/open_questions.md`
 - `memory/mid_term/experiments_and_results.md`
 - `memory/short_term/*.md`
-- `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`
 
 ## Commands Run
 
 - `git status --short --branch`
 - `git worktree list`
-- `git merge-base --is-ancestor ...`
-- `julia --project=. test/runtests.jl test_ctm_gauge_readiness.jl`
-- `git merge --ff-only codex/s0-s7-completion`
-- `git worktree remove /Users/ren/Codex/iPEPS/.worktrees/codex/s0-s7-completion`
-- `git branch -d codex/s0-s7-completion`
+- `git merge --no-ff codex/complete-gpt-pxp-roadmap`
+- `julia --project=. -e 'using Pkg; Pkg.test()'`
+- `git diff --check HEAD~1 HEAD`
+- `git push origin main`
+- `git worktree remove ...`
+- `git branch -d ...`
 
 ## Tests/Results
 
-- Focused S7b branch verification before merge:
-  `julia --project=. test/runtests.jl test_ctm_gauge_readiness.jl` passed
-  `98/98` in `54.9s`.
-- Post-merge full-suite verification on local `main`:
-  `julia --project=. -e 'using Pkg; Pkg.test()'` passed `65149/65149` in
-  `4m35.1s`.
-- `git diff --check` passed after the memory/notes edits.
+- Feature-branch full-suite verification:
+  `julia --project=. -e 'using Pkg; Pkg.test()'` passed `65356/65356` in
+  `7m28.3s`.
+- Post-merge full-suite verification on `main`:
+  `julia --project=. -e 'using Pkg; Pkg.test()'` passed `65356/65356` in
+  `4m57.8s`.
+- `git diff --check HEAD~1 HEAD` passed.
+- `origin/main` points to `98e1ad7`.
 
 ## Known Problems
 
-- Local `main` is ahead of `origin/main`; it has not been pushed after the S0-S7
-  integration.
-- Production ScarFinder validation remains future work.
+- CTM-aware/full-update evolution is not implemented.
+- Full tensor snapshot persistence for ScarFinder candidates is not implemented.
+- Publication-grade physics audit sweeps across `dt`, `D`, `chi`, cutoff, unit
+  cell, and update scheme remain future work.
+- Return/fidelity proxy, richer CTM observables, transfer-matrix correlation
+  length, and energy-variance-quality observables remain future work.
 
 ## Next Recommended Actions
 
-Push `main` if remote publication is desired.
+Choose the next milestone: CTM-trusted ScarFinder audit campaign, tensor
+snapshot persistence, expanded CTM observables, or CTM-aware/full-update design.
 
 ## Things Not To Do
 
 - Do not treat simple/local observables as CTMRG-quality physics measurements.
-- Do not claim production ScarFinder validation from S0-S7 completion alone.
+- Do not claim publication-grade ScarFinder validation from trusted CTM plumbing
+  alone; convergence/audit campaigns are still required.
 - Do not rerun `project-memory-curator` unless explicitly requested.
 - Do not delete older notes just because they are summarized here.

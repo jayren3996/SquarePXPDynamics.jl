@@ -1,12 +1,15 @@
 # Active Tasks
 
-- Confirmed: The merged `main` tree was verified after the S0-S7 fast-forward
-  merge and memory refresh.
-- Confirmed: The post-merge memory/notes update was committed on `main`.
-- Confirmed: The now-merged
-  `/Users/ren/Codex/iPEPS/.worktrees/codex/s0-s7-completion` worktree was
-  removed and the local `codex/s0-s7-completion` branch was deleted.
-- Follow-up: push local `main` to `origin/main` if remote publication is wanted.
-- Source: user request on 2026-05-16
-- Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- Confirmed: GPT PXP roadmap completion was merged to `main`, pushed to
+  GitHub, and verified on 2026-05-17.
+- Confirmed: Local merged branches and the extra Superpowers worktree were
+  cleaned up. Only `main` remains locally.
+- Confirmed: Memory and notes are being refreshed to reflect the pushed
+  roadmap state.
+- Active task: decide the next research/engineering milestone.
+- Candidate next milestones: CTM-trusted ScarFinder audit campaign, tensor
+  snapshot persistence, expanded CTM observable layer, or CTM-aware/full-update
+  design.
+- Source: user request on 2026-05-17
+- Source: `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`
 - Source: `git status`

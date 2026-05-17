@@ -3,8 +3,8 @@
 ## Package Shape
 
 - Confirmed: The package is named `SquarePXPDynamics` and targets Julia `1.12`.
-- Confirmed: Main dependencies are `ITensors`, `LinearAlgebra`, `PEPSKit`, and
-  `TensorKit`; tests additionally use `Aqua` and `Test`.
+- Confirmed: Main dependencies are `ITensors`, `LinearAlgebra`, `PEPSKit`,
+  `Random`, and `TensorKit`; tests additionally use `Aqua` and `Test`.
 - Source: `Project.toml`
 - Source: `test/Project.toml`
 
@@ -27,19 +27,28 @@
 - `src/StarSimpleUpdate.jl`: QR-reduced five-site star update through
   `project_star!`, including touched-link and split diagnostics.
 - `src/IPEPSEvolution.jl`: Trotter parameters, five-color/serial evolution,
-  model metadata, and `EvolutionLog` diagnostics.
-- `src/Observables.jl`: simple/local PXP and TFIM observables.
+  reverse real-time evolution, model metadata, `EvolutionLog` diagnostics, and
+  reversibility validation helpers.
+- `src/Observables.jl`: simple/local PXP and TFIM observables, including
+  scar-oriented sublattice imbalance and checkerboard structure-factor
+  diagnostics.
 - `src/PEPSKitMeasurements.jl`: experimental PEPSKit/TensorKit CTMRG
-  measurement adapter, diagnostics, validation sweeps, and CSV output.
+  measurement adapter, diagnostics, validation sweeps, trusted CTM measurement
+  summaries, reproducible seeded CTMRG initialization, and CSV output.
 - `src/CTMTrust.jl`: finite-chi CTM trust policy and trust CSV output.
 - `src/CTMGaugeReadiness.jl`: S7b CTM bond norm diagnostics, gauge-readiness
-  checks, and transactional `fix_bond_gauge!`.
+  checks, PEPSKit full-update helper compatibility checks, and transactional
+  `fix_bond_gauge!`.
 - `src/Benchmarks.jl`: simple-update benchmark runner and JSON/CSV writers.
 - `src/FiniteTFIMReference.jl`: dense small-cell finite TFIM reference.
 - `src/FiniteMPSTFIMReference.jl`: open-boundary finite MPS TFIM reference.
 - `src/FinitePXPEEDBenchmark.jl`: EDKit-backed finite PBC PXP benchmark.
-- `src/ScarFinder.jl`: ScarFinder orchestration, guarded simple-energy
-  correction, ranking, and CSV/JSON logs.
+- `src/PXPValidation.jl`: ED-versus-iPEPS PXP validation, CTM-trusted
+  validation attachment, convergence reports, reversibility reports, and JSON
+  writers.
+- `src/ScarFinder.jl`: ScarFinder orchestration, measurement backends,
+  objective-based ranking, guarded simple-energy correction, CTM trust gating,
+  candidate metadata persistence, and CSV/JSON logs.
 - Source: `src/SquarePXPDynamics.jl`
 - Source: `src/*.jl`
 - Source: `README.md`
@@ -51,6 +60,10 @@
   simple/local or CTM-backed measurement functions.
 - Confirmed: ScarFinder sits above this stack and should call evolution and
   measurement APIs rather than manipulating low-level tensor indices.
+- Confirmed: ScarFinder now has an explicit measurement-backend boundary.
+  `SimpleBackend` is the fast development path, while `TrustedCTMBackend`
+  composes CTM sweeps and finite-chi trust for physics-facing candidate
+  ranking.
 - Confirmed: CTM-backed measurement contexts are version-guarded. S7a trust
   consumes CTM sweep records, while S7b gauge conditioning additionally
   requires fresh contexts, finite-chi trust, and local CTM bond norm diagnostics
@@ -61,6 +74,7 @@
 - Source: `src/ScarFinder.jl`
 - Source: `src/PEPSKitMeasurements.jl`
 - Source: `src/CTMGaugeReadiness.jl`
+- Source: `src/PXPValidation.jl`
 
 ## Benchmark And Reference Paths
 

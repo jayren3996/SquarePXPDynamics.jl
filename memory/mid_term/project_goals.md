@@ -17,23 +17,30 @@
   that directly supports ScarFinder, dense local gates, local and CTM-backed
   diagnostics, fixed-bond-dimension evolve-project loops, and benchmark/reference
   validation.
-- Confirmed: CTMRG trust and S7b gauge-conditioning infrastructure are now
-  available as accuracy/readiness layers. Production ScarFinder validation and
-  physics-facing CTM workflows remain future work.
+- Confirmed: CTMRG trust, S7b gauge-conditioning infrastructure, trusted
+  ScarFinder measurement backends, objective-based ranking, and PXP validation
+  reports are now available as accuracy/readiness layers. Publication-grade
+  ScarFinder campaigns and CTM-aware/full-update evolution remain future work.
 - Source: `README.md`
 - Source: `notes/README.md`
 - Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- Source: `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`
 
 ## Current Integrated State
 
-- Confirmed: Local `main` now includes the S0-S7 completion branch, including
-  the v1 infinite TFIM benchmark framework, finite TFIM/MPS/PXP ED reference
-  paths, S7a CTM trust, and S7b CTM gauge-readiness/conditioning APIs.
+- Confirmed: Local `main` now includes the S0-S7 completion work and the GPT
+  PXP roadmap completion, including the v1 infinite TFIM benchmark framework,
+  finite TFIM/MPS/PXP ED reference paths, S7a CTM trust, S7b CTM
+  gauge-readiness/conditioning APIs, trusted ScarFinder backends, objective
+  scoring, candidate metadata persistence, reproducible CTMRG initialization,
+  PXP validation/convergence reports, and reverse-evolution diagnostics.
 - Confirmed: Simple-update TFIM and ScarFinder outputs remain implementation
-  diagnostics unless backed by appropriate CTM trust and finite-chi workflows.
+  diagnostics unless backed by appropriate CTM trust, finite-chi workflows, and
+  convergence/error-budget reports.
 - Source: `README.md`
 - Source: `src/SquarePXPDynamics.jl`
 - Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- Source: `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`
 
 ## Working Rule
 

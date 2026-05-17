@@ -11,6 +11,18 @@
 - Source: `src/SquarePXPDynamics.jl`
 - Source: `test/runtests.jl`
 
+- Confirmed: GPT PXP roadmap completion was merged and pushed to `main` on
+  2026-05-17. It adds first-class ScarFinder measurement backends, trusted CTM
+  ranking gates, explicit physics objectives, scar-oriented observables,
+  candidate metadata persistence, reproducible CTMRG seeding, ED/iPEPS
+  validation and convergence reports, reverse-evolution validation, projection
+  semantics clarification, and PEPSKit helper compatibility guards.
+- Source: `docs/superpowers/plans/2026-05-16-complete-gpt-pxp-roadmap.md`
+- Source: `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`
+- Source: `README.md`
+- Source: `src/ScarFinder.jl`
+- Source: `src/PXPValidation.jl`
+
 - Confirmed: CTM diagnostics and context safety were hardened after review,
   including diagnostics metadata, stale-context guards, CTM validation sweeps,
   and README warnings.
@@ -83,15 +95,17 @@
 
 ## Future Milestones
 
-- Confirmed: Local `main` is ahead of `origin/main` after the S0-S7 merge and
-  memory refresh work. Push remains an explicit follow-up if remote publication
-  is desired.
+- Confirmed: Local `main` is aligned with `origin/main` at
+  `98e1ad7 Merge GPT PXP roadmap completion`.
 - Open question: Add the broader Tier 2 TFIM smoke matrix across multiple
   `h/J` values, initial states, `D`, and `dt`.
-- Open question: Build production ScarFinder validation on top of the completed
-  S0-S7 infrastructure, including physics-facing CTM workflows and explicit
-  finite-chi policies for ranking/claims.
+- Open question: Run the first CTM-trusted ScarFinder audit campaign using the
+  current simple-update plus trusted-measurement stack.
+- Open question: Add full tensor snapshot persistence for ScarFinder candidates.
+- Open question: Expand CTM-backed observables and design CTM-aware/full-update
+  evolution.
 - Source: `docs/superpowers/specs/2026-05-15-infinite-tfim-benchmark-design.md`
 - Source: `docs/superpowers/notes/2026-05-15-current-work-infinite-tfim-benchmark.md`
 - Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
+- Source: `docs/superpowers/notes/2026-05-17-gpt-roadmap-completion.md`
 - Source: `README.md`
