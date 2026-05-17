@@ -5,7 +5,7 @@ using JSON3
 using ..SquareIPEPS: SquareIPEPSState, copy_state, log_norm, product_square_ipeps
 using ..SquareUnitCells: PeriodicSquareUnitCell
 using ..Observables: SimpleObservableSummary, measure_simple
-using ..FiniteIPEPSObservables: exact_density_finite
+using ..FiniteIPEPSObservables: exact_density_finite, exact_all_down_return_probability_finite
 using ..PEPSKitMeasurements:
     CTMObservableSummary,
     CTMValidationPoint,
@@ -29,6 +29,9 @@ export write_pxp_convergence_json
 export PXPReversibilityReport, validate_pxp_reversibility
 export PXPAuditConfig, PXPAuditSummary, PXPAuditRun, PXPAuditReport
 export run_pxp_audit_campaign, write_pxp_audit_json, write_pxp_audit_csv
+export PXPLargerDBenchmarkConfig, PXPLargerDBenchmarkSummary
+export PXPLargerDBenchmarkRun, PXPLargerDBenchmarkReport
+export run_pxp_larger_d_benchmark
 
 """
     TrustedCTMMeasurement(measurement, points, trust, policy = CTMTrustPolicy())
@@ -637,6 +640,214 @@ struct PXPAuditReport
     metadata::PXPValidationMetadata
 end
 
+"""
+    PXPLargerDBenchmarkConfig(; kwargs...)
+
+Controls the M3 larger-D PXP dynamics benchmark. `ed_mode = :symmetric_pbc`
+uses the current finite PBC ED path, and `observable_mode = :auto` selects
+`:exact_finite` for tiny cells with exact finite observables enabled and
+`:symmetric_pbc_ed_global` otherwise.
+"""
+struct PXPLargerDBenchmarkConfig
+    n_values::Vector{Int}
+    total_time::Float64
+    dt_values::Vector{Float64}
+    D_values::Vector{Int}
+    cutoff_values::Vector{Float64}
+    measure_every::Int
+    order::Int
+    schedule::Symbol
+    initial_state::Symbol
+    point_group::Bool
+    use_sparse::Bool
+    ed_tol::Float64
+    ed_m_init::Int
+    ed_m_max::Int
+    ed_extend_step::Int
+    ed_mode::Symbol
+    observable_mode::Symbol
+    chi_values::Vector{Int}
+    ctm_tol::Float64
+    ctm_maxiter::Int
+    ctm_verbosity::Int
+    ctm_seed::Union{Nothing,Int}
+    exact_finite_observables::Bool
+    exact_finite_max_sites::Int
+end
+
+function PXPLargerDBenchmarkConfig(;
+    n_values = [3],
+    total_time::Real = 0.02,
+    dt_values = [0.02],
+    D_values = [1, 2, 3, 4],
+    cutoff_values = [1e-12],
+    measure_every::Integer = 1,
+    order::Integer = 1,
+    schedule::Symbol = :serial,
+    initial_state::Symbol = :down,
+    point_group::Bool = true,
+    use_sparse::Bool = true,
+    ed_tol::Real = 1e-10,
+    ed_m_init::Integer = 30,
+    ed_m_max::Integer = 60,
+    ed_extend_step::Integer = 10,
+    ed_mode::Symbol = :symmetric_pbc,
+    observable_mode::Symbol = :auto,
+    chi_values = Int[],
+    ctm_tol::Real = 1e-8,
+    ctm_maxiter::Integer = 100,
+    ctm_verbosity::Integer = 0,
+    ctm_seed = 0,
+    exact_finite_observables::Bool = false,
+    exact_finite_max_sites::Integer = 12,
+)
+    n_grid = [_positive_int(n, "n_values entry") for n in n_values]
+    dt_grid = [_finite_positive(dt, "dt_values entry") for dt in dt_values]
+    D_grid = [_positive_int(D, "D_values entry") for D in D_values]
+    cutoff_grid = [_finite_positive(cutoff, "cutoff_values entry") for cutoff in cutoff_values]
+    chi_grid = [_positive_int(chi, "chi_values entry") for chi in chi_values]
+    isempty(n_grid) && throw(ArgumentError("n_values must be nonempty"))
+    isempty(dt_grid) && throw(ArgumentError("dt_values must be nonempty"))
+    isempty(D_grid) && throw(ArgumentError("D_values must be nonempty"))
+    isempty(cutoff_grid) && throw(ArgumentError("cutoff_values must be nonempty"))
+    ed_mode === :symmetric_pbc ||
+        throw(ArgumentError("ed_mode must be :symmetric_pbc for M3"))
+    observable_mode in (:auto, :exact_finite, :symmetric_pbc_ed_global, :ctm_trusted) ||
+        throw(
+            ArgumentError(
+                "observable_mode must be :auto, :exact_finite, :symmetric_pbc_ed_global, or :ctm_trusted",
+            ),
+        )
+    initial_state in (:down, :all_down) ||
+        throw(ArgumentError("initial_state must be :down or :all_down"))
+
+    cadence = _positive_int(measure_every, "measure_every")
+    ord = _positive_int(order, "order")
+    ord in (1, 2) || throw(ArgumentError("order must be 1 or 2"))
+    schedule in (:serial, :five_color) ||
+        throw(ArgumentError("schedule must be :serial or :five_color"))
+    total = _finite_nonnegative(total_time, "total_time")
+    tol = _finite_positive(ed_tol, "ed_tol")
+    m_init = _positive_int(ed_m_init, "ed_m_init")
+    m_max = _positive_int(ed_m_max, "ed_m_max")
+    m_max >= m_init || throw(ArgumentError("ed_m_max must be at least ed_m_init"))
+    extend = _positive_int(ed_extend_step, "ed_extend_step")
+    ctm_tol_f = _finite_positive(ctm_tol, "ctm_tol")
+    ctm_maxiter_i = _positive_int(ctm_maxiter, "ctm_maxiter")
+    ctm_verbosity_i = _nonnegative_int(ctm_verbosity, "ctm_verbosity")
+    seed = ctm_seed === nothing ? nothing : _nonnegative_int(ctm_seed, "ctm_seed")
+    exact_limit = _positive_int(exact_finite_max_sites, "exact_finite_max_sites")
+
+    for n in n_grid, dt in dt_grid, D in D_grid, cutoff in cutoff_grid
+        PXPValidationConfig(
+            n;
+            total_time = total,
+            dt,
+            measure_every = cadence,
+            initial_state,
+            point_group,
+            use_sparse,
+            ed_tol = tol,
+            ed_m_init = m_init,
+            ed_m_max = m_max,
+            ed_extend_step = extend,
+            order = ord,
+            maxdim = D,
+            cutoff,
+            schedule,
+            exact_finite_observables = exact_finite_observables && n^2 <= exact_limit,
+            exact_finite_max_sites = exact_limit,
+        )
+    end
+
+    return PXPLargerDBenchmarkConfig(
+        n_grid,
+        total,
+        dt_grid,
+        D_grid,
+        cutoff_grid,
+        cadence,
+        ord,
+        schedule,
+        initial_state,
+        point_group,
+        use_sparse,
+        tol,
+        m_init,
+        m_max,
+        extend,
+        ed_mode,
+        observable_mode,
+        chi_grid,
+        ctm_tol_f,
+        ctm_maxiter_i,
+        ctm_verbosity_i,
+        seed,
+        exact_finite_observables,
+        exact_limit,
+    )
+end
+
+"""
+    PXPLargerDBenchmarkSummary
+
+Flat per-run M3 benchmark row. ED fields describe the finite PBC symmetric ED
+reference; exact finite fields are nullable and are populated only for tiny
+iPEPS cells where exact finite contraction was enabled.
+"""
+struct PXPLargerDBenchmarkSummary
+    n::Int
+    D::Int
+    dt::Float64
+    cutoff::Float64
+    total_time::Float64
+    ed_mode::Symbol
+    observable_mode::Symbol
+    ed_boundary_condition::Symbol
+    ed_symmetry_sector::Symbol
+    ed_observable_scope::Symbol
+    ed_reference_label::String
+    ed_basis_dimension::Int
+    ed_constrained_dimension::Int
+    ed_group_order::Int
+    ed_hamiltonian_nnz::Union{Nothing,Int}
+    ed_runtime_seconds::Float64
+    ipeps_runtime_seconds::Float64
+    reversibility_runtime_seconds::Float64
+    density_error_simple::Float64
+    density_error_exact_finite::Union{Nothing,Float64}
+    density_error_ctm::Union{Nothing,Float64}
+    return_probability_error::Union{Nothing,Float64}
+    ed_return_probability::Float64
+    ed_excitation_density::Float64
+    ipeps_simple_density::Float64
+    ipeps_exact_finite_density::Union{Nothing,Float64}
+    ipeps_ctm_density::Union{Nothing,Float64}
+    max_truncerr::Float64
+    log_norm_initial::Float64
+    log_norm_final::Float64
+    log_norm_delta_abs::Float64
+    reversibility_density_drift::Float64
+    ctm_trust_status::Symbol
+    ctm_trust_reason::Symbol
+    notes::Vector{String}
+    warnings::Vector{String}
+end
+
+"""One M3 benchmark run containing the full validation report and flat summary."""
+struct PXPLargerDBenchmarkRun
+    validation::PXPValidationReport
+    reversibility::PXPReversibilityReport
+    summary::PXPLargerDBenchmarkSummary
+end
+
+"""Complete M3 benchmark campaign report."""
+struct PXPLargerDBenchmarkReport
+    config::PXPLargerDBenchmarkConfig
+    runs::Vector{PXPLargerDBenchmarkRun}
+    metadata::PXPValidationMetadata
+end
+
 function _validation_ed_config(config::PXPValidationConfig)
     return PXPEEDBenchmarkConfig(
         config.n;
@@ -816,23 +1027,13 @@ function _comparison(ed::PXPEEDSample, sample::PXPIPEPSSample)
     )
 end
 
-"""
-    validate_pxp_ed_ipeps(config; ctm_params = nothing,
-                          trust_policy = CTMTrustPolicy(),
-                          ctm_measure = measure_ctm)
-
-Run a finite periodic PXP ED trajectory and a matched all-down iPEPS trajectory
-on an `n x n` unit cell. iPEPS samples are measured at the same times as ED.
-When `ctm_params` is supplied, every iPEPS sample also receives a trusted CTM
-measurement bundle from [`measure_ctm_trusted`](@ref).
-"""
-function validate_pxp_ed_ipeps(
-    config::PXPValidationConfig;
+function _validate_pxp_ipeps_against_ed(
+    config::PXPValidationConfig,
+    ed_result::PXPEEDBenchmarkResult;
     ctm_params = nothing,
     trust_policy::CTMTrustPolicy = CTMTrustPolicy(),
     ctm_measure = measure_ctm,
 )::PXPValidationReport
-    ed_result = run_pxp_ed_benchmark(_validation_ed_config(config))
     psi = _validation_initial_state(config)
     trotter = _validation_trotter(config)
     samples = PXPIPEPSSample[]
@@ -869,12 +1070,32 @@ function validate_pxp_ed_ipeps(
         _comparison(ed_sample, ipeps_sample) for
         (ed_sample, ipeps_sample) in zip(ed_result.samples, samples)
     ]
-    return PXPValidationReport(
+    return PXPValidationReport(config, ed_result, samples, comparisons, _validation_metadata())
+end
+
+"""
+    validate_pxp_ed_ipeps(config; ctm_params = nothing,
+                          trust_policy = CTMTrustPolicy(),
+                          ctm_measure = measure_ctm)
+
+Run a finite periodic PXP ED trajectory and a matched all-down iPEPS trajectory
+on an `n x n` unit cell. iPEPS samples are measured at the same times as ED.
+When `ctm_params` is supplied, every iPEPS sample also receives a trusted CTM
+measurement bundle from [`measure_ctm_trusted`](@ref).
+"""
+function validate_pxp_ed_ipeps(
+    config::PXPValidationConfig;
+    ctm_params = nothing,
+    trust_policy::CTMTrustPolicy = CTMTrustPolicy(),
+    ctm_measure = measure_ctm,
+)::PXPValidationReport
+    ed_result = run_pxp_ed_benchmark(_validation_ed_config(config))
+    return _validate_pxp_ipeps_against_ed(
         config,
         ed_result,
-        samples,
-        comparisons,
-        _validation_metadata(),
+        ctm_params = ctm_params,
+        trust_policy = trust_policy,
+        ctm_measure = ctm_measure,
     )
 end
 
@@ -1014,6 +1235,165 @@ function _audit_trust_status(samples)
     return (:rejected, :unknown)
 end
 
+function _larger_d_ctm_params(config::PXPLargerDBenchmarkConfig)
+    isempty(config.chi_values) && return nothing
+    if config.ctm_seed === nothing
+        return Tuple(
+            PEPSKitCTMRGParams(chi, config.ctm_tol, config.ctm_maxiter, config.ctm_verbosity)
+            for chi in config.chi_values
+        )
+    else
+        return Tuple(
+            PEPSKitCTMRGParams(
+                chi,
+                config.ctm_tol,
+                config.ctm_maxiter,
+                config.ctm_verbosity;
+                seed = config.ctm_seed,
+            ) for chi in config.chi_values
+        )
+    end
+end
+
+function _larger_d_ed_config(config::PXPLargerDBenchmarkConfig, n::Int, dt::Float64)
+    return PXPEEDBenchmarkConfig(
+        n;
+        total_time = config.total_time,
+        dt,
+        measure_every = config.measure_every,
+        initial_state = config.initial_state,
+        point_group = config.point_group,
+        use_sparse = config.use_sparse,
+        tol = config.ed_tol,
+        m_init = config.ed_m_init,
+        m_max = config.ed_m_max,
+        extend_step = config.ed_extend_step,
+    )
+end
+
+function _larger_d_validation_config(
+    config::PXPLargerDBenchmarkConfig,
+    n::Int,
+    dt::Float64,
+    D::Int,
+    cutoff::Float64,
+)
+    use_exact = config.exact_finite_observables && n^2 <= config.exact_finite_max_sites
+    return PXPValidationConfig(
+        n;
+        total_time = config.total_time,
+        dt,
+        measure_every = config.measure_every,
+        initial_state = config.initial_state,
+        point_group = config.point_group,
+        use_sparse = config.use_sparse,
+        ed_tol = config.ed_tol,
+        ed_m_init = config.ed_m_init,
+        ed_m_max = config.ed_m_max,
+        ed_extend_step = config.ed_extend_step,
+        order = config.order,
+        maxdim = D,
+        cutoff,
+        schedule = config.schedule,
+        exact_finite_observables = use_exact,
+        exact_finite_max_sites = config.exact_finite_max_sites,
+    )
+end
+
+function _larger_d_observable_mode(
+    config::PXPLargerDBenchmarkConfig,
+    run_config::PXPValidationConfig,
+)
+    config.observable_mode !== :auto && return config.observable_mode
+    run_config.exact_finite_observables && return :exact_finite
+    !isempty(config.chi_values) && return :ctm_trusted
+    return :symmetric_pbc_ed_global
+end
+
+function _last_evolution_max_truncerr(samples)
+    evolutions = [sample.evolution for sample in samples if sample.evolution !== nothing]
+    return _maximum_or_zero([evolution.max_truncerr for evolution in evolutions])
+end
+
+function _exact_return_probability_or_nothing(
+    sample::PXPIPEPSSample,
+    config::PXPValidationConfig,
+)
+    config.exact_finite_observables || return nothing
+    psi = _validation_initial_state(config)
+    evolve!(psi, sample.time; params = _validation_trotter(config))
+    return exact_all_down_return_probability_finite(psi; max_sites = config.exact_finite_max_sites)
+end
+
+function _larger_d_summary(
+    config::PXPLargerDBenchmarkConfig,
+    run_config::PXPValidationConfig,
+    validation::PXPValidationReport,
+    reversibility::PXPReversibilityReport,
+    ed_seconds::Float64,
+    ipeps_seconds::Float64,
+    reversibility_seconds::Float64,
+)::PXPLargerDBenchmarkSummary
+    final_comparison = validation.comparisons[end]
+    final_sample = validation.ipeps_samples[end]
+    final_ed = validation.ed_result.samples[end]
+    log_norms = [sample.log_norm for sample in validation.ipeps_samples]
+    trust_status, trust_reason = _audit_trust_status(validation.ipeps_samples)
+    mode = _larger_d_observable_mode(config, run_config)
+    exact_return = final_sample.exact_finite_density === nothing ?
+        nothing : _exact_return_probability_or_nothing(final_sample, run_config)
+
+    warnings = String[]
+    run_config.maxdim > 1 && push!(
+        warnings,
+        "density_simple is a diagnostic for D>1 loopy PEPS, not exact finite truth",
+    )
+    run_config.exact_finite_observables || push!(
+        warnings,
+        "exact finite iPEPS observables were not available for this run",
+    )
+    push!(warnings, "symmetric PBC ED observables are global site averages")
+
+    return PXPLargerDBenchmarkSummary(
+        run_config.n,
+        run_config.maxdim,
+        run_config.dt,
+        run_config.cutoff,
+        run_config.total_time,
+        config.ed_mode,
+        mode,
+        :periodic,
+        validation.ed_result.point_group ? :fully_symmetric_space_group : :translation_symmetric,
+        :pbc_global_site_average,
+        "finite_pbc_global_density",
+        validation.ed_result.basis_dimension,
+        validation.ed_result.constrained_dimension,
+        validation.ed_result.group_order,
+        validation.ed_result.hamiltonian_nnz,
+        ed_seconds,
+        ipeps_seconds,
+        reversibility_seconds,
+        final_comparison.density_error_simple,
+        final_comparison.density_error_exact_finite,
+        final_comparison.density_error_ctm,
+        exact_return === nothing ? nothing : exact_return - final_ed.return_probability,
+        final_ed.return_probability,
+        final_ed.excitation_density,
+        final_comparison.ipeps_simple_density,
+        final_comparison.ipeps_exact_finite_density,
+        final_comparison.ipeps_ctm_density,
+        _last_evolution_max_truncerr(validation.ipeps_samples),
+        isempty(log_norms) ? 0.0 : first(log_norms),
+        isempty(log_norms) ? 0.0 : last(log_norms),
+        isempty(log_norms) ? 0.0 : abs(last(log_norms) - first(log_norms)),
+        reversibility.density_drift,
+        trust_status,
+        trust_reason,
+        ["M3 larger-D PXP ED benchmark"],
+        warnings,
+    )
+end
+
 function _audit_summary(
     validation::PXPValidationReport,
     reversibility::PXPReversibilityReport,
@@ -1119,6 +1499,68 @@ function run_pxp_audit_campaign(
     end
 
     return PXPAuditReport(config, runs, _validation_metadata())
+end
+
+"""
+    run_pxp_larger_d_benchmark(config = PXPLargerDBenchmarkConfig(); kwargs...)
+
+Run the M3 larger-D PXP ED benchmark campaign. ED is run once for each
+`(n, dt)` pair and reused for every requested `D` and cutoff at that pair.
+"""
+function run_pxp_larger_d_benchmark(
+    config::PXPLargerDBenchmarkConfig = PXPLargerDBenchmarkConfig();
+    trust_policy::CTMTrustPolicy = CTMTrustPolicy(),
+    ctm_measure = measure_ctm,
+)::PXPLargerDBenchmarkReport
+    ctm_params = _larger_d_ctm_params(config)
+    runs = PXPLargerDBenchmarkRun[]
+
+    for n in config.n_values, dt in config.dt_values
+        ed_result = nothing
+        ed_seconds = @elapsed begin
+            ed_result = run_pxp_ed_benchmark(_larger_d_ed_config(config, n, dt))
+        end
+        for D in config.D_values, cutoff in config.cutoff_values
+            run_config = _larger_d_validation_config(config, n, dt, D, cutoff)
+            validation = nothing
+            ipeps_seconds = @elapsed begin
+                validation = _validate_pxp_ipeps_against_ed(
+                    run_config,
+                    ed_result;
+                    ctm_params,
+                    trust_policy,
+                    ctm_measure,
+                )
+            end
+            psi = _validation_initial_state(run_config)
+            reversibility = nothing
+            reversibility_seconds = @elapsed begin
+                reversibility = validate_pxp_reversibility(
+                    psi,
+                    run_config.total_time;
+                    params = _validation_trotter(run_config),
+                )
+            end
+            push!(
+                runs,
+                PXPLargerDBenchmarkRun(
+                    validation,
+                    reversibility,
+                    _larger_d_summary(
+                        config,
+                        run_config,
+                        validation,
+                        reversibility,
+                        ed_seconds,
+                        ipeps_seconds,
+                        reversibility_seconds,
+                    ),
+                ),
+            )
+        end
+    end
+
+    return PXPLargerDBenchmarkReport(config, runs, _validation_metadata())
 end
 
 function _json_value(value::Nothing)

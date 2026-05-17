@@ -38,3 +38,54 @@ end
     large = product_square_ipeps(PeriodicSquareUnitCell(4, 4); state = :down, maxdim = 1)
     @test_throws ArgumentError exact_all_down_return_probability_finite(large; max_sites = 9)
 end
+
+@testset "larger-D PXP benchmark config validates controls" begin
+    config = PXPLargerDBenchmarkConfig(;
+        n_values = [3],
+        total_time = 0.02,
+        dt_values = [0.02],
+        D_values = [1, 2, 3],
+        cutoff_values = [1e-12],
+        exact_finite_observables = true,
+        exact_finite_max_sites = 9,
+    )
+
+    @test config.n_values == [3]
+    @test config.D_values == [1, 2, 3]
+    @test config.observable_mode === :auto
+    @test config.ed_mode === :symmetric_pbc
+    @test_throws ArgumentError PXPLargerDBenchmarkConfig(; n_values = Int[])
+    @test_throws ArgumentError PXPLargerDBenchmarkConfig(; D_values = Int[])
+    @test_throws ArgumentError PXPLargerDBenchmarkConfig(; observable_mode = :central_region)
+    @test_throws ArgumentError PXPLargerDBenchmarkConfig(; ed_mode = :open_boundary)
+end
+
+@testset "larger-D PXP benchmark separates exact finite and simple diagnostics" begin
+    config = PXPLargerDBenchmarkConfig(;
+        n_values = [3],
+        total_time = 0.02,
+        dt_values = [0.02],
+        D_values = [1, 2, 3],
+        cutoff_values = [1e-12],
+        exact_finite_observables = true,
+        exact_finite_max_sites = 9,
+    )
+
+    report = run_pxp_larger_d_benchmark(config)
+
+    @test length(report.runs) == 3
+    @test all(run -> run.summary.observable_mode === :exact_finite, report.runs)
+    @test all(run -> run.summary.ed_observable_scope === :pbc_global_site_average, report.runs)
+    @test all(run -> run.summary.density_error_exact_finite !== nothing, report.runs)
+    @test all(run -> run.summary.return_probability_error !== nothing, report.runs)
+    @test all(run -> run.summary.density_error_simple !== nothing, report.runs)
+    @test all(run -> run.summary.ed_runtime_seconds >= 0, report.runs)
+    @test all(run -> run.summary.ipeps_runtime_seconds >= 0, report.runs)
+    @test all(run -> run.summary.max_truncerr >= 0, report.runs)
+    @test all(run -> run.summary.log_norm_delta_abs >= 0, report.runs)
+    @test all(run -> run.summary.reversibility_density_drift >= 0, report.runs)
+
+    d2 = only(run for run in report.runs if run.summary.D == 2)
+    @test abs(d2.summary.density_error_exact_finite) < 1e-6
+    @test abs(d2.summary.density_error_simple) > 1e-4
+end
