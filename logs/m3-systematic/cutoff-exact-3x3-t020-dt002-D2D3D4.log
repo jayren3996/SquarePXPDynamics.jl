@@ -1,0 +1,6 @@
+CTM threading: (julia_threads = 8, blas_threads = 32, strided_threads = 8, strided_threaded_mul = false, pepskit_scheduler = :default)
+artifacts/m3-systematic/cutoff-exact-3x3-t020-dt002-D2D3D4.json
+artifacts/m3-systematic/cutoff-exact-3x3-t020-dt002-D2D3D4.csv
+real 198.69
+user 2249.20
+sys 77.79

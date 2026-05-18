@@ -1,0 +1,8 @@
+bash: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+CTM threading: (julia_threads = 42, blas_threads = 16, strided_threads = 42, strided_threaded_mul = true, pepskit_scheduler = :dynamic)
+artifacts/m3-systematic/threaded-ctm-trajectory-3x3-t020-dt002-D2D3D4-chi2chi4.json
+artifacts/m3-systematic/threaded-ctm-trajectory-3x3-t020-dt002-D2D3D4-chi2chi4.csv
+real 508.17
+user 5467.80
+sys 279.94

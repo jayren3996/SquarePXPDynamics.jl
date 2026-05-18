@@ -1,0 +1,39 @@
+**Root Cause Report**
+
+I reproduced and inspected the existing artifact. The apparent “D gets worse” result is real in the recorded CTM density, but the root cause is not primarily CTM measurement.
+
+Key evidence:
+
+- The JSON trajectory shows D=4 first breaks around `t=0.08`, when CTMRG diagnostics also become poor. By `t=0.20`, D=4 has `chi=4` CTMRG residual about `0.0604`, so `ctm_trust_status = rejected` is justified.
+- Exact finite contraction on the tiny `3x3` iPEPS state matches the CTM trend:
+  - D=2 exact finite density: `0.0374264910`
+  - D=3 exact finite density: `0.0368066348`
+  - D=4 exact finite density: `0.0277497509`
+- That rules out the CTM density operator/path as the main cause for this tiny cell. CTM is measuring the evolved state consistently enough here, even though its diagnostics are not trusted.
+- A cutoff sweep localizes the larger-D failure:
+  - D=4, `cutoff=1e-12`: exact density `0.0277497509`
+  - D=4, `cutoff=1e-10`: exact density `0.0374012639`
+  - D=4, `cutoff=1e-9`: exact density `0.0374264910`
+- Gauge/conditioning diagnostics support this: D=4 max simple-gauge diagonal condition drops from about `2.6e4` at `cutoff=1e-12` to about `14` at `cutoff=1e-9`.
+
+So the current best root cause is: **larger-D simple update with an overly tight cutoff is retaining tiny ill-conditioned singular directions, producing a worse evolved state.** CTM trust rejection is a real secondary issue, but it is not what caused the D=4 density to fall to `0.02775`.
+
+I did not find a code bug requiring a patch. I updated the decision log at [memory/mid_term/decision_log.md](/data/djxg096/SquarePXPDynamics.jl/memory/mid_term/decision_log.md) with this result.
+
+**Next Experiment**
+
+Run a cutoff-aware exact finite sweep before another CTM campaign:
+
+```bash
+JULIA_NUM_THREADS=8 \
+SQUAREPXP_LARGERD_N=3 \
+SQUAREPXP_LARGERD_TOTAL_TIME=0.2 \
+SQUAREPXP_LARGERD_DT=0.02 \
+SQUAREPXP_LARGERD_D=2,3,4 \
+SQUAREPXP_LARGERD_CUTOFF=1e-12,1e-10,1e-9,1e-8 \
+SQUAREPXP_LARGERD_EXACT_FINITE=true \
+SQUAREPXP_LARGERD_CHI="" \
+julia --project=. scripts/pxp_larger_d_ed_benchmark.jl
+```
+
+Verification run: `git diff --check` passed. No Julia test suite was run because only the memory decision log was edited.

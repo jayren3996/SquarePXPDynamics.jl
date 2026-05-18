@@ -1,0 +1,67 @@
+/goal
+
+We need to systematically debug an unexpected iPEPS+CTM benchmark result in `/data/djxg096/SquarePXPDynamics.jl`.
+
+Before substantial work, read `memory/README.md` and follow its read order. Do not run `project-memory-curator` unless explicitly requested.
+
+Context:
+- ED results are already complete enough for this stage.
+- The active issue is iPEPS local observable dynamics measured with CTM.
+- We recently fixed a performance/configuration issue: Julia must be started with enough Julia threads. Use explicit threading for CTM runs, e.g.
+  `JULIA_NUM_THREADS=42`
+  `SQUAREPXP_CTM_BLAS_THREADS=16`
+  `SQUAREPXP_CTM_STRIDED_THREADS=42`
+  `SQUAREPXP_CTM_STRIDED_THREADED_MUL=true`
+  `SQUAREPXP_CTM_PEPSKIT_SCHEDULER=dynamic`
+- A CTM trajectory run completed:
+  `artifacts/m3-systematic/threaded-ctm-trajectory-3x3-t020-dt002-D2D3D4-chi2chi4.json`
+  `artifacts/m3-systematic/threaded-ctm-trajectory-3x3-t020-dt002-D2D3D4-chi2chi4.csv`
+
+Observed problem:
+- For `3x3`, `dt=0.02`, `total_time=0.2`, CTM density error appears to get worse as iPEPS bond dimension D increases.
+- Final-time CSV summary:
+  - D=2: ED density `0.0374514509`, iPEPS CTM density `0.0374430017`, error about `-8.45e-6`
+  - D=3: iPEPS CTM density `0.0368134433`, error about `-6.38e-4`
+  - D=4: iPEPS CTM density `0.0277543865`, error about `-9.70e-3`
+- This is counterintuitive and should not be explained away without evidence.
+- `ctm_trust_status` is rejected with reason `unaccepted_diagnostics`, so finite-chi convergence/trust diagnostics are part of the problem.
+
+Task:
+Systematically debug why increasing D worsens the CTM-observable trajectory error.
+
+Please use a root-cause workflow:
+1. Reproduce and inspect the existing artifact.
+2. Separate possible causes:
+   - simple-update evolution issue at larger D
+   - CTM finite-chi/convergence issue
+   - CTM measurement/operator issue
+   - gauge/log-normalization/conditioning issue
+   - benchmark configuration or artifact interpretation issue
+3. Do not treat `density_simple` as truth for D>1. It is only a diagnostic.
+4. Use CTM/environment observables or exact finite observables for tiny cells where appropriate.
+5. Prefer small, controlled probes before expensive campaigns.
+
+Suggested first checks:
+- Inspect full JSON, not just CSV, especially all CTM diagnostics for chi=2 and chi=4.
+- Determine whether D=4 is failing CTMRG convergence or whether the evolved state itself is suspicious.
+- Rerun a tiny comparison at `3x3`, `total_time=0.02` and `0.2`, with D=2,3,4 and chi sweep such as `2,4,8` if feasible.
+- For `3x3`, enable exact finite iPEPS observables where possible to distinguish evolution error from CTM measurement error.
+- Check log norm growth, truncation error, bond entropies, reversibility drift, and gauge diagnostics across D.
+- Verify whether the larger-D tensors are actually using additional bond capacity meaningfully or becoming ill-conditioned.
+- If needed, build a focused diagnostic script rather than repeatedly using the full benchmark script.
+
+Important files/APIs likely relevant:
+- `src/PXPValidation.jl`
+- `src/PEPSKitMeasurements.jl`
+- `src/IPEPSEvolution.jl`
+- `src/StarSimpleUpdate.jl`
+- `src/CTMGaugeReadiness.jl`
+- `src/FiniteIPEPSObservables.jl`
+- `scripts/pxp_larger_d_ed_benchmark.jl`
+- `artifacts/m3-systematic/threaded-ctm-trajectory-3x3-t020-dt002-D2D3D4-chi2chi4.{json,csv}`
+
+Expected output:
+- A concise root-cause report with evidence.
+- If a code bug is found, implement the smallest safe fix and run focused tests.
+- If the issue is numerical/algorithmic rather than a code bug, identify the next best experiment and the exact command to run.
+- Record any important architectural, workflow, or scientific decision in `memory/mid_term/decision_log.md`.

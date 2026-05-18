@@ -1,5 +1,44 @@
 # Decision Log
 
+## 2026-05-17 - Treat Larger-D PXP Simple-Update Cutoff As A Stability Parameter
+
+Decision:
+
+Do not interpret larger iPEPS bond dimension at a fixed very tight
+`cutoff = 1e-12` as a monotone accuracy sweep for the current square-star
+simple-update PXP trajectory. For larger-D `3x3` debug runs, sweep cutoff and
+gauge/conditioning diagnostics alongside `D` before drawing physics
+conclusions.
+
+Reason:
+
+The `3x3`, `dt = 0.02`, `total_time = 0.2`, `D = 2,3,4`, `chi = 2,4` CTM
+artifact showed CTM density error worsening with D. Focused exact finite
+contractions showed that CTM density tracks the evolved finite iPEPS state:
+final exact finite densities were approximately `0.03742649` for D=2,
+`0.03680663` for D=3, and `0.02774975` for D=4, matching the CTM trend. A
+cutoff sweep localized the larger-D failure to over-retained ill-conditioned
+directions: D=4 at `cutoff = 1e-12` gave exact density `0.02774975`, while
+`cutoff = 1e-10` gave `0.03740126` and `cutoff = 1e-9` gave `0.03742649`.
+Simple-gauge diagnostics also improved from max diagonal condition
+`~2.6e4` at `1e-12` to `~14` at `1e-9`.
+
+Consequences:
+
+The active anomaly is primarily a simple-update/gauge-conditioning and cutoff
+stability issue, not a CTM density-operator bug. CTM trust may still reject
+low-chi runs because CTMRG diagnostics are unaccepted, but tiny-cell exact
+finite observables should be used to separate measurement trust from evolution
+error. Next larger-D PXP benchmark probes should include a cutoff grid such as
+`1e-12,1e-10,1e-9,1e-8` and report exact finite density on `3x3` when feasible.
+
+Source:
+
+`artifacts/m3-systematic/threaded-ctm-trajectory-3x3-t020-dt002-D2D3D4-chi2chi4.json`;
+current 2026-05-17 focused exact finite and cutoff diagnostics.
+
+Status: active
+
 ## 2026-05-15 - Keep The Project Square-Lattice Focused
 
 Decision:

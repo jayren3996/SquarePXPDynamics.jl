@@ -1,0 +1,1 @@
+{"lattice_size":[3,3],"basis_dimension":4,"constrained_dimension":34,"group_order":72,"point_group":true,"hamiltonian_nnz":6,"samples":[{"step":0,"time":0.0,"norm":1.0,"return_probability":1.0,"excitation_density":0.0}],"diagnostics":{"basis_builds":1,"basis_extensions":0,"restarts":0,"matvecs":4,"total_times_served":0,"max_dim_used":4,"accepted_intervals":[]}}

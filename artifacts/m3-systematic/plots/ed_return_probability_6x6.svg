@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="700" viewBox="0 0 1100 700">
+<rect width="100%" height="100%" fill="white"/>
+<text x="550" y="28" text-anchor="middle" font-family="Arial" font-size="20" font-weight="bold">6x6 PBC ED return probability</text>
+<line x1="85" y1="630.00" x2="830" y2="630.00" stroke="#ddd" stroke-width="1"/>
+<text x="75" y="634.00" text-anchor="end" font-family="Arial" font-size="12">-0.08</text>
+<line x1="85" y1="515.00" x2="830" y2="515.00" stroke="#ddd" stroke-width="1"/>
+<text x="75" y="519.00" text-anchor="end" font-family="Arial" font-size="12">0.152</text>
+<line x1="85" y1="400.00" x2="830" y2="400.00" stroke="#ddd" stroke-width="1"/>
+<text x="75" y="404.00" text-anchor="end" font-family="Arial" font-size="12">0.384</text>
+<line x1="85" y1="285.00" x2="830" y2="285.00" stroke="#ddd" stroke-width="1"/>
+<text x="75" y="289.00" text-anchor="end" font-family="Arial" font-size="12">0.616</text>
+<line x1="85" y1="170.00" x2="830" y2="170.00" stroke="#ddd" stroke-width="1"/>
+<text x="75" y="174.00" text-anchor="end" font-family="Arial" font-size="12">0.848</text>
+<line x1="85" y1="55.00" x2="830" y2="55.00" stroke="#ddd" stroke-width="1"/>
+<text x="75" y="59.00" text-anchor="end" font-family="Arial" font-size="12">1.08</text>
+<line x1="85.00" y1="55" x2="85.00" y2="630" stroke="#eee" stroke-width="1"/>
+<text x="85.00" y="652" text-anchor="middle" font-family="Arial" font-size="12">0</text>
+<line x1="234.00" y1="55" x2="234.00" y2="630" stroke="#eee" stroke-width="1"/>
+<text x="234.00" y="652" text-anchor="middle" font-family="Arial" font-size="12">0.4</text>
+<line x1="383.00" y1="55" x2="383.00" y2="630" stroke="#eee" stroke-width="1"/>
+<text x="383.00" y="652" text-anchor="middle" font-family="Arial" font-size="12">0.8</text>
+<line x1="532.00" y1="55" x2="532.00" y2="630" stroke="#eee" stroke-width="1"/>
+<text x="532.00" y="652" text-anchor="middle" font-family="Arial" font-size="12">1.2</text>
+<line x1="681.00" y1="55" x2="681.00" y2="630" stroke="#eee" stroke-width="1"/>
+<text x="681.00" y="652" text-anchor="middle" font-family="Arial" font-size="12">1.6</text>
+<line x1="830.00" y1="55" x2="830.00" y2="630" stroke="#eee" stroke-width="1"/>
+<text x="830.00" y="652" text-anchor="middle" font-family="Arial" font-size="12">2</text>
+<rect x="85" y="55" width="745" height="575" fill="none" stroke="#333" stroke-width="1.2"/>
+<text x="458" y="680" text-anchor="middle" font-family="Arial" font-size="15">time</text>
+<text transform="translate(22,342) rotate(-90)" text-anchor="middle" font-family="Arial" font-size="15">return probability</text>
+<polyline points="85.00,94.66 92.45,101.74 99.90,122.44 107.35,155.08 114.80,197.15 122.25,245.57 129.70,297.05 137.15,348.46 144.60,397.12 152.05,440.99 159.50,478.77 166.95,509.92 174.40,534.50 181.85,553.07 189.30,566.48 196.75,575.75 204.20,581.84 211.65,585.64 219.10,587.89 226.55,589.15 234.00,589.80 241.45,590.12 248.90,590.26 256.35,590.32 263.80,590.34 271.25,590.34 278.70,590.34 286.15,590.34 293.60,590.34 301.05,590.34 308.50,590.34 315.95,590.34 323.40,590.34 330.85,590.34 338.30,590.34 345.75,590.34 353.20,590.34 360.65,590.34 368.10,590.34 375.55,590.34 383.00,590.34 390.45,590.34 397.90,590.34 405.35,590.34 412.80,590.34 420.25,590.34 427.70,590.34 435.15,590.34 442.60,590.34 450.05,590.34 457.50,590.34 464.95,590.34 472.40,590.34 479.85,590.34 487.30,590.34 494.75,590.34 502.20,590.34 509.65,590.34 517.10,590.34 524.55,590.34 532.00,590.34 539.45,590.34 546.90,590.34 554.35,590.34 561.80,590.34 569.25,590.34 576.70,590.34 584.15,590.34 591.60,590.34 599.05,590.34 606.50,590.34 613.95,590.34 621.40,590.34 628.85,590.34 636.30,590.34 643.75,590.34 651.20,590.34 658.65,590.34 666.10,590.34 673.55,590.34 681.00,590.34 688.45,590.34 695.90,590.34 703.35,590.34 710.80,590.34 718.25,590.34 725.70,590.34 733.15,590.34 740.60,590.34 748.05,590.34 755.50,590.34 762.95,590.33 770.40,590.31 777.85,590.27 785.30,590.20 792.75,590.09 800.20,589.92 807.65,589.69 815.10,589.38 822.55,589.00 830.00,588.57" fill="none" stroke="black" stroke-width="2.5"/>
+<line x1="855" y1="65" x2="889" y2="65" stroke="black" stroke-width="2.5"/>
+<text x="897" y="69" font-family="Arial" font-size="12">return probability</text>
+</svg>
