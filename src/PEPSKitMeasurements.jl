@@ -316,54 +316,28 @@ struct CTMObservableSummary
     end
 end
 
-CTMObservableSummary(
-    density::Float64,
-    density_even::Float64,
-    density_odd::Float64,
-    blockade_violation::Float64,
-    pxp_energy_density::Float64,
-    diagnostics::Union{CTMRGDiagnostics,Nothing},
-) = CTMObservableSummary(
-    density,
-    density_even,
-    density_odd,
-    blockade_violation,
-    pxp_energy_density,
-    density_even - density_odd,
-    (density_even - density_odd)^2,
-    diagnostics,
-)
-
-CTMObservableSummary(
+function CTMObservableSummary(
     density::Real,
     density_even::Real,
     density_odd::Real,
     blockade_violation::Real,
     pxp_energy_density::Real,
-) = CTMObservableSummary(
-    Float64(density),
-    Float64(density_even),
-    Float64(density_odd),
-    Float64(blockade_violation),
-    Float64(pxp_energy_density),
-    nothing,
+    diagnostics::Union{CTMRGDiagnostics,Nothing} = nothing,
 )
-
-CTMObservableSummary(
-    density::Real,
-    density_even::Real,
-    density_odd::Real,
-    blockade_violation::Real,
-    pxp_energy_density::Real,
-    diagnostics::Union{CTMRGDiagnostics,Nothing},
-) = CTMObservableSummary(
-    Float64(density),
-    Float64(density_even),
-    Float64(density_odd),
-    Float64(blockade_violation),
-    Float64(pxp_energy_density),
-    diagnostics,
-)
+    de = Float64(density_even)
+    do_ = Float64(density_odd)
+    imbalance = de - do_
+    return CTMObservableSummary(
+        Float64(density),
+        de,
+        do_,
+        Float64(blockade_violation),
+        Float64(pxp_energy_density),
+        imbalance,
+        imbalance^2,
+        diagnostics,
+    )
+end
 
 function _ctm_observable_summary(obs::CTMObservableSummary)
     return obs
@@ -592,8 +566,7 @@ function _local_neighbor_cartesianindex(
     dir === :right && return center + CartesianIndex(0, 1)
     dir === :up && return center + CartesianIndex(-1, 0)
     dir === :left && return center + CartesianIndex(0, -1)
-    dir === :down && return center + CartesianIndex(1, 0)
-    throw(ArgumentError("direction must be :right, :up, :left, or :down"))
+    return center + CartesianIndex(1, 0)
 end
 
 function _coord_from_row_col(cell::PeriodicSquareUnitCell, row::Int, col::Int)
