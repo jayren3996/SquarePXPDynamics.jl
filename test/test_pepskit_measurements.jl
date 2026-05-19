@@ -90,6 +90,18 @@ end
             ENV["$(prefix)_STRIDED_THREADED_MUL"] = "false"
             ENV["$(prefix)_PEPSKIT_SCHEDULER"] = "not_a_scheduler"
             @test_throws ArgumentError configure_ctm_threading_from_env!(prefix = prefix)
+
+            ENV["$(prefix)_PEPSKIT_SCHEDULER"] = "default"
+            ENV["$(prefix)_BLAS_THREADS"] = "not_an_int"
+            err = try
+                configure_ctm_threading_from_env!(prefix = prefix)
+                nothing
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            @test occursin("$(prefix)_BLAS_THREADS", err.msg)
+            @test occursin("not_an_int", err.msg)
         finally
             for (k, v) in saved_env
                 v === nothing ? delete!(ENV, k) : (ENV[k] = v)

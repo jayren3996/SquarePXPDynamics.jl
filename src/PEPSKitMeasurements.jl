@@ -80,7 +80,11 @@ end
 
 function _env_optional_int(name::AbstractString)
     value = _env_value(name)
-    return value === nothing ? nothing : parse(Int, value)
+    value === nothing && return nothing
+    parsed = tryparse(Int, value)
+    parsed === nothing &&
+        throw(ArgumentError("$name must be an integer (got \"$(value)\")"))
+    return parsed
 end
 
 function _env_bool(name::AbstractString, default::Bool)
