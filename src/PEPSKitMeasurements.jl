@@ -873,7 +873,6 @@ function star_expectation_ctm(
     ctx::PEPSKitMeasurementContext,
 )::ComplexF64
     assert_fresh_pepskit_context(psi, ctx)
-    ctx.peps !== nothing || throw(ArgumentError("PEPSKit measurement context has no PEPS"))
     op = _cached_star_localoperator(psi, center, O, ctx)
     value = PEPSKit.expectation_value(ctx.peps, op, ctx.env)
     _real_expectation(value)
@@ -914,7 +913,6 @@ function pxp_energy_density_ctm(
     ctx::PEPSKitMeasurementContext,
 )::Float64
     assert_fresh_pepskit_context(psi, ctx)
-    ctx.peps !== nothing || throw(ArgumentError("PEPSKit measurement context has no PEPS"))
     total = _expectation(ctx, _cached_pxp_energy_operator(psi, ctx))
     return total / length(psi.unitcell.reps)
 end
