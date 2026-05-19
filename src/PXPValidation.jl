@@ -927,40 +927,9 @@ function _maybe_trusted_ctm(
     )
 end
 
-function _ctm_density(ctm::Nothing)
-    return nothing
-end
-
-function _ctm_density(ctm::TrustedCTMMeasurement)
-    return ctm.measurement.density
-end
-
-function _ctm_blockade(ctm::Nothing)
-    return nothing
-end
-
-function _ctm_blockade(ctm::TrustedCTMMeasurement)
-    return ctm.measurement.blockade_violation
-end
-
-function _ctm_trusted(ctm::Nothing)
-    return nothing
-end
-
-function _ctm_trusted(ctm::TrustedCTMMeasurement)
-    return ctm.trust.trusted
-end
-
-function _ctm_reason(ctm::Nothing)
-    return nothing
-end
-
-function _ctm_reason(ctm::TrustedCTMMeasurement)
-    return ctm.trust.reason
-end
-
 function _comparison(ed::PXPEEDSample, sample::PXPIPEPSSample)
-    ctm_density = _ctm_density(sample.ctm)
+    ctm = sample.ctm
+    ctm_density = ctm === nothing ? nothing : ctm.measurement.density
     exact_density = sample.exact_finite_density
     return PXPEDComparisonSample(
         ed.step,
@@ -974,9 +943,9 @@ function _comparison(ed::PXPEEDSample, sample::PXPIPEPSSample)
         ctm_density === nothing ? nothing : ctm_density - ed.excitation_density,
         exact_density === nothing ? nothing : exact_density - ed.excitation_density,
         sample.simple.blockade_violation,
-        _ctm_blockade(sample.ctm),
-        _ctm_trusted(sample.ctm),
-        _ctm_reason(sample.ctm),
+        ctm === nothing ? nothing : ctm.measurement.blockade_violation,
+        ctm === nothing ? nothing : ctm.trust.trusted,
+        ctm === nothing ? nothing : ctm.trust.reason,
     )
 end
 
