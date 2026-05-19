@@ -10,10 +10,17 @@ using ..SquareGeometry: SquareCoord
 using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
 using ..SquareUnitCells: PeriodicSquareUnitCell, wrap, neighbor
 using ..Observables: SimpleObservableSummary, measure_simple
+using ..Internals: _csv_value, _DIRECTIONS, _validate_direction
 using ..SquareIPEPS:
-    SquareIPEPSState, physical_index, link_index, link_weight, state_version
+    SquareIPEPSState,
+    physical_index,
+    link_index,
+    link_weight,
+    _link_weight_view,
+    state_version
 
-export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
+export PEPSKitCTMRGParams, default_ctmrg_params
+export PEPSKitMeasurementContext, CTMRGDiagnostics
 export CTMObservableSummary, CTMValidationPoint
 export configure_ctm_threading!, configure_ctm_threading_from_env!
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
@@ -21,8 +28,6 @@ export assert_fresh_pepskit_context
 export local_density_ctm, nearest_neighbor_density_ctm, blockade_violation_ctm
 export star_expectation_ctm, pxp_energy_density_ctm, measure_ctm, ctm_diagnostics
 export validate_ctm_sweep, write_ctm_validation_csv
-
-const _DIRECTIONS = (:right, :up, :left, :down)
 
 function _positive_thread_count(value::Integer, name::AbstractString)
     count = Int(value)
@@ -157,6 +162,24 @@ struct PEPSKitCTMRGParams
 end
 
 """
+    default_ctmrg_params(; chi = 8, tol = 1e-8, maxiter = 100, verbosity = 0, seed = nothing)
+
+Return a `PEPSKitCTMRGParams` with the project-wide defaults
+`(chi = 8, tol = 1e-8, maxiter = 100, verbosity = 0)` and no explicit seed.
+Callers that previously inlined `PEPSKitCTMRGParams(8, 1e-8, 100, 0)` should
+use this constructor so the defaults are defined in one place.
+"""
+function default_ctmrg_params(;
+    chi::Integer = 8,
+    tol::Real = 1e-8,
+    maxiter::Integer = 100,
+    verbosity::Integer = 0,
+    seed::Union{Nothing,Integer} = nothing,
+)
+    return PEPSKitCTMRGParams(chi, tol, maxiter, verbosity; seed = seed)
+end
+
+"""
     CTMRGDiagnostics
 
 Structured summary of CTMRG convergence metadata exposed by the measurement
@@ -212,11 +235,15 @@ CTMRG environment returned by PEPSKit, the raw CTMRG info object, and the
 parameters used to construct it. Local operators are cached by unit-cell
 coordinate and operator identity so repeated measurements reuse the same
 PEPSKit `LocalOperator` without rerunning CTMRG.
+
+This struct is parameterized on the concrete `peps`, `env`, and `info` types
+returned by PEPSKit so the compiler can specialize CTMRG/expectation_value
+wrappers around it.
 """
-struct PEPSKitMeasurementContext
-    peps::Any
-    env::Any
-    info::Any
+struct PEPSKitMeasurementContext{P,E,I}
+    peps::P
+    env::E
+    info::I
     params::PEPSKitCTMRGParams
     diagnostics::CTMRGDiagnostics
     source_state_id::UInt
@@ -507,12 +534,6 @@ function assert_fresh_pepskit_context(
     return nothing
 end
 
-function _validate_direction(dir::Symbol)
-    dir in _DIRECTIONS ||
-        throw(ArgumentError("direction must be :right, :up, :left, or :down"))
-    return dir
-end
-
 function _dense_index(values)
     idx = 1
     nsites = length(values)
@@ -533,6 +554,11 @@ function _real_expectation(value; atol = 1e-8)
         ),
     )
     return Float64(real(z))
+end
+
+function _assert_finite_realish_expectation(value; atol = 1e-8)
+    _real_expectation(value; atol = atol)
+    return nothing
 end
 
 function _physical_lattice(cell::PeriodicSquareUnitCell)
@@ -687,10 +713,10 @@ function _absorbed_site_array(psi::SquareIPEPSState, c::SquareCoord)
 
     data = Array(T, pidx, nidx, eidx, sidx, widx)
     lambdas = (
-        sqrt.(link_weight(psi, c, :up)),
-        sqrt.(link_weight(psi, c, :right)),
-        sqrt.(link_weight(psi, c, :down)),
-        sqrt.(link_weight(psi, c, :left)),
+        sqrt.(_link_weight_view(psi, c, :up)),
+        sqrt.(_link_weight_view(psi, c, :right)),
+        sqrt.(_link_weight_view(psi, c, :down)),
+        sqrt.(_link_weight_view(psi, c, :left)),
     )
     size(data) ==
     (2, length(lambdas[1]), length(lambdas[2]), length(lambdas[3]), length(lambdas[4])) ||
@@ -732,17 +758,17 @@ function to_pepskit_infinitepeps(psi::SquareIPEPSState)
 end
 
 """
-    pepskit_ctmrg_context(psi; params = PEPSKitCTMRGParams(8, 1e-8, 100, 0))
+    pepskit_ctmrg_context(psi; params = default_ctmrg_params())
 
 Convert `psi` with [`to_pepskit_infinitepeps`](@ref), construct a PEPSKit
 `CTMRGEnv`, run `PEPSKit.leading_boundary`, and return a
 `PEPSKitMeasurementContext`. The raw PEPSKit convergence `info` object is
 preserved in the context; this function does not require or hide perfect CTMRG
-convergence.
+convergence. Defaults come from [`default_ctmrg_params`](@ref).
 """
 function pepskit_ctmrg_context(
     psi::SquareIPEPSState;
-    params::PEPSKitCTMRGParams = PEPSKitCTMRGParams(8, 1e-8, 100, 0),
+    params::PEPSKitCTMRGParams = default_ctmrg_params(),
 )::PEPSKitMeasurementContext
     peps = to_pepskit_infinitepeps(psi)
     chi_space = TensorKit.ComplexSpace(params.chi)
@@ -780,7 +806,7 @@ function _operator_cache_key(
     O::AbstractMatrix,
 )
     c = wrap(cell, center)
-    return (tag, cell.Lx, cell.Ly, c.x, c.y, size(O), objectid(O))
+    return (tag, cell.Lx, cell.Ly, c.x, c.y, size(O), hash(O))
 end
 
 function _pepskit_star_localoperator(
@@ -820,6 +846,33 @@ function _cached_pxp_energy_operator(
     end
 end
 
+function _cached_density_operator(
+    psi::SquareIPEPSState,
+    c::SquareCoord,
+    ctx::PEPSKitMeasurementContext,
+)
+    cell = psi.unitcell
+    site = wrap(cell, c)
+    key = (:density, cell.Lx, cell.Ly, site.x, site.y)
+    return get!(ctx.operator_cache, key) do
+        _pepskit_density_operator(cell, c)
+    end
+end
+
+function _cached_twosite_nn_operator(
+    psi::SquareIPEPSState,
+    c::SquareCoord,
+    dir::Symbol,
+    ctx::PEPSKitMeasurementContext,
+)
+    cell = psi.unitcell
+    site = wrap(cell, c)
+    key = (:nn_density, cell.Lx, cell.Ly, site.x, site.y, dir)
+    return get!(ctx.operator_cache, key) do
+        _pepskit_twosite_nn_operator(cell, c, dir)
+    end
+end
+
 """
     local_density_ctm(psi, c, ctx)::Float64
 
@@ -833,7 +886,7 @@ function local_density_ctm(
     ctx::PEPSKitMeasurementContext,
 )::Float64
     assert_fresh_pepskit_context(psi, ctx)
-    return _expectation(ctx, _pepskit_density_operator(psi.unitcell, c))
+    return _expectation(ctx, _cached_density_operator(psi, c, ctx))
 end
 
 """
@@ -850,7 +903,7 @@ function nearest_neighbor_density_ctm(
 )::Float64
     assert_fresh_pepskit_context(psi, ctx)
     _validate_direction(dir)
-    return _expectation(ctx, _pepskit_twosite_nn_operator(psi.unitcell, c, dir))
+    return _expectation(ctx, _cached_twosite_nn_operator(psi, c, dir, ctx))
 end
 
 """
@@ -875,7 +928,7 @@ function star_expectation_ctm(
     assert_fresh_pepskit_context(psi, ctx)
     op = _cached_star_localoperator(psi, center, O, ctx)
     value = PEPSKit.expectation_value(ctx.peps, op, ctx.env)
-    _real_expectation(value)
+    _assert_finite_realish_expectation(value)
     return ComplexF64(value)
 end
 
@@ -936,18 +989,29 @@ function _density_ctm(
 end
 
 """
-    measure_ctm(psi; params = PEPSKitCTMRGParams(8, 1e-8, 100, 0))::CTMObservableSummary
+    measure_ctm(psi; params = default_ctmrg_params())::CTMObservableSummary
 
 Build one PEPSKit CTMRG measurement context for `psi` and reuse it to compute
 density, even/odd densities, nearest-neighbor blockade violation, and
 five-site PXP energy density. Density, blockade, and PXP energy are all
 CTMRG-backed PEPSKit `expectation_value` measurements. This is a measurement
 backend for states produced by the custom ITensors simple-update engine; it
-does not update or evolve the state.
+does not update or evolve the state. Defaults come from
+[`default_ctmrg_params`](@ref).
+
+# Example
+
+```julia
+using SquarePXPDynamics
+cell = PeriodicSquareUnitCell(2, 2)
+psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+summary = measure_ctm(psi; params = default_ctmrg_params(; chi = 4, maxiter = 20))
+# summary.density ≈ 0 for the all-down product state.
+```
 """
 function measure_ctm(
     psi::SquareIPEPSState;
-    params::PEPSKitCTMRGParams = PEPSKitCTMRGParams(8, 1e-8, 100, 0),
+    params::PEPSKitCTMRGParams = default_ctmrg_params(),
 )::CTMObservableSummary
     ctx = pepskit_ctmrg_context(psi; params)
     return CTMObservableSummary(
@@ -981,18 +1045,6 @@ function validate_ctm_sweep(
     return [
         CTMValidationPoint(p, reference, measure(psi; params = p)) for p in param_values
     ]
-end
-
-function _csv_value(value::Nothing)
-    return ""
-end
-
-function _csv_value(value::Bool)
-    return string(value)
-end
-
-function _csv_value(value::Real)
-    return string(value)
 end
 
 function _diagnostic_field(::Nothing, ::Symbol)

@@ -271,6 +271,16 @@ function link_weight(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol)
     return copy(_validated_link_weight(psi, c, dir))
 end
 
+# Internal: return the stored Vector{Float64} directly, without revalidation
+# or copy. The state invariant is that everything in `psi.link_weights` has
+# already been validated by `_validate_link_weight_values` at write time. Hot
+# read paths in StarSimpleUpdate / CTMGaugeReadiness / PEPSKitMeasurements use
+# this helper; callers must treat the result as read-only.
+function _link_weight_view(psi::SquareIPEPSState, c::SquareCoord, dir::Symbol)
+    _validate_link_direction(dir)
+    return psi.link_weights[bondkey(psi.unitcell, c, dir)]
+end
+
 function _validate_link_weight_values(link::Index, values)
     length(values) == dim(link) || throw(
         ArgumentError(

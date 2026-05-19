@@ -7,6 +7,7 @@ using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
 using ..SquareUnitCells
 using ..SquareIPEPS
 using ..StarModels: TFIMStarModel, star_hamiltonian
+using ..Internals: _DIRECTIONS, _validate_direction, _opposite_direction
 
 export local_density_simple, density_simple, sublattice_densities
 export sublattice_imbalance_simple, checkerboard_structure_factor_simple
@@ -18,21 +19,7 @@ export local_x_simple, local_y_simple, local_z_simple, nearest_neighbor_zz_simpl
 export tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
 export TFIMObservableSummary, measure_tfim_simple
 
-const _DIRECTIONS = (:right, :up, :left, :down)
-
-function _validate_direction(dir::Symbol)
-    dir in _DIRECTIONS ||
-        throw(ArgumentError("direction must be :right, :up, :left, or :down"))
-    return dir
-end
-
-function _opposite_dir(dir::Symbol)
-    dir === :right && return :left
-    dir === :up && return :down
-    dir === :left && return :right
-    dir === :down && return :up
-    throw(ArgumentError("direction must be :right, :up, :left, or :down"))
-end
+const _opposite_dir = _opposite_direction
 
 function _external_dirs_for_leaf(dir::Symbol)
     dir === :right && return (:right, :up, :down)
@@ -541,6 +528,16 @@ end
 
 Compute cheap deterministic simple-update diagnostics for a custom ITensors
 square iPEPS state. This does not run CTMRG or refresh any environment.
+
+# Example
+
+```julia
+using SquarePXPDynamics
+cell = PeriodicSquareUnitCell(10, 10)
+psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+summary = measure_simple(psi)
+# summary.density == 0.0 for the all-down product state
+```
 """
 function measure_simple(psi::SquareIPEPSState)::SimpleObservableSummary
     densities = sublattice_densities(psi)

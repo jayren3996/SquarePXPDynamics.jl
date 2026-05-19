@@ -9,6 +9,22 @@
     @test Docs.hasdoc(SquarePXPDynamics, :project_star!)
 end
 
+@testset "load-bearing API docstrings include an Example block" begin
+    # A curated set of public functions whose docstrings should contain a
+    # runnable example. Adding a name here is a deliberate decision that the
+    # function is load-bearing enough to deserve worked usage.
+    @test occursin("# Example", string(@doc SquarePXPDynamics.evolve!))
+    @test occursin("# Example", string(@doc SquarePXPDynamics.project_star!))
+    @test occursin("# Example", string(@doc SquarePXPDynamics.measure_simple))
+    @test occursin("# Example", string(@doc SquarePXPDynamics.measure_ctm))
+    @test occursin("# Example", string(@doc SquarePXPDynamics.scarfinder!))
+    @test occursin(
+        "# Example",
+        string(@doc SquarePXPDynamics.validate_pxp_ed_ipeps),
+    )
+    @test occursin("# Example", string(@doc SquarePXPDynamics.run_benchmark))
+end
+
 @testset "public exports do not expose internal star helpers" begin
     public_names = names(SquarePXPDynamics; all = false)
     @test all(name -> !startswith(String(name), "_"), public_names)

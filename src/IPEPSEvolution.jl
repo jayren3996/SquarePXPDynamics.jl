@@ -474,6 +474,16 @@ updates and calling [`project_star!`](@ref) for each center. `schedule` may be
 `total_time` must be zero or a positive integer multiple of `dt`. Zero time
 returns diagnostics without mutating `psi`. The convenience keyword form
 constructs [`TrotterParams`](@ref) and then uses the same evolution path.
+
+# Example
+
+```julia
+using SquarePXPDynamics
+cell = PeriodicSquareUnitCell(10, 10)
+psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+log = evolve!(psi, 0.02; dt = 0.01, order = 1, maxdim = 1)
+# `psi` is now mutated in place; `log` summarizes per-step diagnostics.
+```
 """
 function evolve!(
     psi::SquareIPEPSState,

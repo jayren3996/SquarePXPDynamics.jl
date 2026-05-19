@@ -204,6 +204,17 @@ end
 Run a TFIM benchmark from a product iPEPS initial state, returning samples at
 step 0, every `spec.measure_every` full Trotter steps, and the final step.
 Evolution is performed one full step at a time through [`evolve!`](@ref).
+
+# Example
+
+```julia
+using SquarePXPDynamics
+cell = PeriodicSquareUnitCell(10, 10)
+trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
+spec = BenchmarkSpec(cell, trotter, TFIMStarModel(1.0, 0.5), :down, 0.02, 1)
+result = run_benchmark(spec; run_label = "smoke")
+# result.samples is the time series of TFIM diagnostics.
+```
 """
 function run_benchmark(spec::BenchmarkSpec; run_label::AbstractString = "manual")
     psi = product_square_ipeps(

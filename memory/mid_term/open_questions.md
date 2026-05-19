@@ -31,7 +31,7 @@
   sensitivity policy, and benchmark evidence are sufficient before CTM values
   can drive energy-oriented ScarFinder ranking or external physics claims?
 - Source: `README.md`
-- Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
+- Source: `Notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 - Source: `src/CTMTrust.jl`
 - Source: `src/CTMGaugeReadiness.jl`
 - Source: `src/ScarFinder.jl`
@@ -90,7 +90,7 @@
 - Open question: Should PEPSKit/TensorKit-facing code remain core public API,
   become experimental-but-exported API, or move behind a package extension once
   project boundaries settle?
-- Source: `notes/2026-05-15-code-quality-audit.md`
+- Source: `Notes/2026-05-15-code-quality-audit.md`
 - Source: `src/CTMGaugeReadiness.jl`
 
 ## Superseded Context To Watch
@@ -111,7 +111,7 @@
 - Superseded/problematic: Older 7x7 ED target language should not drive current
   work. The user explicitly redirected to stop at `6x6` and improve iPEPS+CTM
   observables/performance.
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `README.md`
 - Source: `src/SquarePXPDynamics.jl`
 - Source: `memory/short_term/current_state.md`

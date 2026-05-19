@@ -8,8 +8,8 @@
 - Confirmed: `:up` is the Rydberg/excited state and `:down` is the
   vacancy/unexcited state in the PXP convention.
 - Source: `README.md`
-- Source: `notes/README.md`
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/README.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 
 ## Coordinates And Directions
 
@@ -17,7 +17,7 @@
 - Confirmed: Direction order is `:right`, `:up`, `:left`, `:down`.
 - Confirmed: Dense square-star site order is `(center, right, up, left, down)`.
 - Source: `README.md`
-- Source: `notes/README.md`
+- Source: `Notes/README.md`
 - Source: `src/SquareGeometry.jl`
 - Source: `src/SquareUnitCells.jl`
 
@@ -30,8 +30,8 @@
 - Confirmed: Five-color compatible periodic cells require dimensions compatible
   with disjoint same-color radius-1 stars; `10 x 10` is the robust default
   referenced in notes and TFIM plans.
-- Source: `notes/README.md`
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/README.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `src/SquareGeometry.jl`
 - Source: `src/SquareUnitCells.jl`
 
@@ -41,7 +41,7 @@
 - Confirmed: Dense five-site star gates are converted to ITensors with primed
   output physical indices and unprimed input physical indices in square-star
   site order.
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `src/SquarePEPS.jl`
 - Source: `src/SquareIPEPS.jl`
 
@@ -49,7 +49,7 @@
 
 - Confirmed: Exported Julia symbols require docstrings because
   `test/test_public_docs.jl` checks public documentation coverage.
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `test/test_public_docs.jl`
 
 ## TFIM Convention

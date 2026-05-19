@@ -8,7 +8,7 @@
   rejection, star-update diagnostic validation, nested evolution diagnostic
   validation, invalid-input coverage, D=2 repeated-update smoke coverage, and
   README/module status updates.
-- Source: `notes/2026-05-15-code-quality-audit.md`
+- Source: `Notes/2026-05-15-code-quality-audit.md`
 
 ## PEPSKit Feasibility Probe
 
@@ -17,7 +17,7 @@
   operators.
 - Confirmed: PEPSKit's registered simple-update path was not suitable as a
   ready backend for the custom five-site PXP update.
-- Source: `notes/2026-05-15-pepskit-backend-feasibility.md`
+- Source: `Notes/2026-05-15-pepskit-backend-feasibility.md`
 - Source: `scripts/dev/pepskit_feasibility_probe.jl`
 
 ## CTM And ScarFinder Hardening
@@ -28,7 +28,7 @@
 - Source: `README.md`
 - Source: `src/PEPSKitMeasurements.jl`
 - Source: `src/ScarFinder.jl`
-- Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
+- Source: `Notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 
 ## M3 ED And iPEPS/CTM Benchmark Cleanup
 

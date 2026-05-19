@@ -1,6 +1,47 @@
 # SquarePXPDynamics.jl
 
-`SquarePXPDynamics` is a Julia package for PEPS-based dynamics on the 2D square-lattice PXP model.
+`SquarePXPDynamics` is a Julia package for PEPS-based dynamics on the
+2D square-lattice PXP model: simple-update iPEPS Trotter evolution,
+local/CTMRG observables, ED reference benchmarks, and a ScarFinder
+candidate-search loop.
+
+## Requirements
+
+- Julia 1.12 or newer (the package pins `julia = "1.12"` in `Project.toml`).
+- PEPSKit 0.7, ITensors 0.9, TensorKit 0.15, ITensorMPS 0.3.x.
+
+## Quick start
+
+```julia
+using SquarePXPDynamics
+
+# Periodic 10x10 unit cell, all-down product state, bond dimension 1.
+cell = PeriodicSquareUnitCell(10, 10)
+psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+
+# One Trotter step at dt = 0.01 using the current 5-argument TrotterParams.
+params = TrotterParams(0.01, 1, :real, 1, 1e-12)
+evolve!(psi, 0.01; params = params)
+
+# Cheap simple-update diagnostics.
+summary = measure_simple(psi)
+@show summary.density summary.pxp_energy_density
+```
+
+`measure_simple` returns simple/local diagnostics only — useful for smoke
+tests and regression checks, **not** CTMRG-quality measurements.
+
+## Where to look
+
+| If you want…                                | Look at |
+|---|---|
+| Public API and exports                      | `src/SquarePXPDynamics.jl` |
+| Per-module narrative                        | `## Currently shipped` below |
+| Conventions, physics context, decisions     | `memory/README.md` and tiered `memory/{long,mid,short}_term/` |
+| Original design specs / multi-stage plans   | `docs/superpowers/specs/`, `docs/superpowers/plans/` |
+| Historical scoping notes                    | `Notes/` |
+| Agent-facing instructions                   | `AGENTS.md` |
+| Autonomous-loop prompts                     | `prompts/` |
 
 ## Status
 
@@ -90,19 +131,17 @@ bond-environment gauge conditioning.
 
 ## Minimal Example
 
-```julia
-using SquarePXPDynamics
+See the **Quick start** at the top of this README for the PXP minimal flow
+using the current 5-argument `TrotterParams` constructor. Two notes:
 
-cell = PeriodicSquareUnitCell(10, 10)
-psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-params = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
-
-evolve!(psi, 0.01; params = params)
-summary = measure_simple(psi)
-```
-
-`summary` contains simple/local diagnostics only. These are useful for smoke
-tests and regression checks, but they are not CTMRG-quality measurements.
+- The legacy 6-argument constructor (`TrotterParams(dt, order, evolution,
+  projected::Bool, maxdim, cutoff)`) is still accepted via
+  [`legacy_trotter_params`](@ref) for compatibility with older scripts.
+  New code should use the 5-argument keyword form shown above.
+- `measure_simple` returns simple/local diagnostics only. They are useful for
+  smoke tests and regression checks, but they are not CTMRG-quality
+  measurements; route physics-facing measurements through
+  [`measure_ctm`](@ref) and [`measure_ctm_trusted`](@ref).
 
 ### TFIM Benchmark Smoke Run
 

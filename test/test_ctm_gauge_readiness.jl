@@ -40,18 +40,30 @@ function _untrusted_ctm_assessment()
     )
 end
 
-@testset "CTM gauge readiness public API exports" begin
-    @test isdefined(SquarePXPDynamics, :CTMGaugePolicy)
-    @test isdefined(SquarePXPDynamics, :CTMBondNormDiagnostic)
-    @test isdefined(SquarePXPDynamics, :CTMGaugeReadiness)
-    @test isdefined(SquarePXPDynamics, :BondGaugeFixInfo)
-    @test isdefined(SquarePXPDynamics, :ctm_bond_norm_matrix)
-    @test isdefined(SquarePXPDynamics, :ctm_bond_norm_diagnostic)
-    @test isdefined(SquarePXPDynamics, :all_ctm_bond_norm_diagnostics)
-    @test isdefined(SquarePXPDynamics, :ctm_ready_for_gauge_updates)
-    @test isdefined(SquarePXPDynamics, :fix_bond_gauge!)
-    @test isdefined(SquarePXPDynamics, :pepskit_private_full_update_available)
-    @test isdefined(SquarePXPDynamics, :assert_fresh_pepskit_context)
+@testset "CTM gauge readiness public API behavior" begin
+    policy = CTMGaugePolicy()
+    @test policy.min_rcond > 0
+    @test policy.max_hermiticity_residual > 0
+    @test isfinite(policy.min_psd_eigenvalue)
+    @test policy.require_all_bonds isa Bool
+    @test policy isa CTMGaugePolicy
+
+    bond = BondKey(SquareCoord(1, 1), :right)
+    diag = CTMBondNormDiagnostic(bond, ComplexF64[1.0 0.0; 0.0 1.0]; policy)
+    @test diag isa CTMBondNormDiagnostic
+    @test diag.bond == bond
+    @test diag.accepted === true
+
+    @test BondGaugeFixInfo isa Type
+    @test CTMGaugeReadiness isa Type
+
+    @test pepskit_private_full_update_available() isa Bool
+    @test ctm_bond_norm_matrix isa Function
+    @test ctm_bond_norm_diagnostic isa Function
+    @test all_ctm_bond_norm_diagnostics isa Function
+    @test ctm_ready_for_gauge_updates isa Function
+    @test fix_bond_gauge! isa Function
+    @test assert_fresh_pepskit_context isa Function
 end
 
 @testset "PEPSKit private full-update helper compatibility is centralized" begin

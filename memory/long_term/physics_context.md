@@ -9,8 +9,8 @@
 - Confirmed: The dense five-site Hamiltonian and blockade projector remain the
   source of truth for PXP local physics.
 - Source: `README.md`
-- Source: `notes/README.md`
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/README.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `src/SquarePXP.jl`
 
 ## Blockade Constraint
@@ -20,7 +20,7 @@
 - Confirmed: Approximate PEPS/iPEPS projection can still leak outside the
   constrained manifold, so blockade diagnostics are mandatory.
 - Source: `README.md`
-- Source: `notes/README.md`
+- Source: `Notes/README.md`
 - Source: `src/Observables.jl`
 
 ## iPEPS And Simple Update
@@ -35,8 +35,8 @@
 - Confirmed: Simple/local observables are development and regression
   diagnostics, not final CTMRG-quality physics measurements.
 - Source: `README.md`
-- Source: `notes/2026-05-15-chatgpt-pro-ipeps-review-plan.md`
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/2026-05-15-chatgpt-pro-ipeps-review-plan.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `src/SquareIPEPS.jl`
 - Source: `src/StarSimpleUpdate.jl`
 - Source: `src/CTMGaugeReadiness.jl`
@@ -52,8 +52,8 @@
   logic or CTMRG internals.
 - Confirmed: Current ScarFinder includes optional guarded simple-energy
   correction. Production CTM-trusted ScarFinder validation remains future work.
-- Source: `notes/README.md`
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/README.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `src/ScarFinder.jl`
 
 ## TFIM Benchmark Context

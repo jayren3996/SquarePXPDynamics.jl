@@ -11,6 +11,7 @@ using ..PXPValidation: TrustedCTMMeasurement, measure_ctm_trusted
 using ..CTMTrust: CTMTrustPolicy
 using ..PEPSKitMeasurements: CTMObservableSummary, CTMRGDiagnostics
 using ..PEPSKitMeasurements: PEPSKitCTMRGParams, measure_ctm
+using ..Internals: _csv_value
 
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
@@ -962,6 +963,19 @@ diagnostic outcome. CTM diagnostics are recorded when a caller supplies
 create scheduled `:ctm` scores without a callback. Set `require_trusted_ctm =
 true` to reject iterations whose scheduled CTM measurement fails the trust
 policy. No direct star-projection logic is performed here.
+
+# Example
+
+```julia
+using SquarePXPDynamics
+cell = PeriodicSquareUnitCell(10, 10)
+psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
+params = ScarFinderParams(0.0, trotter, 3, Inf, Inf, Inf, false)
+result = scarfinder!(psi, params)
+# result.iterations[i].observables holds per-iteration simple diagnostics;
+# `psi` is mutated in place.
+```
 """
 function scarfinder!(
     psi::SquareIPEPSState,
@@ -1151,27 +1165,6 @@ function scarfinder!(
         log_format,
         candidate_store,
     )
-end
-
-function _csv_value(value::Nothing)
-    return ""
-end
-
-function _csv_value(value::Bool)
-    return string(value)
-end
-
-function _csv_value(value::Real)
-    return string(value)
-end
-
-function _csv_value(value::Symbol)
-    return String(value)
-end
-
-function _csv_value(value::AbstractString)
-    escaped = replace(value, "\"" => "\"\"")
-    return any(ch -> ch in escaped, (',', '"', '\n', '\r')) ? "\"$escaped\"" : escaped
 end
 
 function _score_rows(result::ScarFinderResult)

@@ -10,6 +10,7 @@ module SquarePXPDynamics
 
 import EDKit
 
+include("Internals.jl")
 include("SpinOps.jl")
 include("SquareGeometry.jl")
 include("SquarePXP.jl")
@@ -113,7 +114,8 @@ using .FiniteIPEPSObservables:
     exact_all_down_return_probability_finite,
     exact_blockade_violation_finite,
     exact_pxp_energy_density_finite
-using .PEPSKitMeasurements: PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics
+using .PEPSKitMeasurements: PEPSKitCTMRGParams, default_ctmrg_params
+using .PEPSKitMeasurements: PEPSKitMeasurementContext, CTMRGDiagnostics
 using .PEPSKitMeasurements: CTMObservableSummary, CTMValidationPoint
 using .PEPSKitMeasurements: configure_ctm_threading!, configure_ctm_threading_from_env!
 using .PEPSKitMeasurements: to_pepskit_infinitepeps
@@ -268,7 +270,8 @@ export exact_one_site_expectation_finite, exact_nearest_neighbor_expectation_fin
 export exact_star_expectation_finite, exact_density_finite
 export exact_all_down_return_probability_finite
 export exact_blockade_violation_finite, exact_pxp_energy_density_finite
-export PEPSKitCTMRGParams, PEPSKitMeasurementContext, CTMRGDiagnostics, CTMObservableSummary
+export PEPSKitCTMRGParams, default_ctmrg_params
+export PEPSKitMeasurementContext, CTMRGDiagnostics, CTMObservableSummary
 export CTMValidationPoint
 export configure_ctm_threading!, configure_ctm_threading_from_env!
 export to_pepskit_infinitepeps, pepskit_ctmrg_context

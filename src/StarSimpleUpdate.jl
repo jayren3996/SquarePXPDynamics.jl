@@ -11,6 +11,7 @@ using ..SquareIPEPS:
     physical_index,
     link_index,
     link_weight,
+    _link_weight_view,
     absorb_link_weight,
     deabsorb_link_weight,
     _mark_mutated!,
@@ -140,7 +141,7 @@ function _pre_update_touched_min_lambda(psi::SquareIPEPSState, coords)
     end
     values = Dict{BondKey,Float64}()
     for key in keys
-        lambda = link_weight(psi, key.site, key.dir)
+        lambda = _link_weight_view(psi, key.site, key.dir)
         minimum_lambda = minimum(lambda)
         isfinite(minimum_lambda) && minimum_lambda >= 0 ||
             throw(ArgumentError("touched link weights must be finite and nonnegative"))
@@ -402,6 +403,17 @@ absorption, QR reduction, gate application, SVD splitting, and reconstruction
 all succeed. `maxdim` is the cap for this update and may be larger than
 `psi.maxdim`; in that case affected links may grow while `psi.maxdim` remains
 the state's construction/default cap.
+
+# Example
+
+```julia
+using SquarePXPDynamics
+cell = PeriodicSquareUnitCell(10, 10)
+psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+info = project_star!(psi, SquareCoord(1, 1), 0.01)
+# info.max_truncerr summarizes the largest singular-value truncation
+# error across the four bond splits of this star.
+```
 """
 function project_star!(
     psi::SquareIPEPSState,

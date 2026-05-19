@@ -102,9 +102,11 @@ Return a dense square-star PXP evolution gate with local blockade projection.
 The default `projection = :left` preserves the historical `P * U` behavior and
 assumes the input vector is already in the constrained sector. Use
 `projection = :sandwich` to return `P * U * P` for explicit constrained-sector
-action on raw local vectors. For the current square-star PXP Hamiltonian, `P`
-commutes with `U`, so `:left` and `:sandwich` are equivalent operators; the
-keyword makes the chosen convention explicit at call sites.
+action on raw local vectors. For the current square-star PXP Hamiltonian `H`,
+`H` is supported on states with all four neighbors down (so `U = I` outside
+that support) and maps constrained basis states to constrained basis states
+inside it; hence `[P, U] = 0`, and `:left` and `:sandwich` produce equivalent
+operators. The keyword makes the chosen convention explicit at call sites.
 """
 function projected_square_pxp_gate(
     step::Real;

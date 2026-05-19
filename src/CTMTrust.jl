@@ -1,6 +1,7 @@
 module CTMTrust
 
 using ..PEPSKitMeasurements: CTMRGDiagnostics, CTMObservableSummary, CTMValidationPoint
+using ..Internals: _csv_value
 
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
 
@@ -360,22 +361,6 @@ function assess_ctm_trust(points; policy::CTMTrustPolicy = CTMTrustPolicy())
         energy_delta,
         observed_max_residual,
     )
-end
-
-function _csv_value(::Nothing)
-    return ""
-end
-
-function _csv_value(value::Bool)
-    return string(value)
-end
-
-function _csv_value(value::Real)
-    return string(value)
-end
-
-function _csv_value(value::Symbol)
-    return String(value)
 end
 
 """

@@ -11,7 +11,7 @@
   trusted CTM contexts and local bond norm diagnostics; it is not by itself a
   full-update solver or production ScarFinder validation.
 - Source: `README.md`
-- Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
+- Source: `Notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 - Source: `src/PEPSKitMeasurements.jl`
 - Source: `src/CTMGaugeReadiness.jl`
 
@@ -21,7 +21,7 @@
   state remains globally blockade-constrained, so blockade leakage must be
   monitored.
 - Source: `README.md`
-- Source: `notes/README.md`
+- Source: `Notes/README.md`
 
 ## Scope Boundaries
 
@@ -30,8 +30,8 @@
 - Confirmed: Avoid arbitrary graph support, broad Hamiltonian packaging, GPU
   backends, symmetry machinery, and broad module splitting unless they solve a
   specific near-term project problem.
-- Source: `notes/README.md`
-- Source: `notes/2026-05-15-code-quality-audit.md`
+- Source: `Notes/README.md`
+- Source: `Notes/2026-05-15-code-quality-audit.md`
 - Source: `docs/superpowers/specs/2026-05-15-infinite-tfim-benchmark-design.md`
 
 ## PEPSKit Boundary
@@ -41,7 +41,7 @@
 - Confirmed: PEPSKit's registered simple-update/time-evolution API did not
   expose a reliable ready path for the custom five-site square-star update, so
   the project keeps custom local update logic outside PEPSKit.
-- Source: `notes/2026-05-15-pepskit-backend-feasibility.md`
+- Source: `Notes/2026-05-15-pepskit-backend-feasibility.md`
 
 ## Testing Constraints
 
@@ -52,6 +52,6 @@
   representatives.
 - Confirmed: S7b tests should compare observables, CTM summaries, freshness
   guards, and transactional mutation behavior rather than raw tensor entries.
-- Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `docs/superpowers/notes/2026-05-16-s7b-gauge-fixing-handoff.md`

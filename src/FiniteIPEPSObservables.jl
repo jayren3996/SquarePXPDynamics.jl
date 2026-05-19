@@ -8,14 +8,13 @@ using ..SquareGeometry
 using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
 using ..SquareUnitCells
 using ..SquareIPEPS
+using ..Internals: _DIRECTIONS
 
 export dense_state_finite
 export exact_one_site_expectation_finite, exact_nearest_neighbor_expectation_finite
 export exact_star_expectation_finite, exact_density_finite
 export exact_all_down_return_probability_finite
 export exact_blockade_violation_finite, exact_pxp_energy_density_finite
-
-const _DIRECTIONS = (:right, :up, :left, :down)
 
 function _dense_index(values)
     idx = 1

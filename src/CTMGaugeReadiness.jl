@@ -9,7 +9,12 @@ import ..PEPSKitMeasurements
 using ..SquareGeometry: SquareCoord
 using ..SquareUnitCells: BondKey, bondkey, neighbor
 using ..SquareIPEPS:
-    SquareIPEPSState, physical_index, link_index, link_weight, _mark_mutated!
+    SquareIPEPSState,
+    physical_index,
+    link_index,
+    link_weight,
+    _link_weight_view,
+    _mark_mutated!
 using ..PEPSKitMeasurements: PEPSKitMeasurementContext, assert_fresh_pepskit_context
 using ..CTMTrust: CTMTrustAssessment
 
@@ -298,13 +303,36 @@ function _ctm_bond_norm_raw_matrix(
     end
 end
 
+# Compute the raw bond-norm matrix for an `:up`-direction bond, given a
+# rotated (peps, env) pair already shared across all `:up` bonds. Skips the
+# per-call rotr90 of the entire CTM environment.
+function _ctm_bond_norm_raw_matrix_up_rotated(
+    psi::SquareIPEPSState,
+    bond::BondKey,
+    ctx::PEPSKitMeasurementContext,
+    rotated_peps,
+    rotated_env,
+    peps_size,
+)
+    bond.dir === :up || throw(ArgumentError("bond must be in :up direction"))
+    site = PEPSKitMeasurements._squarecoord_to_cartesianindex(psi.unitcell, bond.site)
+    rotated_site = PEPSKit.siterotr90(site, peps_size)
+    rotated_row, rotated_col = Tuple(rotated_site)
+    return _horizontal_bondenv_matrix(
+        rotated_peps,
+        rotated_env,
+        rotated_row,
+        rotated_col,
+    )
+end
+
 function _validate_positive_deabsorption_weights(
     psi::SquareIPEPSState,
     c::SquareCoord;
     atol::Real = _GAUGE_FIX_ATOL,
 )
     for dir in (:up, :right, :down, :left)
-        values = link_weight(psi, c, dir)
+        values = _link_weight_view(psi, c, dir)
         all(value -> value > atol, values) || throw(
             ArgumentError(
                 "D>1 gauge conditioning requires positive link weights on all legs of $c",
@@ -334,10 +362,10 @@ function _gamma_tensor_from_pepskit(
     dims = (ITensors.dim(p), ITensors.dim(up), ITensors.dim(right), ITensors.dim(down), ITensors.dim(left))
     data = _pepskit_tensor_data(tensor, dims)
     lambdas = (
-        sqrt.(link_weight(psi, c, :up)),
-        sqrt.(link_weight(psi, c, :right)),
-        sqrt.(link_weight(psi, c, :down)),
-        sqrt.(link_weight(psi, c, :left)),
+        sqrt.(_link_weight_view(psi, c, :up)),
+        sqrt.(_link_weight_view(psi, c, :right)),
+        sqrt.(_link_weight_view(psi, c, :down)),
+        sqrt.(_link_weight_view(psi, c, :left)),
     )
     T = ITensor(ComplexF64, p, left, right, up, down)
     for pv in axes(data, 1),
@@ -460,10 +488,43 @@ function all_ctm_bond_norm_diagnostics(
     policy::CTMGaugePolicy = CTMGaugePolicy(),
 )::Dict{BondKey,CTMBondNormDiagnostic}
     assert_fresh_pepskit_context(psi, ctx)
-    return Dict{BondKey,CTMBondNormDiagnostic}(
-        bond => ctm_bond_norm_diagnostic(psi, bond.site, bond.dir, ctx; policy) for
-        bond in keys(psi.link_weights)
-    )
+    result = Dict{BondKey,CTMBondNormDiagnostic}()
+
+    right_bonds = BondKey[]
+    up_bonds = BondKey[]
+    for bond in keys(psi.link_weights)
+        if bond.dir === :right
+            push!(right_bonds, bond)
+        elseif bond.dir === :up
+            push!(up_bonds, bond)
+        else
+            throw(ArgumentError("BondKey direction must be :right or :up"))
+        end
+    end
+
+    for bond in right_bonds
+        raw = _ctm_bond_norm_raw_matrix(psi, bond, ctx)
+        result[bond] = CTMBondNormDiagnostic(bond, raw; policy)
+    end
+
+    if !isempty(up_bonds)
+        rotated_peps = rotr90(ctx.peps)
+        rotated_env = rotr90(ctx.env)
+        peps_size = size(ctx.peps)
+        for bond in up_bonds
+            raw = _ctm_bond_norm_raw_matrix_up_rotated(
+                psi,
+                bond,
+                ctx,
+                rotated_peps,
+                rotated_env,
+                peps_size,
+            )
+            result[bond] = CTMBondNormDiagnostic(bond, raw; policy)
+        end
+    end
+
+    return result
 end
 
 function _collect_diagnostics(
@@ -587,7 +648,7 @@ function fix_bond_gauge!(
         policy,
     )
     readiness.ready || return BondGaugeFixInfo(bond, false, readiness.reason, readiness)
-    if length(link_weight(psi, bond.site, bond.dir)) == 1
+    if length(_link_weight_view(psi, bond.site, bond.dir)) == 1
         return BondGaugeFixInfo(bond, false, :product_noop, readiness)
     end
     updates = _conditioned_gamma_tensors(psi, bond, ctx)

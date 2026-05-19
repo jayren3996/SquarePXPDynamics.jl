@@ -7,11 +7,10 @@ using ..SquareGeometry: SquareCoord
 using ..SquareUnitCells: BondKey, bondkey, neighbor
 using ..SquareIPEPS:
     SquareIPEPSState, physical_index, link_index, absorb_link_weight
+using ..Internals: _DIRECTIONS, _validate_direction, _opposite_direction
 
 export SimpleGaugeDiagnostic
 export gauge_diagnostic_simple, gauge_deviation_simple, all_gauge_deviations_simple
-
-const _DIRECTIONS = (:right, :up, :left, :down)
 
 """
     SimpleGaugeDiagnostic
@@ -33,26 +32,6 @@ function _require_simple_gauge(psi::SquareIPEPSState)
     psi.gauge === :simple ||
         throw(ArgumentError("simple-gauge diagnostics require psi.gauge === :simple"))
     return psi
-end
-
-function _validate_direction(dir::Symbol)
-    dir in _DIRECTIONS ||
-        throw(ArgumentError("direction must be :right, :up, :left, or :down"))
-    return dir
-end
-
-function _opposite_direction(dir::Symbol)
-    if dir === :right
-        return :left
-    elseif dir === :left
-        return :right
-    elseif dir === :up
-        return :down
-    elseif dir === :down
-        return :up
-    else
-        throw(ArgumentError("direction must be :right, :up, :left, or :down"))
-    end
 end
 
 function _external_absorbed_tensor(

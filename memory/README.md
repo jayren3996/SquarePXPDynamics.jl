@@ -36,12 +36,12 @@ Then read relevant long-term files for the task:
 
 Do not copy whole design documents, large logs, generated artifacts, raw test
 output, or speculative ideas without labeling them. Preserve detailed source
-material in `notes/`, `docs/`, source files, tests, and git history.
+material in `Notes/`, `docs/`, source files, tests, and git history.
 
 ## Update Rules
 
 - Add source references for nontrivial entries, such as `Source:
-  notes/foo.md`, `Source: src/bar.jl`, or `Source: git log`.
+  Notes/foo.md`, `Source: src/bar.jl`, or `Source: git log`.
 - Use confidence labels where useful: `Confirmed:`, `Inferred:`,
   `Speculative:`, `Open question:`, `Deprecated / stale:`, `Superseded:`.
 - Record important scientific, architectural, implementation, and workflow

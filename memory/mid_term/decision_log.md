@@ -63,7 +63,7 @@ workflows for square-lattice PXP or explicitly scoped benchmarks.
 
 Source:
 
-`notes/README.md`; `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+`Notes/README.md`; `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 
 Status: active
 
@@ -599,7 +599,7 @@ must remain directly tested.
 
 Source:
 
-`README.md`; `notes/README.md`; `src/SquarePXP.jl`; `test/test_square_pxp.jl`
+`README.md`; `Notes/README.md`; `src/SquarePXP.jl`; `test/test_square_pxp.jl`
 
 Status: active
 
@@ -628,7 +628,7 @@ maintaining custom QR-reduced star-update code.
 
 Source:
 
-`notes/2026-05-15-pepskit-backend-feasibility.md`; `src/PEPSKitMeasurements.jl`;
+`Notes/2026-05-15-pepskit-backend-feasibility.md`; `src/PEPSKitMeasurements.jl`;
 `src/StarSimpleUpdate.jl`
 
 Status: active
@@ -657,7 +657,7 @@ chi sensitivity before trusting energy comparisons or physics claims.
 
 Source:
 
-`README.md`; `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`;
+`README.md`; `Notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`;
 `src/ScarFinder.jl`
 
 Status: active
@@ -908,7 +908,7 @@ energy correction, and S7b CTM norm-matrix/gauge-conditioning infrastructure.
 Source:
 
 `docs/superpowers/specs/2026-05-16-s0-s7-completion-design.md`;
-current S0-S7 audit in this thread; `notes/2026-05-15-ipeps-superpowers-multistage-plan.md`
+current S0-S7 audit in this thread; `Notes/2026-05-15-ipeps-superpowers-multistage-plan.md`
 
 Status: active
 
@@ -941,8 +941,8 @@ trustworthy.
 
 Source:
 
-User confirmation in current thread; `notes/2026-05-15-chatgpt-pro-ipeps-review-plan.md`;
-`notes/2026-05-15-ipeps-superpowers-multistage-plan.md`;
+User confirmation in current thread; `Notes/2026-05-15-chatgpt-pro-ipeps-review-plan.md`;
+`Notes/2026-05-15-ipeps-superpowers-multistage-plan.md`;
 `memory/long_term/literature_context.md`
 
 Status: active

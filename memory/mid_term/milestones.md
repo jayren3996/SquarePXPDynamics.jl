@@ -27,7 +27,7 @@
   including diagnostics metadata, stale-context guards, CTM validation sweeps,
   and README warnings.
 - Source: `README.md`
-- Source: `notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
+- Source: `Notes/2026-05-15-gpt-pro-ctm-scarfinder-revision-notes.md`
 - Source: `src/PEPSKitMeasurements.jl`
 
 - Confirmed: S0-S7 completion has been reconciled against the current
@@ -95,8 +95,10 @@
 
 ## Future Milestones
 
-- Confirmed: Local `main` is aligned with `origin/main` at
-  `98e1ad7 Merge GPT PXP roadmap completion`.
+- Confirmed: Local `main` is at `8c1eed7 docs: root-cause note for pxp-d-debug —
+  cutoff stability at larger D` (2026-05-19), with a string of intervening
+  refactor commits since the earlier `98e1ad7 Merge GPT PXP roadmap completion`
+  pointer.
 - Open question: Add the broader Tier 2 TFIM smoke matrix across multiple
   `h/J` values, initial states, `D`, and `dt`.
 - Open question: Run the first CTM-trusted ScarFinder audit campaign using the

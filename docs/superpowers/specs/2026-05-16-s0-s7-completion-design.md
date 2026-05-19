@@ -185,8 +185,10 @@ unimplemented.
 
 Complete now:
 
-- Add a narrow `measure(psi; backend = :simple | :ctm, params = ...)` wrapper
-  only if it stays thin and explicit.
+- Superseded by Slice 3: a narrow `measure(psi; backend = :simple | :ctm,
+  params = ...)` wrapper was considered but deliberately not added. The
+  explicit `measure_simple` / `measure_ctm` boundary turned out clearer than
+  any wrapper. See Slice 3 below.
 - Keep `measure_simple`, `measure_ctm`, and named local observables as the
   primary APIs.
 - Add missing dense-reference tests for PXP `:x_plus` simple observables.

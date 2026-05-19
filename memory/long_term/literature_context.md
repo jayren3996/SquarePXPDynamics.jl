@@ -4,7 +4,7 @@
 
 - Confirmed: The project motivation is square-lattice PXP dynamics and
   scar-like candidate search using low-entanglement PEPS/iPEPS methods.
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Literature anchors recorded there include ScarFinder
   `https://arxiv.org/abs/2504.12383`, Bernien et al.
   `https://arxiv.org/abs/1707.04344`, Turner et al.
@@ -18,7 +18,7 @@
   measurement trust and S7b local gauge conditioning are now implemented
   accuracy/readiness layers; a full ALS/full-update truncation solver remains
   later infrastructure.
-- Source: `notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
+- Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `docs/superpowers/notes/2026-05-16-s0-s7-completion-audit.md`
 - Literature anchors recorded there include iPEPS gauge fixing / fast full
   update `https://arxiv.org/abs/1503.05345`, CTMRG for iPEPS contraction
@@ -31,7 +31,7 @@
 - Confirmed: PEPSKit.jl is used for experimental CTMRG measurement support,
   but not as the source of the custom five-site PXP update.
 - Source: `Project.toml`
-- Source: `notes/2026-05-15-pepskit-backend-feasibility.md`
+- Source: `Notes/2026-05-15-pepskit-backend-feasibility.md`
 - Source: `src/PEPSKitMeasurements.jl`
 
 ## TFIM Benchmark References
