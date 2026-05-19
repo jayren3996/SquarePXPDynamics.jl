@@ -486,17 +486,6 @@ function _ctm_initializer(seed::Int)
     return (T, dims...) -> randn(rng, T, dims...)
 end
 
-function _assert_fresh_context(psi::SquareIPEPSState, ctx::PEPSKitMeasurementContext)
-    objectid(psi) == ctx.source_state_id ||
-        throw(ArgumentError("PEPSKit measurement context belongs to a different iPEPS state"))
-    state_version(psi) == ctx.source_state_version || throw(
-        ArgumentError(
-            "PEPSKit measurement context is stale because the iPEPS state was mutated",
-        ),
-    )
-    return nothing
-end
-
 """
     assert_fresh_pepskit_context(psi, ctx)
 
@@ -508,7 +497,14 @@ function assert_fresh_pepskit_context(
     psi::SquareIPEPSState,
     ctx::PEPSKitMeasurementContext,
 )
-    return _assert_fresh_context(psi, ctx)
+    objectid(psi) == ctx.source_state_id ||
+        throw(ArgumentError("PEPSKit measurement context belongs to a different iPEPS state"))
+    state_version(psi) == ctx.source_state_version || throw(
+        ArgumentError(
+            "PEPSKit measurement context is stale because the iPEPS state was mutated",
+        ),
+    )
+    return nothing
 end
 
 function _validate_direction(dir::Symbol)
@@ -597,9 +593,6 @@ function _star_sites_cartesian(cell::PeriodicSquareUnitCell, center::SquareCoord
     )
 end
 
-_pepskit_star_sites(cell::PeriodicSquareUnitCell, center::SquareCoord) =
-    _star_sites_cartesian(cell, center)
-
 function _dense_operator_tensor_map(O::AbstractMatrix, nsites::Int)
     size(O) == (2^nsites, 2^nsites) ||
         throw(ArgumentError("dense operator must be $(2^nsites)x$(2^nsites)"))
@@ -649,13 +642,13 @@ function _pepskit_pxp_star_operator(cell::PeriodicSquareUnitCell, center::Square
     op = _pepskit_pxp_star_tensormap()
     return PEPSKit.LocalOperator(
         _physical_lattice(cell),
-        _pepskit_star_sites(cell, center) => op,
+        _star_sites_cartesian(cell, center) => op,
     )
 end
 
 function _pepskit_pxp_energy_operator(cell::PeriodicSquareUnitCell)
     op = _pepskit_pxp_star_tensormap()
-    terms = [_pepskit_star_sites(cell, c) => op for c in cell.reps]
+    terms = [_star_sites_cartesian(cell, c) => op for c in cell.reps]
     return PEPSKit.LocalOperator(_physical_lattice(cell), terms...)
 end
 
@@ -800,7 +793,7 @@ function _pepskit_star_localoperator(
     op = _dense_operator_tensor_map(O, SQUARE_STAR_SITES)
     return PEPSKit.LocalOperator(
         _physical_lattice(cell),
-        _pepskit_star_sites(cell, center) => op,
+        _star_sites_cartesian(cell, center) => op,
     )
 end
 
@@ -839,7 +832,7 @@ function local_density_ctm(
     c::SquareCoord,
     ctx::PEPSKitMeasurementContext,
 )::Float64
-    _assert_fresh_context(psi, ctx)
+    assert_fresh_pepskit_context(psi, ctx)
     return _expectation(ctx, _pepskit_density_operator(psi.unitcell, c))
 end
 
@@ -855,7 +848,7 @@ function nearest_neighbor_density_ctm(
     dir::Symbol,
     ctx::PEPSKitMeasurementContext,
 )::Float64
-    _assert_fresh_context(psi, ctx)
+    assert_fresh_pepskit_context(psi, ctx)
     _validate_direction(dir)
     return _expectation(ctx, _pepskit_twosite_nn_operator(psi.unitcell, c, dir))
 end
@@ -879,7 +872,7 @@ function star_expectation_ctm(
     O::AbstractMatrix,
     ctx::PEPSKitMeasurementContext,
 )::ComplexF64
-    _assert_fresh_context(psi, ctx)
+    assert_fresh_pepskit_context(psi, ctx)
     ctx.peps !== nothing || throw(ArgumentError("PEPSKit measurement context has no PEPS"))
     op = _cached_star_localoperator(psi, center, O, ctx)
     value = PEPSKit.expectation_value(ctx.peps, op, ctx.env)
@@ -897,7 +890,7 @@ function blockade_violation_ctm(
     psi::SquareIPEPSState,
     ctx::PEPSKitMeasurementContext,
 )::Float64
-    _assert_fresh_context(psi, ctx)
+    assert_fresh_pepskit_context(psi, ctx)
     total = 0.0
     count = 0
     for c in psi.unitcell.reps, dir in (:right, :up)
@@ -920,7 +913,7 @@ function pxp_energy_density_ctm(
     psi::SquareIPEPSState,
     ctx::PEPSKitMeasurementContext,
 )::Float64
-    _assert_fresh_context(psi, ctx)
+    assert_fresh_pepskit_context(psi, ctx)
     ctx.peps !== nothing || throw(ArgumentError("PEPSKit measurement context has no PEPS"))
     total = _expectation(ctx, _cached_pxp_energy_operator(psi, ctx))
     return total / length(psi.unitcell.reps)

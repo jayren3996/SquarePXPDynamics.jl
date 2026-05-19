@@ -305,10 +305,6 @@ end
             cell,
             SquareCoord(5, 5),
         ) !== nothing
-        @test SquarePXPDynamics.PEPSKitMeasurements._pepskit_star_sites(
-            cell,
-            SquareCoord(5, 5),
-        ) == star
         @test length(star) == SQUARE_STAR_SITES
         @test_throws ArgumentError SquarePXPDynamics.PEPSKitMeasurements._pepskit_pxp_star_operator(
             PeriodicSquareUnitCell(2, 2),
