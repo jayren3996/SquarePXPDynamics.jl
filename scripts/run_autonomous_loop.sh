@@ -11,6 +11,7 @@
 # Env knobs:
 #   SLEEP_SECONDS   seconds to sleep between passes (default 1800 = 30 min)
 #   MAX_PASSES      stop after N passes (default 0 = forever)
+#   PASS_TIMEOUT    hard wall-clock timeout for a single pass (default 25m)
 
 set -euo pipefail
 
@@ -20,6 +21,7 @@ PROMPT_FILE="$REPO/prompts/autonomous-improve-prompt.md"
 LOG_FILE="$REPO/logs/autonomous-loop.log"
 SLEEP_SECONDS="${SLEEP_SECONDS:-1800}"
 MAX_PASSES="${MAX_PASSES:-0}"
+PASS_TIMEOUT="${PASS_TIMEOUT:-25m}"
 
 cmd="${1:-status}"
 
@@ -50,6 +52,10 @@ case "$cmd" in
     # env vars (their IPC socket dies when the user disconnects) and force
     # git to fail fast instead of hanging on a TTY prompt. Push credentials
     # come from ~/.git-credentials populated via `credential.helper=store`.
+    #
+    # Hang protection: each pass is wrapped in `timeout` so a stuck Bash
+    # tool call (e.g. polling for a never-arriving exit-file) cannot freeze
+    # the loop indefinitely. timeout exit 124 means the pass was killed.
     read -r -d '' LOOP <<EOF || true
 cd "$REPO"
 unset GIT_ASKPASS SSH_ASKPASS
@@ -59,8 +65,14 @@ pass=0
 while true; do
   pass=\$((pass + 1))
   echo "=== pass \$pass @ \$(date -Iseconds) ===" | tee -a "$LOG_FILE"
-  claude -p "\$(cat "$PROMPT_FILE")" --dangerously-skip-permissions 2>&1 | tee -a "$LOG_FILE"
-  echo "--- end pass \$pass; sleeping ${SLEEP_SECONDS}s ---" | tee -a "$LOG_FILE"
+  timeout --kill-after=30s -s TERM "$PASS_TIMEOUT" \\
+    claude -p "\$(cat "$PROMPT_FILE")" --dangerously-skip-permissions 2>&1 | tee -a "$LOG_FILE"
+  rc=\${PIPESTATUS[0]}
+  if [[ \$rc -eq 124 || \$rc -eq 137 ]]; then
+    echo "--- pass \$pass TIMED OUT (rc=\$rc) after $PASS_TIMEOUT ---" | tee -a "$LOG_FILE"
+  else
+    echo "--- end pass \$pass (rc=\$rc); sleeping ${SLEEP_SECONDS}s ---" | tee -a "$LOG_FILE"
+  fi
   if [[ "$MAX_PASSES" -gt 0 && "\$pass" -ge "$MAX_PASSES" ]]; then
     echo "=== reached MAX_PASSES=$MAX_PASSES, exiting ===" | tee -a "$LOG_FILE"
     break

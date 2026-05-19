@@ -56,6 +56,12 @@ passes.
 - No multi-hour benchmarks — if a slice needs one, instead add a TODO entry to
   `memory/short_term/handoff.md` describing the run, and exit.
 - No tool call you expect to exceed 10 minutes; split it or defer it.
+- Do not run shell commands with `run_in_background: true` unless you also
+  set an explicit, finite `timeout` on the command itself. The launcher
+  wraps each pass in a 25-minute hard timeout, but a backgrounded poll for
+  a never-arriving exit-file is the most common way passes get killed
+  unproductively. If you must run something long, prefer foreground with
+  `timeout 540 <cmd>`.
 
 ## Things you must not do
 
