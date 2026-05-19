@@ -27,6 +27,22 @@ under `src/`, `test/`, `memory/`, `prompts/`, or `scripts/`), or if the pull
 is not fast-forward, write `NOOP: dirty tree / non-FF pull, skipping` to
 stdout and exit without changes. Stray untracked artifacts/logs are fine.
 
+### Stranded commits from a prior timed-out pass
+
+Right after the pull, run `git log --oneline origin/main..main`. If it
+returns anything, a previous pass committed but didn't push (it was killed
+by the 25-min wall before its push). Before picking a new slice:
+
+- Inspect the stranded commit's diff with `git show HEAD`. If it looks
+  reasonable (small diff, plausibly correct, tests not obviously broken),
+  push it (`git push origin main`) as the entire slice for this pass and
+  exit cleanly with a one-line summary. Do not rebase, reorder, or amend.
+- If the diff looks wrong (truncated, mid-edit, accidentally deletes
+  important code), `git reset --hard origin/main` to drop it, write
+  `NOOP: dropped stranded commit <hash> — <reason>` and exit.
+
+Ship-stranded or new-slice, **one per pass** — do not stack them.
+
 ## Active priority: code-quality simplification
 
 The user has flagged that the codebase is **unnecessarily long** and asked
@@ -127,24 +143,44 @@ When the slice is a code-removal:
   `scripts/run_autonomous_loop.sh`. If they look wrong, write a NOOP line
   describing the concern and exit.
 
-## After making changes
+## After making changes — commit first, then test
 
-1. Run the targeted test that covers what you changed, e.g.
+The 25-minute pass wall lands hardest when an agent is mid-Julia-test:
+the commit never happens and the slice is lost. To make slices durable,
+**commit before running tests**. If the test then kills the pass, the
+commit survives locally and pass N+1 ships it via the stranded-commit
+path above.
+
+1. `git add` **only** the files you intentionally modified (no `git add
+   .` or wildcards), and commit immediately with a concise message in the
+   existing style (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`). Do
+   not push yet.
+
+2. Run the targeted test that covers what you changed, e.g.
    `julia --project=test test/runtests.jl test_pepskit_measurements.jl`.
-2. If tests fail, attempt one fix. If still failing, `git restore` your
-   changes and write a single-line `NOOP: <reason>` to stdout and exit.
-3. If tests pass: `git add` only the files you intentionally modified (no
-   wildcards), commit with a concise message in the existing style
-   (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`), then
-   `git push origin main`.
-4. If the slice represented a non-trivial decision (algorithmic choice,
-   convention, scope cut), append a short dated entry to
-   `memory/mid_term/decision_log.md` with `Confirmed:` / `Inferred:` /
-   `Open question:` labels per `memory/README.md`.
-5. If you finished or materially changed a "Next Recommended Action" or
-   "Known Problem", update `memory/short_term/handoff.md` and
-   `memory/short_term/current_state.md` accordingly. Stage and commit these
-   together with the code change when they belong to the same slice.
+   Always wrap it: `timeout 540 julia ...`. Prefer a focused test file
+   over the full `runtests.jl`.
+
+3. If tests **pass**: `git push origin main`.
+
+4. If tests **fail**:
+   - Attempt one fix. Because the original commit is still local-only,
+     amending is safe: stage the fix and run `git commit --amend
+     --no-edit`. Re-run the test.
+   - If the test still fails: `git reset --hard HEAD~1` to drop the
+     commit entirely. Write `NOOP: <slice> failed test <name>` and exit.
+
+5. If the pass is killed mid-test (rc 124/137), the local commit survives
+   and pass N+1 picks it up via the stranded-commit path.
+
+If the slice represented a non-trivial decision (algorithmic choice,
+convention, scope cut), append a short dated entry to
+`memory/mid_term/decision_log.md` and stage+commit it as part of the same
+slice — keep "one commit per pass".
+
+If you finished or materially changed a "Next Recommended Action" or
+"Known Problem", update `memory/short_term/handoff.md` and
+`memory/short_term/current_state.md` accordingly, in the same commit.
 
 ## Output discipline
 
