@@ -27,12 +27,45 @@ under `src/`, `test/`, `memory/`, `prompts/`, or `scripts/`), or if the pull
 is not fast-forward, write `NOOP: dirty tree / non-FF pull, skipping` to
 stdout and exit without changes. Stray untracked artifacts/logs are fine.
 
+## Active priority: code-quality simplification
+
+The user has flagged that the codebase is **unnecessarily long** and asked
+for a sustained code-quality / simplification campaign. Until this section
+is removed from the prompt, **prefer slices that shorten or simplify code
+without changing behavior**. Net-line-removal slices are the most valuable
+shape right now. Look for:
+
+- **Dead code**: unreferenced functions, unused exports, branches that
+  cannot trigger, error paths that no caller can ever hit.
+- **Over-engineered abstractions**: single-use helpers that could be
+  inlined; layered indirection that hides nothing meaningful; "config
+  objects" that wrap a single field.
+- **Duplicate logic**: similar code in 2+ places that should be a shared
+  helper, or vice-versa — a helper used in one place that should be
+  inlined.
+- **Redundant validation**: the same input check repeated at multiple
+  layers when one is enough.
+- **Comments that restate WHAT** the code does (the identifiers already
+  say what). Keep WHY comments — hidden constraints, workarounds,
+  surprising invariants.
+- **Verbose error handling** for cases that can't happen given internal
+  callers and framework guarantees (validate only at system boundaries).
+- **Over-broad try/catch** that swallows or rewraps errors with no added
+  information.
+
+Within this campaign, prefer simplifying code that is on the path to
+**ScarFinder on the 2D infinite square PXP** — i.e. iPEPS/CTM observables,
+gauge fixing, PXP energy/density operators, finite-vs-infinite
+reconciliation. Cleaning those modules pays off twice.
+
 ## Pick one slice
 
-Choose **one** concrete, well-scoped slice — small enough to finish, test, and
-commit in this pass. Good candidate shapes:
+Choose **one** concrete, well-scoped slice — small enough to finish, test,
+and commit in this pass. In addition to the simplification shapes above,
+these are still valid:
 
-- A small refactor with no behavior change (clarify naming, extract a helper).
+- A small refactor with no behavior change (clarify naming, extract a
+  helper).
 - A new unit test that exercises a currently uncovered branch.
 - A docstring tightening or a corrected error message.
 - A documented invariant added as a comment where the WHY is non-obvious.
@@ -40,14 +73,27 @@ commit in this pass. Good candidate shapes:
 - A memory file update reconciled with what is actually in the code (drift
   cleanup) — but only if you also fix the underlying drift.
 
-Prefer slices that move us toward the ScarFinder-on-iPEPS goal: CTM
-observable correctness/throughput, gauge fixing, PXP energy/density
-operators, finite-vs-infinite reconciliation, and the test harness around
-those.
-
-If no well-scoped slice fits, write a single line starting with `NOOP:` and a
-short reason, then exit. Doing nothing is the correct outcome for some
+If no well-scoped slice fits, write a single line starting with `NOOP:` and
+a short reason, then exit. Doing nothing is the correct outcome for some
 passes.
+
+## Simplification guardrails
+
+When the slice is a code-removal:
+
+- Before deleting a function or method, grep `src/`, `test/`, `scripts/`,
+  and `Notes/` for any remaining callers. If you cannot prove zero
+  external usage, do not delete it — propose the deletion in a memory
+  TODO instead.
+- Before removing an export from `src/SquarePXPDynamics.jl`, grep for the
+  symbol across the whole repo. Tests and downstream scripts count.
+- Behavior-preserving means: same return values, same observable side
+  effects, same error semantics (modulo error-message wording, which may
+  improve). If you are unsure, the slice is not behavior-preserving and
+  belongs in a different pass.
+- Net deletions over ~50 lines should be split. Pick a tight cluster
+  (one helper + its inlined call sites, or one module's dead branches)
+  per pass.
 
 ## Hard limits for one pass
 
