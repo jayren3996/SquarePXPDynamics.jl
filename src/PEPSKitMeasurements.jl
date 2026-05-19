@@ -36,7 +36,9 @@ function _set_pepskit_scheduler!(scheduler::Symbol)
     elseif scheduler in (:serial, :dynamic, :static, :greedy)
         PEPSKit.set_scheduler!(scheduler)
     else
-        throw(ArgumentError("pepskit_scheduler must be :default, :serial, :dynamic, :static, or :greedy"))
+        throw(ArgumentError(
+            "pepskit_scheduler must be :default, :serial, :dynamic, :static, or :greedy (got :$(scheduler))",
+        ))
     end
     return scheduler
 end
@@ -93,7 +95,9 @@ function _env_bool(name::AbstractString, default::Bool)
     normalized = lowercase(value)
     normalized in ("1", "true", "yes", "on") && return true
     normalized in ("0", "false", "no", "off") && return false
-    throw(ArgumentError("$name must be one of 1,true,yes,on,0,false,no,off"))
+    throw(ArgumentError(
+        "$name must be one of 1,true,yes,on,0,false,no,off (got \"$(value)\")",
+    ))
 end
 
 """

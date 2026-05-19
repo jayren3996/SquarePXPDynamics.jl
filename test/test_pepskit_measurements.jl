@@ -85,11 +85,27 @@ end
             @test configure_ctm_threading_from_env!(prefix = prefix).strided_threaded_mul === false
 
             ENV["$(prefix)_STRIDED_THREADED_MUL"] = "maybe"
-            @test_throws ArgumentError configure_ctm_threading_from_env!(prefix = prefix)
+            err = try
+                configure_ctm_threading_from_env!(prefix = prefix)
+                nothing
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            @test occursin("$(prefix)_STRIDED_THREADED_MUL", err.msg)
+            @test occursin("maybe", err.msg)
 
             ENV["$(prefix)_STRIDED_THREADED_MUL"] = "false"
             ENV["$(prefix)_PEPSKIT_SCHEDULER"] = "not_a_scheduler"
-            @test_throws ArgumentError configure_ctm_threading_from_env!(prefix = prefix)
+            err = try
+                configure_ctm_threading_from_env!(prefix = prefix)
+                nothing
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            @test occursin("pepskit_scheduler", err.msg)
+            @test occursin("not_a_scheduler", err.msg)
 
             ENV["$(prefix)_PEPSKIT_SCHEDULER"] = "default"
             ENV["$(prefix)_BLAS_THREADS"] = "not_an_int"
