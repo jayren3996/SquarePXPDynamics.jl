@@ -246,10 +246,6 @@ struct PXPIPEPSSample
     exact_finite_density::Union{Nothing,Float64}
 end
 
-function PXPIPEPSSample(step, time, simple, evolution, ctm, log_norm)
-    return PXPIPEPSSample(step, time, simple, evolution, ctm, log_norm, nothing)
-end
-
 """
     PXPEDComparisonSample
 
@@ -273,38 +269,6 @@ struct PXPEDComparisonSample
     ctm_blockade_violation::Union{Nothing,Float64}
     ctm_trusted::Union{Nothing,Bool}
     ctm_reason::Union{Nothing,Symbol}
-end
-
-function PXPEDComparisonSample(
-    step,
-    time,
-    ed_return_probability,
-    ed_excitation_density,
-    ipeps_simple_density,
-    ipeps_ctm_density,
-    density_error_simple,
-    density_error_ctm,
-    simple_blockade_violation,
-    ctm_blockade_violation,
-    ctm_trusted,
-    ctm_reason,
-)
-    return PXPEDComparisonSample(
-        step,
-        time,
-        ed_return_probability,
-        ed_excitation_density,
-        ipeps_simple_density,
-        ipeps_ctm_density,
-        nothing,
-        density_error_simple,
-        density_error_ctm,
-        nothing,
-        simple_blockade_violation,
-        ctm_blockade_violation,
-        ctm_trusted,
-        ctm_reason,
-    )
 end
 
 """
@@ -377,23 +341,6 @@ struct PXPConvergenceReport
     max_abs_density_error_ctm::Union{Nothing,Float64}
     max_abs_density_error_exact_finite::Union{Nothing,Float64}
     all_ctm_trusted::Union{Nothing,Bool}
-end
-
-function PXPConvergenceReport(
-    config,
-    runs,
-    max_abs_density_error_simple,
-    max_abs_density_error_ctm,
-    all_ctm_trusted,
-)
-    return PXPConvergenceReport(
-        config,
-        runs,
-        max_abs_density_error_simple,
-        max_abs_density_error_ctm,
-        nothing,
-        all_ctm_trusted,
-    )
 end
 
 """
