@@ -42,6 +42,68 @@ end
         end
     end
 
+    @testset "CTM threading from environment variables" begin
+        prefix = "SQUAREPXP_CTM_TEST_$(getpid())"
+        keys = (
+            "$(prefix)_BLAS_THREADS",
+            "$(prefix)_STRIDED_THREADS",
+            "$(prefix)_STRIDED_THREADED_MUL",
+            "$(prefix)_PEPSKIT_SCHEDULER",
+        )
+        original_blas = BLAS.get_num_threads()
+        saved_env = Dict(k => get(ENV, k, nothing) for k in keys)
+        try
+            for k in keys
+                delete!(ENV, k)
+            end
+
+            defaults = configure_ctm_threading_from_env!(prefix = prefix)
+            @test defaults.strided_threads == Threads.nthreads()
+            @test defaults.strided_threaded_mul === false
+            @test defaults.pepskit_scheduler === :default
+
+            ENV["$(prefix)_BLAS_THREADS"] = "1"
+            ENV["$(prefix)_STRIDED_THREADS"] = "1"
+            ENV["$(prefix)_STRIDED_THREADED_MUL"] = "true"
+            ENV["$(prefix)_PEPSKIT_SCHEDULER"] = "dynamic"
+            config = configure_ctm_threading_from_env!(prefix = prefix)
+            @test config.blas_threads == 1
+            @test config.strided_threads == 1
+            @test config.strided_threaded_mul === true
+            @test config.pepskit_scheduler === :dynamic
+
+            for raw in ("YES", "On", "1", "true")
+                ENV["$(prefix)_STRIDED_THREADED_MUL"] = raw
+                @test configure_ctm_threading_from_env!(prefix = prefix).strided_threaded_mul === true
+            end
+            for raw in ("no", "OFF", "0", "false")
+                ENV["$(prefix)_STRIDED_THREADED_MUL"] = raw
+                @test configure_ctm_threading_from_env!(prefix = prefix).strided_threaded_mul === false
+            end
+
+            ENV["$(prefix)_STRIDED_THREADED_MUL"] = "   "
+            @test configure_ctm_threading_from_env!(prefix = prefix).strided_threaded_mul === false
+
+            ENV["$(prefix)_STRIDED_THREADED_MUL"] = "maybe"
+            @test_throws ArgumentError configure_ctm_threading_from_env!(prefix = prefix)
+
+            ENV["$(prefix)_STRIDED_THREADED_MUL"] = "false"
+            ENV["$(prefix)_PEPSKIT_SCHEDULER"] = "not_a_scheduler"
+            @test_throws ArgumentError configure_ctm_threading_from_env!(prefix = prefix)
+        finally
+            for (k, v) in saved_env
+                v === nothing ? delete!(ENV, k) : (ENV[k] = v)
+            end
+            BLAS.set_num_threads(original_blas)
+            configure_ctm_threading!(
+                blas_threads = original_blas,
+                strided_threads = 1,
+                strided_threaded_mul = false,
+                pepskit_scheduler = :default,
+            )
+        end
+    end
+
     @testset "CTMRG parameter validation" begin
         @test_throws ArgumentError PEPSKitCTMRGParams(0, 1e-8, 10, 0)
         @test_throws ArgumentError PEPSKitCTMRGParams(4, 0.0, 10, 0)
