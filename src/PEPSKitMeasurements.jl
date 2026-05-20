@@ -27,6 +27,7 @@ export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export assert_fresh_pepskit_context
 export local_density_ctm, nearest_neighbor_density_ctm, blockade_violation_ctm
 export star_expectation_ctm, pxp_energy_density_ctm, measure_ctm, ctm_diagnostics
+export correlator_ctm, correlation_length_ctm
 export validate_ctm_sweep, write_ctm_validation_csv
 
 function _positive_thread_count(value::Integer, name::AbstractString)
@@ -1024,6 +1025,51 @@ function pxp_energy_density_ctm(
     assert_fresh_pepskit_context(psi, ctx)
     total = _expectation(ctx, _cached_pxp_energy_operator(psi, ctx))
     return total / length(psi.unitcell.reps)
+end
+
+"""
+    correlator_ctm(psi, O1, O2, c1, c2, ctx)
+
+Two-point correlator ⟨O1_{c1} O2_{c2}⟩ via PEPSKit's `correlator`, normalized
+by the network norm. `O1` and `O2` are dense `2×2` single-site operators in
+the physical basis `1 = :up`/Rydberg, `2 = :down`/vacancy. `c1` and `c2` must
+be horizontally or vertically aligned (PEPSKit's `correlator` does not
+support diagonal strings).
+
+Returns `ComplexF64`; the caller is responsible for taking `real` when the
+operator is Hermitian.
+"""
+function correlator_ctm(
+    psi::SquareIPEPSState,
+    O1::AbstractMatrix,
+    O2::AbstractMatrix,
+    c1::SquareCoord,
+    c2::SquareCoord,
+    ctx::PEPSKitMeasurementContext,
+)::ComplexF64
+    assert_fresh_pepskit_context(psi, ctx)
+    size(O1) == (2, 2) || throw(ArgumentError("O1 must be a 2x2 single-site operator"))
+    size(O2) == (2, 2) || throw(ArgumentError("O2 must be a 2x2 single-site operator"))
+    op = _dense_operator_tensor_map(O1, 1) ⊗ _dense_operator_tensor_map(O2, 1)
+    i = _squarecoord_to_cartesianindex(psi.unitcell, c1)
+    j = _squarecoord_to_cartesianindex(psi.unitcell, c2)
+    i == j && throw(ArgumentError("c1 and c2 must be distinct sites"))
+    return ComplexF64(PEPSKit.correlator(ctx.peps, op, i, j, ctx.env))
+end
+
+"""
+    correlation_length_ctm(ctx; num_vals=2)
+
+Return `(ξ_h, ξ_v, λ_h, λ_v)` for the cached CTMRG environment, where `ξ_*`
+are transfer-matrix correlation lengths along each lattice axis (one per
+row/column) and `λ_*` are the corresponding normalized transfer-matrix
+spectra. Thin wrapper around `PEPSKit.correlation_length`.
+"""
+function correlation_length_ctm(
+    ctx::PEPSKitMeasurementContext;
+    num_vals::Integer = 2,
+)
+    return PEPSKit.correlation_length(ctx.peps, ctx.env; num_vals)
 end
 
 function _density_ctm(

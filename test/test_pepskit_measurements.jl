@@ -541,5 +541,42 @@ end
             @test pxp_energy_density_ctm(psi, ctx) ≈
                   _ctm_star_energy_average(psi, ctx) atol = 1e-8 rtol = 1e-6
         end
+
+        @testset "correlator at distance 1 same row matches NN density" begin
+            cell = PeriodicSquareUnitCell(5, 5)
+            psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+            evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, 1, 1e-12))
+
+            params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
+            ctx = pepskit_ctmrg_context(psi; params)
+
+            n = ComplexF64[1 0; 0 0]
+            c = first(psi.unitcell.reps)
+            c_right = SquareCoord(c.x + 1, c.y)
+
+            corr = correlator_ctm(psi, n, n, c, c_right, ctx)
+            nn = nearest_neighbor_density_ctm(psi, c, :right, ctx)
+
+            @test isapprox(real(corr), nn; atol = 1e-8, rtol = 1e-6)
+            @test imag(corr) ≈ 0 atol = 1e-8
+        end
+
+        @testset "correlation_length_ctm returns finite spectrum" begin
+            cell = PeriodicSquareUnitCell(5, 5)
+            psi = product_square_ipeps(cell; state = :down, maxdim = 1)
+            evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, 1, 1e-12))
+
+            params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
+            ctx = pepskit_ctmrg_context(psi; params)
+
+            xi_h, xi_v, lambda_h, lambda_v = correlation_length_ctm(ctx)
+
+            @test length(xi_h) == cell.Ly
+            @test length(xi_v) == cell.Lx
+            @test all(isfinite, xi_h)
+            @test all(isfinite, xi_v)
+            @test length(lambda_h) == cell.Ly
+            @test length(lambda_v) == cell.Lx
+        end
     end
 end

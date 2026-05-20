@@ -122,6 +122,7 @@ using .PEPSKitMeasurements: to_pepskit_infinitepeps
 using .PEPSKitMeasurements: pepskit_ctmrg_context, local_density_ctm
 using .PEPSKitMeasurements: nearest_neighbor_density_ctm, blockade_violation_ctm
 using .PEPSKitMeasurements: star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
+using .PEPSKitMeasurements: correlator_ctm, correlation_length_ctm
 using .PEPSKitMeasurements: ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
 using .PEPSKitMeasurements: assert_fresh_pepskit_context
 using .CTMTrust: CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
@@ -277,6 +278,7 @@ export configure_ctm_threading!, configure_ctm_threading_from_env!
 export to_pepskit_infinitepeps, pepskit_ctmrg_context
 export local_density_ctm, nearest_neighbor_density_ctm
 export blockade_violation_ctm, star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
+export correlator_ctm, correlation_length_ctm
 export ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
 export assert_fresh_pepskit_context
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
