@@ -517,7 +517,7 @@ end
         @testset "extended short-evolved CTM full-summary smoke test" begin
             cell = PeriodicSquareUnitCell(5, 5)
             psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-            evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, true, 1, 1e-12))
+            evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, 1, 1e-12))
 
             params = PEPSKitCTMRGParams(2, 1e-6, 20, 0)
             summary = measure_ctm(psi; params)
@@ -530,7 +530,7 @@ end
         @testset "extended short-evolved CTM energy equals average star expectations" begin
             cell = PeriodicSquareUnitCell(5, 5)
             psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-            evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, true, 1, 1e-12))
+            evolve!(psi, 0.01; params = TrotterParams(0.01, 1, :real, 1, 1e-12))
 
             # Modest CTMRG settings keep this extended regression practical.
             # The comparison isolates aggregate-vs-local operator behavior with

@@ -1,7 +1,7 @@
 module CTMTrust
 
 using ..PEPSKitMeasurements: CTMRGDiagnostics, CTMObservableSummary, CTMValidationPoint
-using ..Internals: _csv_value
+using ..Internals: _csv_value, _finite_nonnegative, _optional_finite_nonnegative
 
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
 
@@ -45,18 +45,6 @@ const _TRUST_CSV_HEADER = (
     "trust_observed_max_residual",
 )
 
-function _finite_nonnegative(value::Real, label::String)
-    isfinite(value) && value >= 0 || throw(ArgumentError("$label must be finite and nonnegative"))
-    return Float64(value)
-end
-
-function _optional_finite_nonnegative(value::Nothing, label::String)
-    return nothing
-end
-
-function _optional_finite_nonnegative(value::Real, label::String)
-    return _finite_nonnegative(value, label)
-end
 
 """
     CTMTrustPolicy(min_points=2, require_accepted_diagnostics=true,

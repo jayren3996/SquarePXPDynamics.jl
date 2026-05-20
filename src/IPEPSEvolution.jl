@@ -29,11 +29,8 @@ The default `:five_color` schedule applies disjoint star layers. The `:serial`
 schedule applies one unit-cell center per layer in representative order, with
 second order using the corresponding reversed half sweep.
 
-The legacy six-argument PXP constructor
-`TrotterParams(dt, order, evolution, projected, maxdim, cutoff)` returns a
-compatibility wrapper accepted by `evolve!`, `trotter_sequence`, and existing
-PXP orchestration APIs. New model-aware code should keep `TrotterParams`
-model-agnostic and pass an explicit model protocol to `evolve!`.
+`TrotterParams` is model-agnostic. Pass an explicit `protocol` to `evolve!` to
+select the model (PXP, TFIM, etc.); the default is `StaticModel(PXPStarModel(true))`.
 """
 struct TrotterParams
     dt::Float64
@@ -69,56 +66,6 @@ struct TrotterParams
             throw(ArgumentError("schedule must be :five_color or :serial"))
         return new(step, ord, evolution, dim, trunc_cutoff, order_values, schedule)
     end
-end
-
-struct LegacyPXPParams
-    trotter::TrotterParams
-    protocol::StaticModel{PXPStarModel}
-end
-
-"""
-    legacy_trotter_params(params)
-
-Return the model-agnostic [`TrotterParams`](@ref) from either a current
-`TrotterParams` value or the legacy PXP compatibility wrapper returned by the
-old six-argument constructor.
-"""
-legacy_trotter_params(params::TrotterParams) = params
-legacy_trotter_params(params::LegacyPXPParams) = params.trotter
-legacy_trotter_params(params) = throw(
-    ArgumentError("trotter must be a TrotterParams or legacy PXP TrotterParams"),
-)
-legacy_trotter_protocol(params::TrotterParams) = nothing
-legacy_trotter_protocol(params::LegacyPXPParams) = params.protocol
-legacy_trotter_protocol(params) = legacy_trotter_params(params)
-
-function Base.getproperty(params::LegacyPXPParams, name::Symbol)
-    if name === :projected
-        return getfield(getfield(params, :protocol), :model).projected
-    elseif name in (:dt, :order, :evolution, :maxdim, :cutoff, :split_order, :schedule)
-        return getproperty(getfield(params, :trotter), name)
-    else
-        return getfield(params, name)
-    end
-end
-
-function Base.propertynames(params::LegacyPXPParams; private::Bool = false)
-    public = (:dt, :order, :evolution, :maxdim, :cutoff, :split_order, :schedule, :projected)
-    return private ? (public..., :trotter, :protocol) : public
-end
-
-function TrotterParams(
-    dt::Real,
-    order::Integer,
-    evolution::Symbol,
-    projected::Bool,
-    maxdim::Integer,
-    cutoff::Real,
-)
-    return LegacyPXPParams(
-        TrotterParams(dt, order, evolution, maxdim, cutoff),
-        StaticModel(PXPStarModel(projected)),
-    )
 end
 
 function _validate_trotter_split_order(split_order)
@@ -198,9 +145,6 @@ function trotter_sequence(params::TrotterParams)::Vector{Tuple{Int,Float64}}
         throw(ArgumentError("order must be 1 or 2"))
     end
 end
-
-trotter_sequence(params::LegacyPXPParams)::Vector{Tuple{Int,Float64}} =
-    trotter_sequence(params.trotter)
 
 function _nsteps_for_total_time(total_time::Real, params::TrotterParams)
     total = Float64(total_time)
@@ -488,7 +432,7 @@ log = evolve!(psi, 0.02; dt = 0.01, order = 1, maxdim = 1)
 function evolve!(
     psi::SquareIPEPSState,
     total_time::Real;
-    params::Union{TrotterParams,LegacyPXPParams,Nothing} = nothing,
+    params::Union{TrotterParams,Nothing} = nothing,
     protocol::Union{AbstractModelProtocol,Nothing} = nothing,
     dt = nothing,
     order::Integer = 2,
@@ -498,23 +442,13 @@ function evolve!(
     cutoff::Real = 1e-12,
     schedule::Symbol = :five_color,
 )::EvolutionLog
-    actual_params, actual_protocol = if params === nothing
+    actual_params = if params === nothing
         dt === nothing && throw(UndefKeywordError(:dt))
-        (
-            TrotterParams(dt, order, evolution, maxdim, cutoff; schedule = schedule),
-            protocol === nothing ? StaticModel(PXPStarModel(projected)) : protocol,
-        )
-    elseif params isa LegacyPXPParams
-        protocol === nothing || throw(
-            ArgumentError("cannot pass an explicit protocol with legacy PXP TrotterParams"),
-        )
-        (params.trotter, params.protocol)
+        TrotterParams(dt, order, evolution, maxdim, cutoff; schedule = schedule)
     else
-        (
-            params,
-            protocol === nothing ? StaticModel(PXPStarModel(projected)) : protocol,
-        )
+        params
     end
+    actual_protocol = protocol === nothing ? StaticModel(PXPStarModel(projected)) : protocol
     return _evolve_with_params!(psi, total_time, actual_params, actual_protocol)
 end
 

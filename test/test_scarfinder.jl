@@ -1,7 +1,7 @@
 using JSON3
 
 @testset "ScarFinder parameter validation" begin
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.01, trotter, 1, Inf, Inf, Inf, false)
     @test params.trotter == TrotterParams(0.01, 1, :real, 1, 1e-12)
     @test params.target_energy === nothing
@@ -66,12 +66,12 @@ using JSON3
         target_energy = 0.0,
         correction_attempts = -1,
     )
-    @test_throws ArgumentError ScarFinderParams(0.01, "bad", 1, Inf, Inf, Inf, false)
+    @test_throws MethodError ScarFinderParams(0.01, "bad", 1, Inf, Inf, Inf, false)
 end
 
 @testset "ScarFinder zero iterations do not mutate state" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     weights_before = deepcopy(psi.link_weights)
     obs_before = measure_simple(psi)
@@ -89,7 +89,7 @@ end
 
 @testset "ScarFinder one accepted iteration" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     params = ScarFinderParams(0.01, trotter, 1, Inf, Inf, Inf, false)
 
@@ -109,7 +109,7 @@ end
 
 @testset "ScarFinder rejects non-improving simple energy correction" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     params = ScarFinderParams(
         0.0,
@@ -135,7 +135,7 @@ end
 
 @testset "ScarFinder simple energy correction never worsens recorded objective" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     target = -0.1
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     params = ScarFinderParams(
@@ -164,7 +164,7 @@ end
 
 @testset "ScarFinder multiple accepted iterations" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     params = ScarFinderParams(0.01, trotter, 3, Inf, Inf, Inf, false)
 
@@ -179,7 +179,7 @@ end
 
 @testset "ScarFinder deterministic rejection by blockade threshold" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :up, maxdim = 1)
     params = ScarFinderParams(0.0, trotter, 1, Inf, 0.5, Inf, false)
 
@@ -194,7 +194,7 @@ end
 
 @testset "ScarFinder stops on rejection" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :up, maxdim = 1)
     params = ScarFinderParams(0.0, trotter, 5, Inf, 0.5, Inf, true)
 
@@ -207,7 +207,7 @@ end
 
 @testset "ScarFinder continues after rejection when requested" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :up, maxdim = 1)
     params = ScarFinderParams(0.0, trotter, 3, Inf, 0.5, Inf, false)
 
@@ -221,7 +221,7 @@ end
 
 @testset "ScarFinder keyword convenience path" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
 
     result = scarfinder!(psi; projection_time = 0.01, trotter = trotter, iterations = 2)
@@ -230,15 +230,25 @@ end
     @test result.accepted_iterations == 2
 end
 
-@testset "ScarFinder preserves legacy unprojected TrotterParams" begin
+@testset "ScarFinder accepts explicit unprojected PXP protocol" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, false, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :up, maxdim = 1)
-    params = ScarFinderParams(0.01, trotter, 1, Inf, Inf, Inf, false)
+    params = ScarFinderParams(
+        0.01,
+        trotter,
+        1,
+        Inf,
+        Inf,
+        Inf,
+        false;
+        protocol = StaticModel(PXPStarModel(false)),
+    )
 
     result = scarfinder!(psi, params)
 
-    @test params.trotter == TrotterParams(0.01, 1, :real, 1, 1e-12)
+    @test params.trotter == trotter
+    @test params.protocol isa StaticModel
     @test length(result.iterations) == 1
     @test result.iterations[1].evolution.params == params.trotter
     @test isfinite(result.iterations[1].evolution.max_truncerr)
@@ -246,7 +256,7 @@ end
 
 @testset "ScarFinder simple candidate scores rank without CTM" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     params = ScarFinderParams(0.01, trotter, 2, Inf, Inf, Inf, false)
 
@@ -265,7 +275,7 @@ end
 
 @testset "ScarFinder physics objectives score candidates" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
     objective = CompositeObjective(;
@@ -312,7 +322,7 @@ end
 
 @testset "ScarFinder CTM callback is optional and scheduled" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     params = ScarFinderParams(0.0, trotter, 3, Inf, Inf, Inf, false)
     calls = Int[]
@@ -398,7 +408,7 @@ end
     @test trusted_measurement.trust.trusted
 
     empty!(calls)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     scar_params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
     result = scarfinder!(
         psi,
@@ -416,7 +426,7 @@ end
 
 @testset "ScarFinder trusted CTM backend gates ranking" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
     ctm_params = (
         PEPSKitCTMRGParams(2, 1e-5, 4, 0),
@@ -465,7 +475,7 @@ end
 
 @testset "ScarFinder require trusted CTM validates scheduled observations" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
 
     @test_throws ArgumentError scarfinder!(
@@ -485,7 +495,7 @@ end
 
 @testset "ScarFinder untrusted CTM policy rejects iteration" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
     ctm_params = (
         PEPSKitCTMRGParams(2, 1e-5, 4, 0),
@@ -524,7 +534,7 @@ end
 
 @testset "ScarFinder CTM diagnostics are logged and can require trust" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
     diag = CTMRGDiagnostics(4, 1e-8, 10, 10, 1e-9, true, true)
@@ -590,7 +600,7 @@ end
 
 @testset "ScarFinder nullable CTM sort keys put missing values last" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
     params = ScarFinderParams(0.0, trotter, 2, Inf, Inf, Inf, false)
     summaries = Dict(
@@ -628,7 +638,7 @@ end
 
 @testset "ScarFinder iteration logs write CSV and JSON" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
 
     csv_path = tempname() * ".csv"
@@ -663,7 +673,7 @@ end
 
 @testset "ScarFinder candidate store writes auditable metadata" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
     dir = mktempdir()
     store = JSONCandidateStore(dir)
@@ -689,7 +699,7 @@ end
 
 @testset "ScarFinder candidate store keeps simple and CTM scores explicit" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
     dir = mktempdir()
     diag = CTMRGDiagnostics(4, 1e-8, 10, 10, 1e-9, true, true)
@@ -711,7 +721,7 @@ end
 
 @testset "ScarFinder candidate store persists rejection metadata" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.0, trotter, 1, Inf, 0.5, Inf, false)
     dir = mktempdir()
 
@@ -730,7 +740,7 @@ end
 
 @testset "NoCandidateStore writes no candidate files" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.0, trotter, 1, Inf, Inf, Inf, false)
     dir = mktempdir()
 
@@ -745,7 +755,7 @@ end
 
 @testset "ScarFinder candidate store writes one file per iteration" begin
     cell = PeriodicSquareUnitCell(10, 10)
-    trotter = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    trotter = TrotterParams(0.01, 1, :real, 1, 1e-12)
     params = ScarFinderParams(0.0, trotter, 2, Inf, Inf, Inf, false)
     dir = mktempdir()
 

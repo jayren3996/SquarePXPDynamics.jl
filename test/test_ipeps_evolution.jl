@@ -66,11 +66,11 @@ end
         1e-12,
         (:right, :up, :left, :left),
     )
-    @test_throws ArgumentError TrotterParams(0.0, 1, :real, true, 1, 1e-12)
-    @test_throws ArgumentError TrotterParams(0.1, 3, :real, true, 1, 1e-12)
-    @test_throws ArgumentError TrotterParams(0.1, 1, :bad, true, 1, 1e-12)
-    @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 0, 1e-12)
-    @test_throws ArgumentError TrotterParams(0.1, 1, :real, true, 1, -1e-12)
+    @test_throws ArgumentError TrotterParams(0.0, 1, :real, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 3, :real, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :bad, 1, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, 0, 1e-12)
+    @test_throws ArgumentError TrotterParams(0.1, 1, :real, 1, -1e-12)
 end
 
 @testset "Trotter schedules" begin
@@ -342,45 +342,13 @@ end
     @test log_norm(explicit) ≈ log_norm(legacy) atol = 1e-12
 end
 
-@testset "legacy TrotterParams constructor remains accepted" begin
-    old = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
-    current = TrotterParams(0.01, 1, :real, 1, 1e-12)
-    @test trotter_sequence(old) == trotter_sequence(current)
-    @test old.dt == current.dt
-    @test old.order == current.order
-    @test old.evolution == current.evolution
-    @test old.projected === true
-
+@testset "evolve with unprojected PXP protocol" begin
     cell = PeriodicSquareUnitCell(10, 10)
+    params = TrotterParams(0.01, 1, :real, 1, 1e-12)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-    log = evolve!(psi, 0.01; params = old)
-    @test log.params == current
+    log = evolve!(psi, 0.01; params = params, protocol = StaticModel(PXPStarModel(false)))
     @test log.nsteps == 1
+    @test log.model_metadata.model_type == "PXPStarModel"
+    @test log.model_metadata.pxp_projected === false
     @test isfinite(log.max_truncerr)
-
-    explicit = product_square_ipeps(cell; state = :down, maxdim = 1)
-    @test_throws ArgumentError evolve!(
-        explicit,
-        0.01;
-        params = old,
-        protocol = StaticModel(PXPStarModel(true)),
-    )
-
-    old_unprojected = TrotterParams(0.01, 1, :real, false, 1, 1e-12)
-    @test old_unprojected.projected === false
-    legacy_unprojected = product_square_ipeps(cell; state = :down, maxdim = 1)
-    explicit_unprojected = product_square_ipeps(cell; state = :down, maxdim = 1)
-    legacy_unprojected_log = evolve!(legacy_unprojected, 0.01; params = old_unprojected)
-    explicit_unprojected_log = evolve!(
-        explicit_unprojected,
-        0.01;
-        params = current,
-        protocol = StaticModel(PXPStarModel(false)),
-    )
-    @test legacy_unprojected_log.max_truncerr ≈ explicit_unprojected_log.max_truncerr atol =
-        1e-12
-    @test legacy_unprojected_log.model_metadata.model_type == "PXPStarModel"
-    @test legacy_unprojected_log.model_metadata.pxp_projected === false
-    @test explicit_unprojected_log.model_metadata.pxp_projected === false
-    @test log_norm(legacy_unprojected) ≈ log_norm(explicit_unprojected) atol = 1e-12
 end

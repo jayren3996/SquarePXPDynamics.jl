@@ -3,15 +3,19 @@ module ScarFinder
 using JSON3
 
 using ..SquareIPEPS: SquareIPEPSState, copy_state, state_version, log_norm
-using ..IPEPSEvolution:
-    TrotterParams, EvolutionLog, legacy_trotter_params, legacy_trotter_protocol, evolve!
+using ..IPEPSEvolution: TrotterParams, EvolutionLog, evolve!
 using ..StarModels: AbstractModelProtocol
 using ..Observables: SimpleObservableSummary, measure_simple
 using ..PXPValidation: TrustedCTMMeasurement, measure_ctm_trusted
 using ..CTMTrust: CTMTrustPolicy
 using ..PEPSKitMeasurements: CTMObservableSummary, CTMRGDiagnostics
 using ..PEPSKitMeasurements: PEPSKitCTMRGParams, measure_ctm
-using ..Internals: _csv_value
+using ..Internals:
+    _csv_value,
+    _finite_nonnegative,
+    _nonnegative_float,
+    _nonnegative_int,
+    _optional_finite_float
 
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
@@ -58,13 +62,14 @@ struct ScarFinderParams
 
     function ScarFinderParams(
         projection_time::Real,
-        trotter,
+        trotter::TrotterParams,
         iterations::Integer,
         max_truncerr::Real,
         max_blockade_violation::Real,
         max_bond_entropy::Real,
         stop_on_reject::Bool,
         ;
+        protocol::Union{Nothing,AbstractModelProtocol} = nothing,
         target_energy::Union{Nothing,Real} = nothing,
         correction_time::Real = 0,
         correction_attempts::Integer = 0,
@@ -79,13 +84,13 @@ struct ScarFinderParams
             _nonnegative_float(max_blockade_violation, "max_blockade_violation")
         entropy_limit = _nonnegative_float(max_bond_entropy, "max_bond_entropy")
         energy_target = _optional_finite_float(target_energy, "target_energy")
-        correction_step = _finite_nonnegative_float(correction_time, "correction_time")
+        correction_step = _finite_nonnegative(correction_time, "correction_time")
         correction_count = _nonnegative_int(correction_attempts, "correction_attempts")
 
         return new(
             time,
-            legacy_trotter_params(trotter),
-            legacy_trotter_protocol(trotter),
+            trotter,
+            protocol,
             niterations,
             truncerr_limit,
             blockade_limit,
@@ -402,27 +407,6 @@ struct ScarFinderResult
     iterations::Vector{ScarFinderIteration}
     accepted_iterations::Int
     rejected_iterations::Int
-end
-
-function _nonnegative_float(value::Real, name::String)
-    converted = Float64(value)
-    converted >= 0 || throw(ArgumentError("$name must be nonnegative"))
-    return converted
-end
-
-function _finite_nonnegative_float(value::Real, name::String)
-    converted = Float64(value)
-    isfinite(converted) || throw(ArgumentError("$name must be finite"))
-    converted >= 0 || throw(ArgumentError("$name must be nonnegative"))
-    return converted
-end
-
-_optional_finite_float(::Nothing, name::String) = nothing
-
-function _optional_finite_float(value::Real, name::String)
-    converted = Float64(value)
-    isfinite(converted) || throw(ArgumentError("$name must be finite"))
-    return converted
 end
 
 function _finite_summary(obs::SimpleObservableSummary)
@@ -838,12 +822,6 @@ end
 _count_accepted(iterations) = count(iteration -> iteration.accepted, iterations)
 _count_rejected(iterations) = count(iteration -> !iteration.accepted, iterations)
 
-function _nonnegative_int(value::Integer, name::String)
-    converted = Int(value)
-    converted >= 0 || throw(ArgumentError("$name must be nonnegative"))
-    return converted
-end
-
 function _should_measure_ctm(iteration::Int, total::Int, ctm_every::Int, ctm_at_end::Bool)
     return (ctm_every > 0 && iteration % ctm_every == 0) ||
            (ctm_at_end && iteration == total)
@@ -1253,63 +1231,12 @@ function _write_csv_log(io, result::ScarFinderResult)
     end
 end
 
-function _json_escape(value::AbstractString)
-    escaped = replace(value, "\\" => "\\\\")
-    escaped = replace(escaped, "\"" => "\\\"")
-    escaped = replace(escaped, "\n" => "\\n")
-    escaped = replace(escaped, "\r" => "\\r")
-    return escaped
-end
-
-_json_value(value::Nothing) = "null"
-_json_value(value::Bool) = value ? "true" : "false"
-_json_value(value::Real) = isfinite(value) ? string(value) : "\"$(value)\""
-_json_value(value::Symbol) = _json_value(String(value))
-_json_value(value::AbstractString) = "\"$(_json_escape(value))\""
-
-function _score_json(score::ScarFinderCandidateScore)
-    fields = (
-        :iteration,
-        :accepted,
-        :reject_reason,
-        :diagnostics,
-        :density,
-        :density_even,
-        :density_odd,
-        :blockade_violation,
-        :pxp_energy_density,
-        :mean_bond_entropy,
-        :max_bond_entropy,
-        :max_truncerr,
-        :score,
-        :objective_name,
-        :objective_parameters,
-        :revival_strength,
-        :finite_chi_drift,
-        :energy_variance_proxy,
-        :log_norm_before,
-        :log_norm_after,
-        :log_norm_delta,
-        :ctm_chi,
-        :ctm_tol,
-        :ctm_maxiter,
-        :ctm_iterations,
-        :ctm_residual,
-        :ctm_converged,
-        :ctm_accepted,
-        :ctm_trusted,
-        :ctm_trust_reason,
-        :correction_accepted,
-        :correction_energy_before,
-        :correction_energy_after,
-    )
-    pairs = ["\"$(field)\":$(_json_value(getfield(score, field)))" for field in fields]
-    return "{" * join(pairs, ",") * "}"
-end
+import StructTypes
+StructTypes.StructType(::Type{ScarFinderCandidateScore}) = StructTypes.Struct()
 
 function _write_json_log(io, result::ScarFinderResult)
-    rows = _score_json.(_score_rows(result))
-    println(io, "{\"iterations\":[" * join(rows, ",") * "]}")
+    JSON3.write(io, (; iterations = _score_rows(result)))
+    println(io)
 end
 
 """

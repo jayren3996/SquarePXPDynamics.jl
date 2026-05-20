@@ -93,7 +93,7 @@ end
 @testset "measure simple after short evolution" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 1)
-    params = TrotterParams(0.01, 1, :real, true, 1, 1e-12)
+    params = TrotterParams(0.01, 1, :real, 1, 1e-12)
     evolve!(psi, 0.01; params = params)
 
     summary = measure_simple(psi)
@@ -117,7 +117,7 @@ end
 @testset "simple observables finite for D=2 short evolution" begin
     cell = PeriodicSquareUnitCell(10, 10)
     psi = product_square_ipeps(cell; state = :down, maxdim = 2)
-    params = TrotterParams(0.01, 1, :real, true, 2, 1e-12)
+    params = TrotterParams(0.01, 1, :real, 2, 1e-12)
     evolve!(psi, 0.01; params = params)
 
     summary = measure_simple(psi)
