@@ -678,6 +678,39 @@ function _pepskit_pxp_energy_operator(cell::PeriodicSquareUnitCell)
     return PEPSKit.LocalOperator(_physical_lattice(cell), terms...)
 end
 
+function _sublattice_reps(cell::PeriodicSquareUnitCell, sublattice)
+    sublattice === nothing && return cell.reps
+    sublattice === :even && return [c for c in cell.reps if iseven(c.x + c.y)]
+    sublattice === :odd && return [c for c in cell.reps if isodd(c.x + c.y)]
+    throw(ArgumentError("sublattice must be nothing, :even, or :odd"))
+end
+
+function _pepskit_density_sum_operator(
+    cell::PeriodicSquareUnitCell;
+    sublattice = nothing,
+)
+    n = ComplexF64[1 0; 0 0]
+    op = _dense_operator_tensor_map(n, 1)
+    reps = _sublattice_reps(cell, sublattice)
+    isempty(reps) && throw(ArgumentError("selected sublattice is empty"))
+    terms = [(_squarecoord_to_cartesianindex(cell, c),) => op for c in reps]
+    return PEPSKit.LocalOperator(_physical_lattice(cell), terms...)
+end
+
+function _pepskit_blockade_sum_operator(cell::PeriodicSquareUnitCell)
+    n = ComplexF64[1 0; 0 0]
+    op = _dense_operator_tensor_map(kron(n, n), 2)
+    terms = Pair{NTuple{2,CartesianIndex{2}},typeof(op)}[]
+    for c in cell.reps, dir in (:right, :up)
+        sites = (
+            _squarecoord_to_cartesianindex(cell, c),
+            _local_neighbor_cartesianindex(cell, c, dir),
+        )
+        push!(terms, sites => op)
+    end
+    return PEPSKit.LocalOperator(_physical_lattice(cell), terms...)
+end
+
 function _require_dense_index(index::Index, label)
     ITensors.hasqns(index) && throw(
         ArgumentError(
@@ -846,6 +879,29 @@ function _cached_pxp_energy_operator(
     end
 end
 
+function _cached_density_sum_operator(
+    psi::SquareIPEPSState,
+    ctx::PEPSKitMeasurementContext;
+    sublattice = nothing,
+)
+    cell = psi.unitcell
+    key = (:density_sum, cell.Lx, cell.Ly, sublattice)
+    return get!(ctx.operator_cache, key) do
+        _pepskit_density_sum_operator(cell; sublattice)
+    end
+end
+
+function _cached_blockade_sum_operator(
+    psi::SquareIPEPSState,
+    ctx::PEPSKitMeasurementContext,
+)
+    cell = psi.unitcell
+    key = (:blockade_sum, cell.Lx, cell.Ly)
+    return get!(ctx.operator_cache, key) do
+        _pepskit_blockade_sum_operator(cell)
+    end
+end
+
 function _cached_density_operator(
     psi::SquareIPEPSState,
     c::SquareCoord,
@@ -936,19 +992,19 @@ end
     blockade_violation_ctm(psi, ctx)::Float64
 
 Return the average nearest-neighbor blockade violation over canonical
-periodic `:right` and `:up` bonds using PEPSKit CTMRG.
+periodic `:right` and `:up` bonds using PEPSKit CTMRG. Implemented as one
+batched `LocalOperator` summing `<n_c n_neighbor>` over all
+`(rep, :right or :up)` pairs, so each call is a single `expectation_value`
+contraction instead of `2 * length(reps)`.
 """
 function blockade_violation_ctm(
     psi::SquareIPEPSState,
     ctx::PEPSKitMeasurementContext,
 )::Float64
     assert_fresh_pepskit_context(psi, ctx)
-    total = 0.0
-    count = 0
-    for c in psi.unitcell.reps, dir in (:right, :up)
-        total += nearest_neighbor_density_ctm(psi, c, dir, ctx)
-        count += 1
-    end
+    op = _cached_blockade_sum_operator(psi, ctx)
+    total = _expectation(ctx, op)
+    count = 2 * length(psi.unitcell.reps)
     return total / count
 end
 
@@ -975,17 +1031,11 @@ function _density_ctm(
     ctx::PEPSKitMeasurementContext;
     sublattice = nothing,
 )
-    reps = if sublattice === nothing
-        psi.unitcell.reps
-    elseif sublattice === :even
-        [c for c in psi.unitcell.reps if iseven(c.x + c.y)]
-    elseif sublattice === :odd
-        [c for c in psi.unitcell.reps if isodd(c.x + c.y)]
-    else
-        throw(ArgumentError("sublattice must be nothing, :even, or :odd"))
-    end
+    assert_fresh_pepskit_context(psi, ctx)
+    reps = _sublattice_reps(psi.unitcell, sublattice)
     isempty(reps) && throw(ArgumentError("selected sublattice is empty"))
-    return sum(local_density_ctm(psi, c, ctx) for c in reps) / length(reps)
+    op = _cached_density_sum_operator(psi, ctx; sublattice)
+    return _expectation(ctx, op) / length(reps)
 end
 
 """
