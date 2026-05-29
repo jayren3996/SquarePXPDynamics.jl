@@ -116,8 +116,11 @@ function PXPEEDBenchmarkConfig(
     m_init_i >= 1 || throw(ArgumentError("m_init must be at least 1"))
     m_max_i >= m_init_i || throw(ArgumentError("m_max must be at least m_init"))
     extend_i >= 1 || throw(ArgumentError("extend_step must be at least 1"))
-    initial_state in (:down, :all_down) ||
-        throw(ArgumentError("supported PXP ED initial states are :down and :all_down"))
+    initial_state in (:down, :all_down, :neel, :neel_even, :neel_odd) || throw(
+        ArgumentError(
+            "supported PXP ED initial states are :down, :all_down, :neel, :neel_even, :neel_odd",
+        ),
+    )
     return PXPEEDBenchmarkConfig(
         n_int,
         total,
@@ -480,14 +483,31 @@ end
     pxp_ed_initial_state(basis; state = :down)
 
 Return a normalized coordinate vector for a symmetry-compatible benchmark
-initial state. Currently supported states are `:down` and `:all_down`.
+initial state. Supported states are `:down` / `:all_down` (every site in
+`|down>`) and `:neel` / `:neel_even` / `:neel_odd` (Z_2 checkerboard with the
+nominated sublattice excited; both even and odd orientations are interchanged
+by single-site translation, so in the fully symmetric basis they coincide and
+the returned vector represents `(|Neel_even> + |Neel_odd>)/sqrt(2)`).
 """
 function pxp_ed_initial_state(basis::PXPSquareSpaceGroupBasis; state::Symbol = :down)
-    state === :down || state === :all_down ||
-        throw(ArgumentError("supported PXP ED initial states are :down and :all_down"))
-    dgt = ones(Int, length(basis.dgt))
+    state in (:down, :all_down, :neel, :neel_even, :neel_odd) ||
+        throw(ArgumentError("supported PXP ED initial states are :down, :all_down, :neel, :neel_even, :neel_odd"))
+    n = basis.n
+    nsites = n * n
+    if state === :down || state === :all_down
+        dgt = ones(Int, nsites)
+    else
+        excited_on_even = (state === :neel_odd) ? false : true
+        dgt = Vector{Int}(undef, nsites)
+        for y = 0:(n - 1), x = 0:(n - 1)
+            even = iseven(x + y)
+            excited = excited_on_even ? even : !even
+            # digit 0 == |up> (excited), digit 1 == |down>
+            dgt[_site_index(n, x, y)] = excited ? 0 : 1
+        end
+    end
     coeff, pos = EDKit.index(basis, dgt)
-    iszero(coeff) && throw(ArgumentError("all-down state is not present in the supplied basis"))
+    iszero(coeff) && throw(ArgumentError("initial state $state is not present in the supplied basis"))
     psi = zeros(ComplexF64, size(basis, 1))
     psi[pos] = 1
     return psi
