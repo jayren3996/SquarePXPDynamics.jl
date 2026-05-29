@@ -388,3 +388,71 @@ end
 @testset "CTM trust malformed inputs throw" begin
     @test_throws ArgumentError assess_ctm_trust(Any["not a point"])
 end
+
+@testset "tight_ctm_trust_policy is stricter than the default" begin
+    default_policy = CTMTrustPolicy()
+    tight_policy = tight_ctm_trust_policy()
+
+    @test tight_policy.min_points >= default_policy.min_points
+    @test tight_policy.max_density_delta < default_policy.max_density_delta
+    @test tight_policy.max_blockade_delta < default_policy.max_blockade_delta
+    @test tight_policy.max_energy_delta < default_policy.max_energy_delta
+    @test tight_policy.max_residual !== nothing
+    @test tight_policy.require_accepted_diagnostics === true
+end
+
+@testset "calibrated_ctm_trust_policy derives thresholds from observed drift" begin
+    points = [
+        _trust_point_test(chi = 8, tol = 1e-8, density = 1.0e-3, blockade = 1.0e-5, energy = 1.0e-3),
+        _trust_point_test(chi = 16, tol = 1e-8, density = 1.0e-3 + 2.0e-5, blockade = 1.0e-5 + 4.0e-7, energy = 1.0e-3 + 2.0e-5),
+        _trust_point_test(chi = 32, tol = 1e-8, density = 1.0e-3 + 2.5e-5, blockade = 1.0e-5 + 5.0e-7, energy = 1.0e-3 + 2.5e-5),
+    ]
+
+    policy = calibrated_ctm_trust_policy(points; safety = 3.0, floor = 1e-9)
+    @test policy.min_points == 2
+    @test policy.require_accepted_diagnostics === true
+    @test policy.max_density_delta ≈ 3.0 * 2.0e-5 rtol = 1e-9
+    @test policy.max_blockade_delta ≈ 3.0 * 4.0e-7 rtol = 1e-9
+    @test policy.max_energy_delta ≈ 3.0 * 2.0e-5 rtol = 1e-9
+    @test policy.max_residual === nothing
+
+    assessment = assess_ctm_trust(points; policy)
+    @test assessment.trusted === true
+    @test assessment.reason === :trusted
+end
+
+@testset "calibrated_ctm_trust_policy honors the safety floor" begin
+    points = [
+        _trust_point_test(chi = 8, tol = 1e-8, density = 0.5, blockade = 0.0, energy = 0.5),
+        _trust_point_test(chi = 16, tol = 1e-8, density = 0.5, blockade = 0.0, energy = 0.5),
+    ]
+    policy = calibrated_ctm_trust_policy(points; floor = 1.0e-6)
+    @test policy.max_density_delta == 1.0e-6
+    @test policy.max_blockade_delta == 1.0e-6
+    @test policy.max_energy_delta == 1.0e-6
+end
+
+@testset "calibrated_ctm_trust_policy validates inputs" begin
+    single = [
+        _trust_point_test(chi = 8, tol = 1e-8, density = 0.0, blockade = 0.0, energy = 0.0),
+    ]
+    @test_throws ArgumentError calibrated_ctm_trust_policy(single)
+    points = [
+        _trust_point_test(chi = 8, tol = 1e-8, density = 0.0, blockade = 0.0, energy = 0.0),
+        _trust_point_test(chi = 16, tol = 1e-8, density = 0.0, blockade = 0.0, energy = 0.0),
+    ]
+    @test_throws ArgumentError calibrated_ctm_trust_policy(points; safety = 0.0)
+    @test_throws ArgumentError calibrated_ctm_trust_policy(points; floor = -1.0)
+end
+
+@testset "calibrated_ctm_trust_policy accepts CTMObservableSummary windows" begin
+    diag = _trust_diag_test(8)
+    summaries = [
+        CTMObservableSummary(0.10, 0.10, 0.10, 1.0e-5, 0.10, diag),
+        CTMObservableSummary(0.10001, 0.10001, 0.10001, 1.1e-5, 0.10001, diag),
+    ]
+    policy = calibrated_ctm_trust_policy(summaries; safety = 2.0, floor = 1.0e-12)
+    @test policy.max_density_delta ≈ 2.0e-5 rtol = 1e-9
+    @test policy.max_blockade_delta ≈ 2.0e-6 rtol = 1e-9
+    @test policy.max_energy_delta ≈ 2.0e-5 rtol = 1e-9
+end

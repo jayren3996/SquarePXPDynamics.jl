@@ -126,8 +126,15 @@ bond-environment gauge conditioning.
 ## Not Yet Shipped
 
 - CTM-aware/full-update evolution.
-- Full physics audit reports across `dt`, `D`, `chi`, cutoff, unit cell, and
-  update scheme before publication-quality ScarFinder claims.
+- Calibrated CTM trust thresholds for production audits (the
+  `tight_ctm_trust_policy()` and `calibrated_ctm_trust_policy(...)`
+  factories ship as of 2026-05-26; the numerical thresholds adopted as
+  per-`D` defaults still depend on the first production calibration run,
+  documented in `docs/superpowers/notes/2026-05-26-ctm-trust-calibration.md`).
+- Published acceptance verdict for the first audit campaign (the harness,
+  driver script, and threshold framework ship; the campaign result lives
+  in `docs/superpowers/notes/2026-05-26-scarfinder-acceptance.md` once
+  populated).
 
 ## Minimal Example
 
@@ -347,8 +354,23 @@ result = scarfinder!(
 )
 ```
 
-`JSONCandidateStore` writes metadata and score records for auditability. It
-does not yet persist full tensor snapshots.
+`JSONCandidateStore` writes metadata and score records for auditability.
+`JLD2CandidateStore(directory)` also writes a JLD2 tensor snapshot per
+iteration so candidates can be exactly reloaded later via
+`load_square_ipeps_snapshot(path)`. Both stores share the same JSON metadata
+layout.
+
+### ScarFinder audit harness
+
+`run_scarfinder_audit(config; objective)` runs ScarFinder on a
+`(dt, D, cutoff)` and optional `chi` grid, captures per-row best
+candidates and trusted-CTM counts, and reports a cross-row stability
+summary (`best_iteration_agreement`, `top_k_jaccard_min`,
+`score_cv`). See `scripts/run_scarfinder_audit.jl` for the driver and
+`docs/superpowers/notes/2026-05-26-scarfinder-acceptance.md` for the
+acceptance-threshold framework. The companion CTM calibration script is
+`scripts/run_ctm_chi_sensitivity.jl`; the threading recipe is
+`docs/superpowers/notes/2026-05-26-ctm-throughput-recipe.md`.
 
 For coarse error-budget artifacts, run:
 

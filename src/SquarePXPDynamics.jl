@@ -31,7 +31,10 @@ include("FiniteTFIMReference.jl")
 include("FiniteMPSTFIMReference.jl")
 include("FinitePXPEEDBenchmark.jl")
 include("PXPValidation.jl")
+include("CandidateSnapshots.jl")
+include("IPEPSCompression.jl")
 include("ScarFinder.jl")
+include("ScarFinderAudit.jl")
 
 using .SpinOps:
     pauli_x,
@@ -124,8 +127,10 @@ using .PEPSKitMeasurements: nearest_neighbor_density_ctm, blockade_violation_ctm
 using .PEPSKitMeasurements: star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
 using .PEPSKitMeasurements: correlator_ctm, correlation_length_ctm
 using .PEPSKitMeasurements: ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
+using .PEPSKitMeasurements: ctm_chi_sensitivity_sweep
 using .PEPSKitMeasurements: assert_fresh_pepskit_context
 using .CTMTrust: CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
+using .CTMTrust: tight_ctm_trust_policy, calibrated_ctm_trust_policy
 using .CTMGaugeReadinessModule:
     CTMGaugePolicy,
     CTMBondNormDiagnostic,
@@ -210,11 +215,19 @@ using .PXPValidation:
     run_pxp_larger_d_benchmark,
     write_pxp_larger_d_benchmark_json,
     write_pxp_larger_d_benchmark_csv
+using .CandidateSnapshots:
+    SQUARE_IPEPS_SNAPSHOT_FORMAT_VERSION,
+    write_square_ipeps_snapshot,
+    load_square_ipeps_snapshot
+using .IPEPSCompression:
+    IPEPSCompressionInfo,
+    compress_to_target_maxdim!
 using .ScarFinder:
     ScarFinderParams,
     ScarFinderCandidateScore,
     ScarFinderIteration,
     ScarFinderResult,
+    ScarFinderCompressionInfo,
     MeasurementBackend,
     SimpleBackend,
     TrustedCTMBackend,
@@ -222,6 +235,7 @@ using .ScarFinder:
     CandidateStore,
     NoCandidateStore,
     JSONCandidateStore,
+    JLD2CandidateStore,
     ScarFinderObjective,
     RevivalObjective,
     TargetEnergyObjective,
@@ -230,6 +244,14 @@ using .ScarFinder:
     rank_scarfinder_candidates,
     write_scarfinder_log,
     scarfinder!
+using .ScarFinderAudit:
+    ScarFinderAuditConfig,
+    ScarFinderAuditRow,
+    ScarFinderAuditStability,
+    ScarFinderAuditReport,
+    run_scarfinder_audit,
+    write_scarfinder_audit_json,
+    write_scarfinder_audit_csv
 
 export pauli_x, pauli_y, pauli_z, identity2, projector_up, projector_down
 export kron_all, embed_one_site
@@ -280,8 +302,10 @@ export local_density_ctm, nearest_neighbor_density_ctm
 export blockade_violation_ctm, star_expectation_ctm, pxp_energy_density_ctm, measure_ctm
 export correlator_ctm, correlation_length_ctm
 export ctm_diagnostics, validate_ctm_sweep, write_ctm_validation_csv
+export ctm_chi_sensitivity_sweep
 export assert_fresh_pepskit_context
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
+export tight_ctm_trust_policy, calibrated_ctm_trust_policy
 export CTMGaugePolicy, CTMBondNormDiagnostic, CTMGaugeReadiness, BondGaugeFixInfo
 export ctm_bond_norm_matrix, ctm_bond_norm_diagnostic
 export all_ctm_bond_norm_diagnostics, ctm_ready_for_gauge_updates
@@ -317,10 +341,17 @@ export PXPLargerDBenchmarkRun, PXPLargerDBenchmarkReport
 export run_pxp_larger_d_benchmark
 export write_pxp_larger_d_benchmark_json, write_pxp_larger_d_benchmark_csv
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
+export ScarFinderCompressionInfo
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
-export CandidateStore, NoCandidateStore, JSONCandidateStore
+export CandidateStore, NoCandidateStore, JSONCandidateStore, JLD2CandidateStore
+export SQUARE_IPEPS_SNAPSHOT_FORMAT_VERSION
+export write_square_ipeps_snapshot, load_square_ipeps_snapshot
+export IPEPSCompressionInfo, compress_to_target_maxdim!
 export ScarFinderObjective, RevivalObjective, TargetEnergyObjective
 export LowVarianceObjective, CompositeObjective
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
+export ScarFinderAuditConfig, ScarFinderAuditRow, ScarFinderAuditStability
+export ScarFinderAuditReport
+export run_scarfinder_audit, write_scarfinder_audit_json, write_scarfinder_audit_csv
 
 end

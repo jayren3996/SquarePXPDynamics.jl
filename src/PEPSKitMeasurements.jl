@@ -29,6 +29,7 @@ export local_density_ctm, nearest_neighbor_density_ctm, blockade_violation_ctm
 export star_expectation_ctm, pxp_energy_density_ctm, measure_ctm, ctm_diagnostics
 export correlator_ctm, correlation_length_ctm
 export validate_ctm_sweep, write_ctm_validation_csv
+export ctm_chi_sensitivity_sweep
 
 function _positive_thread_count(value::Integer, name::AbstractString)
     count = Int(value)
@@ -1141,6 +1142,49 @@ function validate_ctm_sweep(
     return [
         CTMValidationPoint(p, reference, measure(psi; params = p)) for p in param_values
     ]
+end
+
+"""
+    ctm_chi_sensitivity_sweep(psi; chi_values, tol = 1e-8, maxiter = 100,
+                              verbosity = 0, seed = 0)::Vector{CTMValidationPoint}
+
+Run [`measure_ctm`](@ref) at each `chi` in `chi_values` (must be strictly
+increasing positive integers) on the same `psi`, and return one
+[`CTMValidationPoint`](@ref) per `chi`. The lowest-`chi` measurement is used as
+the reference for every point, so each point's `delta_*` fields record drift
+relative to the smallest environment. This is intended for finite-`chi`
+sensitivity audits feeding [`assess_ctm_trust`](@ref); it does not compare
+against simple/local diagnostics.
+"""
+function ctm_chi_sensitivity_sweep(
+    psi::SquareIPEPSState;
+    chi_values,
+    tol::Real = 1e-8,
+    maxiter::Integer = 100,
+    verbosity::Integer = 0,
+    seed::Union{Nothing,Integer} = 0,
+)::Vector{CTMValidationPoint}
+    chi_collected = collect(Int, chi_values)
+    length(chi_collected) >= 1 ||
+        throw(ArgumentError("chi_values must contain at least one value"))
+    for idx in 2:length(chi_collected)
+        chi_collected[idx] > chi_collected[idx - 1] ||
+            throw(ArgumentError("chi_values must be strictly increasing"))
+    end
+
+    measurements = CTMObservableSummary[]
+    for chi in chi_collected
+        params = PEPSKitCTMRGParams(chi, tol, maxiter, verbosity; seed)
+        push!(measurements, measure_ctm(psi; params))
+    end
+
+    reference = measurements[1]
+    points = CTMValidationPoint[]
+    for (idx, chi) in pairs(chi_collected)
+        params = PEPSKitCTMRGParams(chi, tol, maxiter, verbosity; seed)
+        push!(points, CTMValidationPoint(params, reference, measurements[idx]))
+    end
+    return points
 end
 
 function _diagnostic_field(::Nothing, ::Symbol)

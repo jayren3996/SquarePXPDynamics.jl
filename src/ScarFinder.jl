@@ -2,6 +2,8 @@ module ScarFinder
 
 using JSON3
 
+using ..CandidateSnapshots: write_square_ipeps_snapshot
+using ..IPEPSCompression: IPEPSCompressionInfo, compress_to_target_maxdim!
 using ..SquareIPEPS: SquareIPEPSState, copy_state, state_version, log_norm
 using ..IPEPSEvolution: TrotterParams, EvolutionLog, evolve!
 using ..StarModels: AbstractModelProtocol
@@ -18,8 +20,9 @@ using ..Internals:
     _optional_finite_float
 
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
+export ScarFinderCompressionInfo
 export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
-export CandidateStore, NoCandidateStore, JSONCandidateStore
+export CandidateStore, NoCandidateStore, JSONCandidateStore, JLD2CandidateStore
 export ScarFinderObjective, RevivalObjective, TargetEnergyObjective
 export LowVarianceObjective, CompositeObjective
 export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
@@ -59,6 +62,8 @@ struct ScarFinderParams
     target_energy::Union{Nothing,Float64}
     correction_time::Float64
     correction_attempts::Int
+    target_maxdim::Union{Nothing,Int}
+    compression_cutoff::Float64
 
     function ScarFinderParams(
         projection_time::Real,
@@ -73,6 +78,8 @@ struct ScarFinderParams
         target_energy::Union{Nothing,Real} = nothing,
         correction_time::Real = 0,
         correction_attempts::Integer = 0,
+        target_maxdim::Union{Nothing,Integer} = nothing,
+        compression_cutoff::Real = 1e-12,
     )
         time = Float64(projection_time)
         isfinite(time) || throw(ArgumentError("projection_time must be finite"))
@@ -86,6 +93,18 @@ struct ScarFinderParams
         energy_target = _optional_finite_float(target_energy, "target_energy")
         correction_step = _finite_nonnegative(correction_time, "correction_time")
         correction_count = _nonnegative_int(correction_attempts, "correction_attempts")
+        compression_cutoff_value =
+            _finite_nonnegative(compression_cutoff, "compression_cutoff")
+        target_maxdim_value = if target_maxdim === nothing
+            nothing
+        else
+            value = Int(target_maxdim)
+            value >= 1 || throw(ArgumentError("target_maxdim must be at least 1"))
+            value <= trotter.maxdim || throw(ArgumentError(
+                "target_maxdim ($value) must be <= trotter.maxdim ($(trotter.maxdim))",
+            ))
+            value
+        end
 
         return new(
             time,
@@ -99,6 +118,8 @@ struct ScarFinderParams
             energy_target,
             correction_step,
             correction_count,
+            target_maxdim_value,
+            compression_cutoff_value,
         )
     end
 end
@@ -173,6 +194,24 @@ struct JSONCandidateStore <: CandidateStore
     directory::String
 
     function JSONCandidateStore(directory::AbstractString)
+        mkpath(directory)
+        return new(String(directory))
+    end
+end
+
+"""
+    JLD2CandidateStore(directory)
+
+Write one JSON metadata file *and* one JLD2 tensor-state snapshot per
+ScarFinder candidate iteration under `directory`. Metadata mirrors
+[`JSONCandidateStore`](@ref); the JLD2 snapshot uses
+[`write_square_ipeps_snapshot`](@ref) so candidates can be exactly reloaded for
+rerun or downstream analysis.
+"""
+struct JLD2CandidateStore <: CandidateStore
+    directory::String
+
+    function JLD2CandidateStore(directory::AbstractString)
         mkpath(directory)
         return new(String(directory))
     end
@@ -324,15 +363,33 @@ struct ScarFinderCandidateScore
 end
 
 """
+    ScarFinderCompressionInfo
+
+ScarFinder-level wrapper around [`IPEPSCompressionInfo`](@ref). `info` is the
+raw per-bond compression result; the `_shift` fields record `|after - before|`
+for `measure_simple` taken right before and after the compression. Small
+shifts under nontrivial compression indicate the trajectory genuinely lives in
+the target-D manifold (scar-like). Note that simple-observable shifts are
+gauge-sensitive at `D>1`; use CTM checks for gauge-invariant validation.
+"""
+struct ScarFinderCompressionInfo
+    info::IPEPSCompressionInfo
+    density_shift::Float64
+    blockade_shift::Float64
+    energy_shift::Float64
+end
+
+"""
     ScarFinderIteration
 
 Diagnostics for one S6-lite ScarFinder iteration. `evolution` is the
 [`EvolutionLog`](@ref) returned by [`evolve!`](@ref), and `observables` is the
-[`SimpleObservableSummary`](@ref) returned by [`measure_simple`](@ref). The
-`simple_score` field is always present. The `ctm_score` field is populated only
-when a caller supplies a CTM measurement callback and the callback is scheduled
-for that iteration. Rejected iterations carry a short deterministic
-`reject_reason`.
+[`SimpleObservableSummary`](@ref) returned by [`measure_simple`](@ref) after
+optional `target_maxdim` compression. The `simple_score` field is always
+present. The `ctm_score` field is populated only when a caller supplies a CTM
+measurement callback and the callback is scheduled for that iteration. The
+`compression` field is `nothing` when `params.target_maxdim` is `nothing`.
+Rejected iterations carry a short deterministic `reject_reason`.
 """
 struct ScarFinderIteration
     iteration::Int
@@ -345,6 +402,7 @@ struct ScarFinderIteration
     correction_accepted::Union{Nothing,Bool}
     correction_energy_before::Union{Nothing,Float64}
     correction_energy_after::Union{Nothing,Float64}
+    compression::Union{Nothing,ScarFinderCompressionInfo}
 end
 
 ScarFinderIteration(
@@ -364,17 +422,13 @@ ScarFinderIteration(
     nothing,
     nothing,
     nothing,
+    nothing,
 )
 
 store_candidate!(::NoCandidateStore, psi::SquareIPEPSState, iteration::ScarFinderIteration) = nothing
 
-function store_candidate!(
-    store::JSONCandidateStore,
-    psi::SquareIPEPSState,
-    iteration::ScarFinderIteration,
-)
-    path = joinpath(store.directory, "candidate_$(lpad(iteration.iteration, 6, '0')).json")
-    payload = (;
+function _candidate_metadata_payload(psi::SquareIPEPSState, iteration::ScarFinderIteration)
+    return (;
         iteration = iteration.iteration,
         accepted = iteration.accepted,
         reject_reason = iteration.reject_reason,
@@ -385,11 +439,39 @@ function store_candidate!(
         simple_score = iteration.simple_score,
         ctm_score = iteration.ctm_score,
     )
+end
+
+function _write_candidate_metadata(directory::AbstractString, psi::SquareIPEPSState,
+                                   iteration::ScarFinderIteration)
+    path = joinpath(directory, "candidate_$(lpad(iteration.iteration, 6, '0')).json")
+    payload = _candidate_metadata_payload(psi, iteration)
     open(path, "w") do io
         JSON3.write(io, payload)
         write(io, '\n')
     end
     return path
+end
+
+function store_candidate!(
+    store::JSONCandidateStore,
+    psi::SquareIPEPSState,
+    iteration::ScarFinderIteration,
+)
+    return _write_candidate_metadata(store.directory, psi, iteration)
+end
+
+function store_candidate!(
+    store::JLD2CandidateStore,
+    psi::SquareIPEPSState,
+    iteration::ScarFinderIteration,
+)
+    metadata_path = _write_candidate_metadata(store.directory, psi, iteration)
+    snapshot_path = joinpath(
+        store.directory,
+        "candidate_$(lpad(iteration.iteration, 6, '0')).jld2",
+    )
+    write_square_ipeps_snapshot(snapshot_path, psi)
+    return (metadata = metadata_path, snapshot = snapshot_path)
 end
 
 """
@@ -979,7 +1061,25 @@ function scarfinder!(
             params = params.trotter,
             protocol = params.protocol,
         )
-        obs_before_correction = measure_simple(psi)
+        compression_info = nothing
+        if params.target_maxdim !== nothing
+            pre_compression = measure_simple(psi)
+            comp_raw = compress_to_target_maxdim!(
+                psi,
+                params.target_maxdim;
+                cutoff = params.compression_cutoff,
+            )
+            post_compression = measure_simple(psi)
+            compression_info = ScarFinderCompressionInfo(
+                comp_raw,
+                abs(post_compression.density - pre_compression.density),
+                abs(post_compression.blockade_violation - pre_compression.blockade_violation),
+                abs(post_compression.pxp_energy_density - pre_compression.pxp_energy_density),
+            )
+            obs_before_correction = post_compression
+        else
+            obs_before_correction = measure_simple(psi)
+        end
         correction_accepted, correction_energy_before, correction_energy_after, obs =
             _maybe_apply_energy_correction!(psi, obs_before_correction, params)
         accepted, reason = _evaluate_scarfinder_iteration(log, obs, params)
@@ -1052,6 +1152,7 @@ function scarfinder!(
                 correction_accepted,
                 correction_energy_before,
                 correction_energy_after,
+                compression_info,
             ),
         )
         store_candidate!(candidate_store, psi, iterations[end])

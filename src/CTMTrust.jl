@@ -4,6 +4,7 @@ using ..PEPSKitMeasurements: CTMRGDiagnostics, CTMObservableSummary, CTMValidati
 using ..Internals: _csv_value, _finite_nonnegative, _optional_finite_nonnegative
 
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
+export tight_ctm_trust_policy, calibrated_ctm_trust_policy
 
 const _TRUST_REASONS = (
     :trusted,
@@ -85,6 +86,76 @@ struct CTMTrustPolicy
 end
 
 CTMTrustPolicy() = CTMTrustPolicy(2, true, 1e-3, 1e-4, 1e-3, nothing)
+
+"""
+    tight_ctm_trust_policy()
+
+Tighter trust policy suitable for D=4 and above, where iPEPS truncation error
+is well below the default 1e-3 threshold and CTM trust should not dominate.
+"""
+tight_ctm_trust_policy() = CTMTrustPolicy(3, true, 1e-5, 1e-6, 1e-5, 1e-6)
+
+"""
+    calibrated_ctm_trust_policy(window; min_points = 2,
+                                require_accepted_diagnostics = true,
+                                safety = 3.0, floor = 1e-8,
+                                max_residual = nothing)
+
+Derive a [`CTMTrustPolicy`](@ref) from observed finite-`chi` drifts in a
+CTMRG window. `window` may be any iterable whose elements expose `density`,
+`blockade_violation`, and `pxp_energy_density` fields (e.g. a vector of
+[`CTMObservableSummary`](@ref) or of [`CTMValidationPoint`](@ref)
+`.measurement` values). For each observable, the policy threshold is
+`max(safety * observed_max_adjacent_delta, floor)`, giving a configurable
+margin above measured drift while preventing degenerate zeros.
+
+`window` must contain at least two records; otherwise an `ArgumentError` is
+thrown. Use this to bootstrap trust thresholds from a `chi`-sensitivity sweep
+on a representative state before fixing global defaults.
+"""
+function calibrated_ctm_trust_policy(
+    window;
+    min_points::Integer = 2,
+    require_accepted_diagnostics::Bool = true,
+    safety::Real = 3.0,
+    floor::Real = 1e-8,
+    max_residual::Union{Real,Nothing} = nothing,
+)
+    collected = collect(window)
+    length(collected) >= 2 ||
+        throw(ArgumentError("calibrated_ctm_trust_policy needs at least 2 records"))
+    safety > 0 || throw(ArgumentError("safety must be positive"))
+    floor >= 0 || throw(ArgumentError("floor must be nonnegative"))
+
+    density_delta = 0.0
+    blockade_delta = 0.0
+    energy_delta = 0.0
+    for idx in 2:length(collected)
+        previous = _measurement_view(collected[idx - 1])
+        current = _measurement_view(collected[idx])
+        density_delta = max(density_delta, abs(current.density - previous.density))
+        blockade_delta = max(
+            blockade_delta,
+            abs(current.blockade_violation - previous.blockade_violation),
+        )
+        energy_delta = max(
+            energy_delta,
+            abs(current.pxp_energy_density - previous.pxp_energy_density),
+        )
+    end
+
+    return CTMTrustPolicy(
+        min_points,
+        require_accepted_diagnostics,
+        max(safety * density_delta, floor),
+        max(safety * blockade_delta, floor),
+        max(safety * energy_delta, floor),
+        max_residual,
+    )
+end
+
+_measurement_view(point::CTMValidationPoint) = point.measurement
+_measurement_view(summary::CTMObservableSummary) = summary
 
 """
     CTMTrustAssessment
