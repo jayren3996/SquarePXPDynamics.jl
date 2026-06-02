@@ -1,0 +1,4 @@
+dt,D,cutoff,chi,backend,accepted,rejected,iterations_run,best_iteration,best_score,top_k_iteration_indices,ctm_trusted_count,elapsed_seconds,ok,error
+0.02,2,1.0e-12,,simple,1,0,1,1,0.15140389330535511,"1",,59.143647468,true,
+0.02,2,1.0e-12,16,ctm,1,0,1,1,-0.17154102538516783,"1",1,295.497096768,true,
+0.02,2,1.0e-12,32,ctm,1,0,1,1,-0.17154102550618033,"1",1,48.512596415,true,

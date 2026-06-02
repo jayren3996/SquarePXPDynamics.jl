@@ -1,0 +1,3 @@
+label,julia_threads,blas_threads_requested,strided_threads_requested,strided_threaded_mul_requested,pepskit_scheduler_requested,blas_threads_applied,strided_threads_applied,strided_threaded_mul_applied,pepskit_scheduler_applied,chi,reps,cell_Lx,cell_Ly,D,evolve_time,ok,error,warm_seconds,median_seconds,min_seconds,max_seconds,mean_seconds,ctm_iterations,ctm_residual,ctm_converged,ctm_accepted
+smoke-j4,4,1,4,false,default,1,4,false,default,8,2,3,3,2,0.02,true,,264.70948656,1.533774698,1.447030047,1.620519349,1.533774698,,0.0,,true
+smoke-j4,4,1,4,true,default,1,4,true,default,8,2,3,3,2,0.02,true,,0.85858387,1.028408292,0.85751792,1.199298664,1.028408292,,0.0,,true

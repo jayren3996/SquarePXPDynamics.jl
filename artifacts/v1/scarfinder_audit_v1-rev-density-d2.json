@@ -1,0 +1,189 @@
+{
+    "config": {
+        "cell_Lx": 3,
+        "cell_Ly": 3,
+        "initial_state": "down",
+        "total_time": 0.5,
+        "iterations": 6,
+        "dt_values": [
+            0.02,
+            0.01
+        ],
+        "D_values": [
+            2
+        ],
+        "cutoff_values": [
+            1.0e-12
+        ],
+        "chi_values": [
+            16,
+            32
+        ],
+        "schedule": "serial",
+        "order": 1,
+        "blockade_tol": null,
+        "truncation_tol": null,
+        "entropy_cap": null,
+        "ctm_tol": 1.0e-8,
+        "ctm_maxiter": 100,
+        "ctm_seed": 0,
+        "require_trusted_ctm": false,
+        "top_k": 3,
+        "ctm_trust_policy": {
+            "min_points": 3,
+            "require_accepted_diagnostics": true,
+            "max_density_delta": 1.0e-5,
+            "max_blockade_delta": 1.0e-6,
+            "max_energy_delta": 1.0e-5,
+            "max_residual": 1.0e-6
+        }
+    },
+    "rows": [
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": null,
+            "backend": "simple",
+            "accepted": 6,
+            "rejected": 0,
+            "iterations_run": 6,
+            "best_iteration": 5,
+            "best_score": 0.6524176483322345,
+            "top_k_iteration_indices": [
+                5,
+                4,
+                6
+            ],
+            "per_iteration_scores": [
+                0.15140389330535511,
+                0.3333058238334543,
+                0.4680988796249802,
+                0.5822225465238267,
+                0.6524176483322345,
+                0.5275385079768083
+            ],
+            "ctm_trusted_count": null,
+            "elapsed_seconds": 66.499097257,
+            "ok": true,
+            "error": null
+        },
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 16,
+            "backend": "ctm",
+            "accepted": 0,
+            "rejected": 0,
+            "iterations_run": 0,
+            "best_iteration": null,
+            "best_score": null,
+            "top_k_iteration_indices": [
+            ],
+            "per_iteration_scores": [
+            ],
+            "ctm_trusted_count": 0,
+            "elapsed_seconds": null,
+            "ok": false,
+            "error": "ArgumentError: Hermitian CTMRG observable produced non-negligible imaginary part -0.06854496487258349"
+        },
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 32,
+            "backend": "ctm",
+            "accepted": 0,
+            "rejected": 0,
+            "iterations_run": 0,
+            "best_iteration": null,
+            "best_score": null,
+            "top_k_iteration_indices": [
+            ],
+            "per_iteration_scores": [
+            ],
+            "ctm_trusted_count": 0,
+            "elapsed_seconds": null,
+            "ok": false,
+            "error": "ArgumentError: Hermitian CTMRG observable produced non-negligible imaginary part -0.18591295069518857"
+        },
+        {
+            "dt": 0.01,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": null,
+            "backend": "simple",
+            "accepted": 6,
+            "rejected": 0,
+            "iterations_run": 6,
+            "best_iteration": 5,
+            "best_score": 0.6345098693718643,
+            "top_k_iteration_indices": [
+                5,
+                6,
+                4
+            ],
+            "per_iteration_scores": [
+                0.1506223699887129,
+                0.33085489199436907,
+                0.46566914635438206,
+                0.5775928437187785,
+                0.6345098693718643,
+                0.6135727553212096
+            ],
+            "ctm_trusted_count": null,
+            "elapsed_seconds": 13.992788884,
+            "ok": true,
+            "error": null
+        },
+        {
+            "dt": 0.01,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 16,
+            "backend": "ctm",
+            "accepted": 0,
+            "rejected": 0,
+            "iterations_run": 0,
+            "best_iteration": null,
+            "best_score": null,
+            "top_k_iteration_indices": [
+            ],
+            "per_iteration_scores": [
+            ],
+            "ctm_trusted_count": 0,
+            "elapsed_seconds": null,
+            "ok": false,
+            "error": "ArgumentError: Hermitian CTMRG observable produced non-negligible imaginary part 0.03400448993153063"
+        },
+        {
+            "dt": 0.01,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 32,
+            "backend": "ctm",
+            "accepted": 0,
+            "rejected": 0,
+            "iterations_run": 0,
+            "best_iteration": null,
+            "best_score": null,
+            "top_k_iteration_indices": [
+            ],
+            "per_iteration_scores": [
+            ],
+            "ctm_trusted_count": 0,
+            "elapsed_seconds": null,
+            "ok": false,
+            "error": "ArgumentError: Hermitian CTMRG observable produced non-negligible imaginary part 0.04569818313539764"
+        }
+    ],
+    "stability": {
+        "n_rows": 6,
+        "n_successful": 2,
+        "best_iteration_agreement": 1,
+        "score_range": 0.017907778960370213,
+        "score_cv": 0.019678982327548736,
+        "top_k_jaccard_min": 1
+    }
+}

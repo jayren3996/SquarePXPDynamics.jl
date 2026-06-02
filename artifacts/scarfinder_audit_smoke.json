@@ -1,0 +1,72 @@
+{
+    "config": {
+        "cell_Lx": 3,
+        "cell_Ly": 3,
+        "initial_state": "down",
+        "total_time": 0.1,
+        "iterations": 2,
+        "dt_values": [
+            0.02
+        ],
+        "D_values": [
+            2
+        ],
+        "cutoff_values": [
+            1.0e-12
+        ],
+        "chi_values": [
+        ],
+        "schedule": "serial",
+        "order": 1,
+        "blockade_tol": null,
+        "truncation_tol": null,
+        "entropy_cap": null,
+        "ctm_tol": 1.0e-8,
+        "ctm_maxiter": 100,
+        "ctm_seed": 0,
+        "require_trusted_ctm": false,
+        "top_k": 3,
+        "ctm_trust_policy": {
+            "min_points": 2,
+            "require_accepted_diagnostics": true,
+            "max_density_delta": 0.001,
+            "max_blockade_delta": 0.0001,
+            "max_energy_delta": 0.001,
+            "max_residual": null
+        }
+    },
+    "rows": [
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": null,
+            "backend": "simple",
+            "accepted": 2,
+            "rejected": 0,
+            "iterations_run": 2,
+            "best_iteration": 2,
+            "best_score": 0.040967290082495444,
+            "top_k_iteration_indices": [
+                2,
+                1
+            ],
+            "per_iteration_scores": [
+                0.013630784447951558,
+                0.040967290082495444
+            ],
+            "ctm_trusted_count": null,
+            "elapsed_seconds": 60.427814357,
+            "ok": true,
+            "error": null
+        }
+    ],
+    "stability": {
+        "n_rows": 1,
+        "n_successful": 1,
+        "best_iteration_agreement": null,
+        "score_range": null,
+        "score_cv": null,
+        "top_k_jaccard_min": null
+    }
+}

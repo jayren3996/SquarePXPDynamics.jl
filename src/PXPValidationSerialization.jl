@@ -21,10 +21,6 @@ for T in (
     PXPValidationReport,
     PXPConvergenceConfig,
     PXPReversibilityReport,
-    PXPAuditConfig,
-    PXPAuditSummary,
-    PXPAuditRun,
-    PXPAuditReport,
     PXPLargerDBenchmarkConfig,
     PXPLargerDBenchmarkSummary,
     PXPLargerDBenchmarkRun,
@@ -141,16 +137,6 @@ write_pxp_convergence_json(report::PXPConvergenceReport, path::AbstractString) =
     _write_json(path, report)
 
 """
-    write_pxp_audit_json(report, path)
-
-Write a [`PXPAuditReport`](@ref) as nested JSON containing campaign
-configuration, per-run flat summaries, full validation reports, and
-reversibility reports.
-"""
-write_pxp_audit_json(report::PXPAuditReport, path::AbstractString) =
-    _write_json(path, report)
-
-"""
     write_pxp_larger_d_benchmark_json(report, path)
 
 Write a nested M3 larger-D PXP ED benchmark report as JSON.
@@ -159,37 +145,6 @@ write_pxp_larger_d_benchmark_json(
     report::PXPLargerDBenchmarkReport,
     path::AbstractString,
 ) = _write_json(path, report)
-
-const PXP_AUDIT_CSV_HEADER = [
-    "n",
-    "total_time",
-    "dt",
-    "D",
-    "cutoff",
-    "schedule",
-    "chi_values",
-    "max_abs_density_error_simple",
-    "max_abs_density_error_ctm",
-    "max_abs_density_error_exact_finite",
-    "max_blockade_violation_simple",
-    "max_blockade_violation_ctm",
-    "pxp_energy_drift_simple",
-    "pxp_energy_drift_ctm",
-    "ctm_trust_status",
-    "ctm_trust_reason",
-    "finite_chi_density_delta",
-    "finite_chi_blockade_delta",
-    "finite_chi_energy_delta",
-    "finite_chi_max_residual",
-    "max_truncerr",
-    "log_norm_initial",
-    "log_norm_final",
-    "log_norm_delta",
-    "log_norm_delta_abs",
-    "reversibility_density_drift",
-    "reversibility_blockade_drift",
-    "reversibility_energy_drift",
-]
 
 function _audit_csv_cell(x::Real)
     isfinite(Float64(x)) || throw(ArgumentError("audit CSV values must be finite"))
@@ -209,57 +164,6 @@ function _audit_csv_cell(x::AbstractString)
     else
         return x
     end
-end
-
-function _audit_csv_row(summary::PXPAuditSummary)
-    values = (
-        summary.n,
-        summary.total_time,
-        summary.dt,
-        summary.D,
-        summary.cutoff,
-        summary.schedule,
-        summary.chi_values,
-        summary.max_abs_density_error_simple,
-        summary.max_abs_density_error_ctm,
-        summary.max_abs_density_error_exact_finite,
-        summary.max_blockade_violation_simple,
-        summary.max_blockade_violation_ctm,
-        summary.pxp_energy_drift_simple,
-        summary.pxp_energy_drift_ctm,
-        summary.ctm_trust_status,
-        summary.ctm_trust_reason,
-        summary.finite_chi_density_delta,
-        summary.finite_chi_blockade_delta,
-        summary.finite_chi_energy_delta,
-        summary.finite_chi_max_residual,
-        summary.max_truncerr,
-        summary.log_norm_initial,
-        summary.log_norm_final,
-        summary.log_norm_delta,
-        summary.log_norm_delta_abs,
-        summary.reversibility_density_drift,
-        summary.reversibility_blockade_drift,
-        summary.reversibility_energy_drift,
-    )
-    return join(_audit_csv_cell.(values), ",")
-end
-
-"""
-    write_pxp_audit_csv(report, path)
-
-Write the flat [`PXPAuditSummary`](@ref) rows from a [`PXPAuditReport`](@ref)
-as CSV. Nested validation, CTM, and reversibility details remain available in
-the JSON artifact.
-"""
-function write_pxp_audit_csv(report::PXPAuditReport, path::AbstractString)
-    open(path, "w") do io
-        println(io, join(PXP_AUDIT_CSV_HEADER, ","))
-        for run in report.runs
-            println(io, _audit_csv_row(run.summary))
-        end
-    end
-    return path
 end
 
 const PXP_LARGER_D_CSV_HEADER = [

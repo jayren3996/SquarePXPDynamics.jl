@@ -1,0 +1,260 @@
+{
+    "config": {
+        "cell_Lx": 3,
+        "cell_Ly": 3,
+        "initial_state": "down",
+        "projection_time": 0.08,
+        "total_evolution_time": 0.48,
+        "iterations": 6,
+        "dt_values": [
+            0.02,
+            0.01
+        ],
+        "D_values": [
+            2
+        ],
+        "cutoff_values": [
+            1.0e-12
+        ],
+        "chi_values": [
+            16,
+            32
+        ],
+        "schedule": "serial",
+        "order": 1,
+        "blockade_tol": null,
+        "truncation_tol": null,
+        "entropy_cap": null,
+        "ctm_tol": 1.0e-8,
+        "ctm_maxiter": 100,
+        "ctm_seed": 0,
+        "require_trusted_ctm": false,
+        "top_k": 3,
+        "ctm_trust_policy": {
+            "min_points": 3,
+            "require_accepted_diagnostics": true,
+            "max_density_delta": 1.0e-5,
+            "max_blockade_delta": 1.0e-6,
+            "max_energy_delta": 1.0e-5,
+            "max_residual": 1.0e-6
+        }
+    },
+    "rows": [
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": null,
+            "backend": "simple",
+            "accepted": 6,
+            "rejected": 0,
+            "iterations_run": 6,
+            "best_iteration": 6,
+            "best_score": 0.14352974857694778,
+            "top_k_iteration_indices": [
+                6,
+                5,
+                4
+            ],
+            "per_iteration_scores": [
+                0.00943078044594508,
+                0.028985456319262012,
+                0.053975545606720125,
+                0.0822028695196969,
+                0.11235024114078213,
+                0.14352974857694778
+            ],
+            "ctm_trusted_count": null,
+            "max_truncerr_used": 1.555866980593297e-8,
+            "reversibility_density_drift": 0.05332590959728847,
+            "reversibility_blockade_drift": 3.8724852474556467e-7,
+            "reversibility_energy_drift": 1.8932040222096957e-13,
+            "elapsed_seconds": 1.424339981,
+            "ok": true,
+            "error": null
+        },
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 16,
+            "backend": "ctm",
+            "accepted": 6,
+            "rejected": 0,
+            "iterations_run": 6,
+            "best_iteration": 1,
+            "best_score": -0.006330575407784872,
+            "top_k_iteration_indices": [
+                1,
+                2,
+                3
+            ],
+            "per_iteration_scores": [
+                -0.006330575407784872,
+                -0.024532909810872028,
+                -0.05241043803136831,
+                -0.08684678806947513,
+                -0.12448121964259522,
+                -0.16232851077191676
+            ],
+            "ctm_trusted_count": 6,
+            "max_truncerr_used": 1.555866980593297e-8,
+            "reversibility_density_drift": 0.05332590959728847,
+            "reversibility_blockade_drift": 3.8724852474556467e-7,
+            "reversibility_energy_drift": 1.8932040222096957e-13,
+            "elapsed_seconds": 356.847344275,
+            "ok": true,
+            "error": null
+        },
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 32,
+            "backend": "ctm",
+            "accepted": 6,
+            "rejected": 0,
+            "iterations_run": 6,
+            "best_iteration": 1,
+            "best_score": -0.006330575407794498,
+            "top_k_iteration_indices": [
+                1,
+                2,
+                3
+            ],
+            "per_iteration_scores": [
+                -0.006330575407794498,
+                -0.024532909810866227,
+                -0.05241043803153012,
+                -0.08684678806728144,
+                -0.12448121964607928,
+                -0.16232851083196684
+            ],
+            "ctm_trusted_count": 6,
+            "max_truncerr_used": 1.555866980593297e-8,
+            "reversibility_density_drift": 0.05332590959728847,
+            "reversibility_blockade_drift": 3.8724852474556467e-7,
+            "reversibility_energy_drift": 1.8932040222096957e-13,
+            "elapsed_seconds": 208.619776644,
+            "ok": true,
+            "error": null
+        },
+        {
+            "dt": 0.01,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": null,
+            "backend": "simple",
+            "accepted": 6,
+            "rejected": 0,
+            "iterations_run": 6,
+            "best_iteration": 6,
+            "best_score": 0.14281918608545252,
+            "top_k_iteration_indices": [
+                6,
+                5,
+                4
+            ],
+            "per_iteration_scores": [
+                0.00942520141483748,
+                0.028945901982656792,
+                0.05385553510769407,
+                0.08194512454168641,
+                0.11189404204957157,
+                0.14281918608545252
+            ],
+            "ctm_trusted_count": null,
+            "max_truncerr_used": 3.927669021798051e-9,
+            "reversibility_density_drift": 0.05306069447231733,
+            "reversibility_blockade_drift": 2.2213627933898815e-7,
+            "reversibility_energy_drift": 1.0129103429076544e-12,
+            "elapsed_seconds": 2.153830269,
+            "ok": true,
+            "error": null
+        },
+        {
+            "dt": 0.01,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 16,
+            "backend": "ctm",
+            "accepted": 6,
+            "rejected": 0,
+            "iterations_run": 6,
+            "best_iteration": 1,
+            "best_score": -0.0063318079360142054,
+            "top_k_iteration_indices": [
+                1,
+                2,
+                3
+            ],
+            "per_iteration_scores": [
+                -0.0063318079360142054,
+                -0.024537223922155044,
+                -0.05241798138230508,
+                -0.08685595859148858,
+                -0.1244898933997247,
+                -0.1623354027320285
+            ],
+            "ctm_trusted_count": 6,
+            "max_truncerr_used": 3.927669021798051e-9,
+            "reversibility_density_drift": 0.05306069447231733,
+            "reversibility_blockade_drift": 2.2213627933898815e-7,
+            "reversibility_energy_drift": 1.0129103429076544e-12,
+            "elapsed_seconds": 45.282401225,
+            "ok": true,
+            "error": null
+        },
+        {
+            "dt": 0.01,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 32,
+            "backend": "ctm",
+            "accepted": 6,
+            "rejected": 0,
+            "iterations_run": 6,
+            "best_iteration": 1,
+            "best_score": -0.006331807936003796,
+            "top_k_iteration_indices": [
+                1,
+                2,
+                3
+            ],
+            "per_iteration_scores": [
+                -0.006331807936003796,
+                -0.02453722392215472,
+                -0.05241798138231078,
+                -0.08685595859253244,
+                -0.12448989340244385,
+                -0.16233540279592662
+            ],
+            "ctm_trusted_count": 6,
+            "max_truncerr_used": 3.927669021798051e-9,
+            "reversibility_density_drift": 0.05306069447231733,
+            "reversibility_blockade_drift": 2.2213627933898815e-7,
+            "reversibility_energy_drift": 1.0129103429076544e-12,
+            "elapsed_seconds": 216.583696155,
+            "ok": true,
+            "error": null
+        }
+    ],
+    "stability": {
+        "n_rows": 6,
+        "n_successful": 6,
+        "n_simple": 2,
+        "n_ctm": 4,
+        "best_iteration_agreement_all": 0.6666666666666666,
+        "score_range_all": 0.14986155651296199,
+        "score_cv_all": 1.774656758871331,
+        "top_k_jaccard_min_all": 0,
+        "best_iteration_agreement_simple": 1,
+        "score_range_simple": 0.0007105624914952591,
+        "score_cv_simple": 0.0035093097642250855,
+        "top_k_jaccard_min_simple": 1,
+        "best_iteration_agreement_ctm": 1,
+        "score_range_ctm": 1.232528229333854e-6,
+        "score_cv_ctm": 0.00011239598105431771,
+        "top_k_jaccard_min_ctm": 1
+    }
+}

@@ -1,0 +1,94 @@
+{
+    "julia_threads": 4,
+    "Lx": 3,
+    "Ly": 3,
+    "D": 2,
+    "dt": 0.02,
+    "evolve_time": 0.02,
+    "chi_values": [
+        8
+    ],
+    "blas_values": [
+        1
+    ],
+    "strided_values": [
+        4
+    ],
+    "threaded_mul_values": [
+        false,
+        true
+    ],
+    "scheduler_values": [
+        "default"
+    ],
+    "reps": 2,
+    "label": "smoke-j4",
+    "rows": [
+        {
+            "label": "smoke-j4",
+            "julia_threads": 4,
+            "blas_threads_requested": 1,
+            "strided_threads_requested": 4,
+            "strided_threaded_mul_requested": false,
+            "pepskit_scheduler_requested": "default",
+            "blas_threads_applied": 1,
+            "strided_threads_applied": 4,
+            "strided_threaded_mul_applied": false,
+            "pepskit_scheduler_applied": "default",
+            "chi": 8,
+            "reps": 2,
+            "cell_Lx": 3,
+            "cell_Ly": 3,
+            "D": 2,
+            "evolve_time": 0.02,
+            "ok": true,
+            "error": null,
+            "warm_seconds": 264.70948656,
+            "median_seconds": 1.533774698,
+            "min_seconds": 1.447030047,
+            "max_seconds": 1.620519349,
+            "mean_seconds": 1.533774698,
+            "timings": [
+                1.620519349,
+                1.447030047
+            ],
+            "ctm_iterations": null,
+            "ctm_residual": 0,
+            "ctm_converged": null,
+            "ctm_accepted": true
+        },
+        {
+            "label": "smoke-j4",
+            "julia_threads": 4,
+            "blas_threads_requested": 1,
+            "strided_threads_requested": 4,
+            "strided_threaded_mul_requested": true,
+            "pepskit_scheduler_requested": "default",
+            "blas_threads_applied": 1,
+            "strided_threads_applied": 4,
+            "strided_threaded_mul_applied": true,
+            "pepskit_scheduler_applied": "default",
+            "chi": 8,
+            "reps": 2,
+            "cell_Lx": 3,
+            "cell_Ly": 3,
+            "D": 2,
+            "evolve_time": 0.02,
+            "ok": true,
+            "error": null,
+            "warm_seconds": 0.85858387,
+            "median_seconds": 1.028408292,
+            "min_seconds": 0.85751792,
+            "max_seconds": 1.199298664,
+            "mean_seconds": 1.028408292,
+            "timings": [
+                1.199298664,
+                0.85751792
+            ],
+            "ctm_iterations": null,
+            "ctm_residual": 0,
+            "ctm_converged": null,
+            "ctm_accepted": true
+        }
+    ]
+}

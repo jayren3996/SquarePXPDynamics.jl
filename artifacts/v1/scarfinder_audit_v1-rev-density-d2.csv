@@ -1,0 +1,7 @@
+dt,D,cutoff,chi,backend,accepted,rejected,iterations_run,best_iteration,best_score,top_k_iteration_indices,ctm_trusted_count,elapsed_seconds,ok,error
+0.02,2,1.0e-12,,simple,6,0,6,5,0.6524176483322345,"5|4|6",,66.499097257,true,
+0.02,2,1.0e-12,16,ctm,0,0,0,,,,0,NaN,false,ArgumentError: Hermitian CTMRG observable produced non-negligible imaginary part -0.06854496487258349
+0.02,2,1.0e-12,32,ctm,0,0,0,,,,0,NaN,false,ArgumentError: Hermitian CTMRG observable produced non-negligible imaginary part -0.18591295069518857
+0.01,2,1.0e-12,,simple,6,0,6,5,0.6345098693718643,"5|6|4",,13.992788884,true,
+0.01,2,1.0e-12,16,ctm,0,0,0,,,,0,NaN,false,ArgumentError: Hermitian CTMRG observable produced non-negligible imaginary part 0.03400448993153063
+0.01,2,1.0e-12,32,ctm,0,0,0,,,,0,NaN,false,ArgumentError: Hermitian CTMRG observable produced non-negligible imaginary part 0.04569818313539764

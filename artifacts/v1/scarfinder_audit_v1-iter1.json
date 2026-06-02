@@ -1,0 +1,116 @@
+{
+    "config": {
+        "cell_Lx": 3,
+        "cell_Ly": 3,
+        "initial_state": "down",
+        "total_time": 0.5,
+        "iterations": 1,
+        "dt_values": [
+            0.02
+        ],
+        "D_values": [
+            2
+        ],
+        "cutoff_values": [
+            1.0e-12
+        ],
+        "chi_values": [
+            16,
+            32
+        ],
+        "schedule": "serial",
+        "order": 1,
+        "blockade_tol": null,
+        "truncation_tol": null,
+        "entropy_cap": null,
+        "ctm_tol": 1.0e-8,
+        "ctm_maxiter": 100,
+        "ctm_seed": 0,
+        "require_trusted_ctm": false,
+        "top_k": 1,
+        "ctm_trust_policy": {
+            "min_points": 3,
+            "require_accepted_diagnostics": true,
+            "max_density_delta": 1.0e-5,
+            "max_blockade_delta": 1.0e-6,
+            "max_energy_delta": 1.0e-5,
+            "max_residual": 1.0e-6
+        }
+    },
+    "rows": [
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": null,
+            "backend": "simple",
+            "accepted": 1,
+            "rejected": 0,
+            "iterations_run": 1,
+            "best_iteration": 1,
+            "best_score": 0.15140389330535511,
+            "top_k_iteration_indices": [
+                1
+            ],
+            "per_iteration_scores": [
+                0.15140389330535511
+            ],
+            "ctm_trusted_count": null,
+            "elapsed_seconds": 59.143647468,
+            "ok": true,
+            "error": null
+        },
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 16,
+            "backend": "ctm",
+            "accepted": 1,
+            "rejected": 0,
+            "iterations_run": 1,
+            "best_iteration": 1,
+            "best_score": -0.17154102538516783,
+            "top_k_iteration_indices": [
+                1
+            ],
+            "per_iteration_scores": [
+                -0.17154102538516783
+            ],
+            "ctm_trusted_count": 1,
+            "elapsed_seconds": 295.497096768,
+            "ok": true,
+            "error": null
+        },
+        {
+            "dt": 0.02,
+            "D": 2,
+            "cutoff": 1.0e-12,
+            "chi": 32,
+            "backend": "ctm",
+            "accepted": 1,
+            "rejected": 0,
+            "iterations_run": 1,
+            "best_iteration": 1,
+            "best_score": -0.17154102550618033,
+            "top_k_iteration_indices": [
+                1
+            ],
+            "per_iteration_scores": [
+                -0.17154102550618033
+            ],
+            "ctm_trusted_count": 1,
+            "elapsed_seconds": 48.512596415,
+            "ok": true,
+            "error": null
+        }
+    ],
+    "stability": {
+        "n_rows": 3,
+        "n_successful": 3,
+        "best_iteration_agreement": 1,
+        "score_range": 0.3229449188115354,
+        "score_cv": 2.918209431724321,
+        "top_k_jaccard_min": 1
+    }
+}
