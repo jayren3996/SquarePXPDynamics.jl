@@ -31,7 +31,6 @@ const TEST_FILES = [
     "test_benchmarks.jl",
     "test_ctm_trust.jl",
     "test_pepskit_measurements.jl",
-    "test_ctm_gauge_readiness.jl",
     "test_pxp_validation.jl",
     "test_pxp_d2_localization.jl",
     "test_scarfinder.jl",

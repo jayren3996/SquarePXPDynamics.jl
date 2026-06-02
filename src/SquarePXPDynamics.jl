@@ -23,7 +23,6 @@ include("Observables.jl")
 include("FiniteIPEPSObservables.jl")
 include("PEPSKitMeasurements.jl")
 include("CTMTrust.jl")
-include("CTMGaugeReadiness.jl")
 include("StarSimpleUpdate.jl")
 include("IPEPSEvolution.jl")
 include("Benchmarks.jl")
@@ -131,17 +130,6 @@ using .PEPSKitMeasurements: ctm_chi_sensitivity_sweep
 using .PEPSKitMeasurements: assert_fresh_pepskit_context
 using .CTMTrust: CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
 using .CTMTrust: tight_ctm_trust_policy, calibrated_ctm_trust_policy
-using .CTMGaugeReadinessModule:
-    CTMGaugePolicy,
-    CTMBondNormDiagnostic,
-    CTMGaugeReadiness,
-    BondGaugeFixInfo,
-    ctm_bond_norm_matrix,
-    ctm_bond_norm_diagnostic,
-    all_ctm_bond_norm_diagnostics,
-    ctm_ready_for_gauge_updates,
-    pepskit_private_full_update_available,
-    fix_bond_gauge!
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
 using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 using .Benchmarks:
@@ -306,10 +294,6 @@ export ctm_chi_sensitivity_sweep
 export assert_fresh_pepskit_context
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
 export tight_ctm_trust_policy, calibrated_ctm_trust_policy
-export CTMGaugePolicy, CTMBondNormDiagnostic, CTMGaugeReadiness, BondGaugeFixInfo
-export ctm_bond_norm_matrix, ctm_bond_norm_diagnostic
-export all_ctm_bond_norm_diagnostics, ctm_ready_for_gauge_updates
-export pepskit_private_full_update_available, fix_bond_gauge!
 export StarUpdateInfo, project_star!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 export BenchmarkSpec, BenchmarkMetadata, EvolutionDiagnostics, BenchmarkSample, BenchmarkResult
