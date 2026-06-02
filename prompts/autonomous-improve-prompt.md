@@ -43,36 +43,61 @@ by the 25-min wall before its push). Before picking a new slice:
 
 Ship-stranded or new-slice, **one per pass** — do not stack them.
 
-## Active priority: code-quality simplification
+## Active priority: execute the 3-stage roadmap
 
-The user has flagged that the codebase is **unnecessarily long** and asked
-for a sustained code-quality / simplification campaign. Until this section
-is removed from the prompt, **prefer slices that shorten or simplify code
-without changing behavior**. Net-line-removal slices are the most valuable
-shape right now. Look for:
+The consolidated review and backlog live in
+`docs/superpowers/notes/2026-06-02-package-review-and-roadmap.md`. **Read it
+first** — it is the source of slices for this campaign and lists exact
+file:line targets. The three user stages are: (1) reliable iPEPS dynamics that
+match ED, (2) bond truncation + proper regauging, (3) ScarFinder that finds a
+better-than-Néel initial state.
 
-- **Dead code**: unreferenced functions, unused exports, branches that
-  cannot trigger, error paths that no caller can ever hit.
-- **Over-engineered abstractions**: single-use helpers that could be
-  inlined; layered indirection that hides nothing meaningful; "config
-  objects" that wrap a single field.
-- **Duplicate logic**: similar code in 2+ places that should be a shared
-  helper, or vice-versa — a helper used in one place that should be
-  inlined.
-- **Redundant validation**: the same input check repeated at multiple
-  layers when one is enough.
-- **Comments that restate WHAT** the code does (the identifiers already
-  say what). Keep WHY comments — hidden constraints, workarounds,
-  surprising invariants.
-- **Verbose error handling** for cases that can't happen given internal
-  callers and framework guarantees (validate only at system boundaries).
-- **Over-broad try/catch** that swallows or rewraps errors with no added
-  information.
+The owner made three decisions on 2026-06-02:
 
-Within this campaign, prefer simplifying code that is on the path to
-**ScarFinder on the 2D infinite square PXP** — i.e. iPEPS/CTM observables,
-gauge fixing, PXP energy/density operators, finite-vs-infinite
-reconciliation. Cleaning those modules pays off twice.
+1. **Stage-3 "better than Néel" metric = staggered-magnetization revival.**
+   Score the longer-lived / larger *return* of the `(n_even − n_odd)` order
+   parameter over the trajectory time series — NOT instantaneous imbalance
+   (the current RevivalObjective is wrong: it rewards t=0 Néel itself).
+2. **Slimming = aggressive delete.** These are SANCTIONED for removal once you
+   `grep -rn` confirm no remaining caller in `src/`, `test/`, `scripts/`
+   (delete tests that only cover the removed code in the same slice):
+   - the TFIM benchmark axis (`Benchmarks.jl`, `FiniteTFIMReference.jl`,
+     `FiniteMPSTFIMReference.jl`, `TFIMStarModel` + `tfim_*` observables);
+   - the orphaned CTM gauge module (`CTMGaugeReadiness.jl` / `fix_bond_gauge!`
+     and its 9 exports) — never called by evolution/compression;
+   - placeholder ScarFinder objectives (`TargetEnergyObjective`,
+     `LowVarianceObjective`) + `energy_variance_proxy` plumbing; `JSONCandidateStore`;
+   - the duplicate PXP campaign driver (`run_pxp_audit_campaign` + its struct
+     family) — keep `run_pxp_larger_d_benchmark`;
+   - `SquarePEPS.jl`, `GaugeDiagnostics.jl` (unused), dead exports (census in
+     the note), and stale/kagome docs (archive to `docs/superpowers/archive/`).
+3. **Stage-3 geometry = even-Lx/Ly cells with `schedule = :serial`** (Néel
+   works there today; `:five_color` forces 5-divisible odd-tiling cells that
+   cannot host a perfect checkerboard).
+
+### Slice priority order — work the highest item with a well-scoped slice
+
+1. **Harden the test gate FIRST** (so later physics changes are catchable):
+   convert every `density_error_simple > 1e-4` lower-bound assertion to
+   `@test_broken` and add `density_error_exact_finite < 1e-6` upper-bound gates;
+   add a `@test_throws` pinning the `:z_up` blockade-forbidden error; add a
+   nightly (`SQUAREPXP_EXTENDED_TESTS`) real-`measure_ctm`-vs-ED D=2 test.
+2. **Aggressive slimming** — one sanctioned target cluster per pass.
+3. **Stage-1 simple-observable D>1 bug**: the simple-gauge density contraction
+   in `Observables.jl` reports ~1.9e-4 error at D=2 while `exact_density_finite`
+   is ~1e-7. Fix it, validated against `exact_density_finite`. Small steps.
+4. **Stage-3 staggered-mag revival**: a per-iteration `(n_even−n_odd)` time
+   series + redefine `RevivalObjective` to score the post-collapse return; then
+   an `scarfinder_search` outer layer ranking candidate states vs a Néel
+   baseline. Large feature — build in small, separately-committed slices.
+5. **Stage-2 Vidal √λ regauge** (principled successor to `rel_floor`). Largest;
+   approach last, with ED/exact-finite verification at tight cutoff for D≤4.
+
+**Physics-changing slices (items 3-5) MUST verify against ED or
+`exact_density_finite`** — never claim a physics improvement from
+`measure_simple` alone (it is wrong for D>1). If a physics slice cannot be
+verified within the pass budget, leave a TODO in `handoff.md` and pick a
+slimming or test-hardening slice instead.
 
 ## Pick one slice
 
@@ -156,10 +181,15 @@ path above.
    existing style (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`). Do
    not push yet.
 
-2. Run the targeted test that covers what you changed, e.g.
-   `julia --project=test test/runtests.jl test_pepskit_measurements.jl`.
-   Always wrap it: `timeout 540 julia ...`. Prefer a focused test file
-   over the full `runtests.jl`.
+2. Run the fast physics-correctness gate plus the test file(s) covering your
+   change. The gate runs the Stage-1/2 regression tests in one warm process:
+   `timeout 540 julia --project=test scripts/fast_gate.jl`. For a change under
+   `src/` that touches evolution, truncation, observables, or scarfinder, ALSO
+   run the relevant focused test file, e.g.
+   `timeout 540 julia --project=test test/runtests.jl test_ipeps_evolution.jl`.
+   Always wrap with `timeout`. Reserve the full `Pkg.test()` (~10 min) for a
+   slice you cannot otherwise convince yourself is safe; it will not fit the
+   pass budget alongside much else.
 
 3. If tests **pass**: `git push origin main`.
 
