@@ -218,6 +218,35 @@ function _new_link_index(center::SquareCoord, dir::Symbol, keptdim::Int)
     return Index(keptdim, "link,$(center.x),$(center.y),$dir,star")
 end
 
+function _validate_rel_floor(rel_floor::Real)
+    value = Float64(rel_floor)
+    isfinite(value) || throw(ArgumentError("rel_floor must be finite"))
+    0 <= value < 1 || throw(ArgumentError("rel_floor must be in [0, 1)"))
+    return value
+end
+
+# SVD with a relative singular-value condition floor. ITensors' `cutoff` bounds
+# the *discarded* relative weight, which still admits retained singular values
+# as small as ~sqrt(cutoff) of the leading one; deabsorbing the full lambda then
+# divides by those near-zero weights and amplifies noise on later star updates
+# (the documented larger-D-worsens-at-tight-cutoff instability). `rel_floor`
+# additionally drops any retained singular value below `rel_floor * sigma_max`,
+# capping the bond condition number at 1/rel_floor regardless of `cutoff`.
+function _svd_with_rel_floor(core, left, right, maxdim::Int, cutoff::Float64, rel_floor::Float64)
+    U, S, V, spec, u, v = svd(core, left, right; maxdim = maxdim, cutoff = cutoff)
+    if rel_floor > 0
+        svals = _singular_values_from_S(S)
+        if !isempty(svals) && isfinite(svals[1]) && svals[1] > 0
+            keep = max(1, count(>=(rel_floor * svals[1]), svals))
+            if keep < length(svals)
+                U, S, V, spec, u, v =
+                    svd(core, left, right; maxdim = keep, cutoff = cutoff)
+            end
+        end
+    end
+    return U, S, V, spec, u, v
+end
+
 function _absorb_star_weights(psi::SquareIPEPSState, coords)
     leaves = Dict{Symbol,ITensor}()
     external_absorbed = Dict{Symbol,NTuple{3,Symbol}}()
@@ -283,6 +312,7 @@ function _split_reduced_theta(
     split_order,
     maxdim,
     cutoff,
+    rel_floor,
     touched_min_lambda,
 )
     leaf_active = Dict{Symbol,ITensor}()
@@ -298,7 +328,8 @@ function _split_reduced_theta(
         leaf = getproperty(coords, dir)
         p_leaf = physical_index(psi, leaf)
         q_leaf = qinds[dir]
-        U, S, V, spec, u, v = svd(core, p_leaf, q_leaf; maxdim = maxdim, cutoff = cutoff)
+        U, S, V, spec, u, v =
+            _svd_with_rel_floor(core, p_leaf, q_leaf, maxdim, cutoff, rel_floor)
         svals = _singular_values_from_S(S)
         lambda_new, scale = _normalized_link_weight_from_singular_values(svals)
         keptdim = length(lambda_new)
@@ -392,6 +423,7 @@ end
         projected::Bool = true,
         maxdim::Integer = psi.maxdim,
         cutoff::Real = 1e-12,
+        rel_floor::Real = 0.0,
         split_order = (:right, :up, :left, :down),
     )::StarUpdateInfo
 
@@ -402,7 +434,10 @@ The update is transactional: `psi` is mutated only after local weight
 absorption, QR reduction, gate application, SVD splitting, and reconstruction
 all succeed. `maxdim` is the cap for this update and may be larger than
 `psi.maxdim`; in that case affected links may grow while `psi.maxdim` remains
-the state's construction/default cap.
+the state's construction/default cap. `rel_floor` (in `[0, 1)`) drops any
+retained singular value below `rel_floor * sigma_max` on each bond split, capping
+the bond condition number at `1/rel_floor` so the de-absorb step never inverts a
+near-zero link weight. `rel_floor = 0` disables the floor (legacy behavior).
 
 # Example
 
@@ -424,11 +459,13 @@ function project_star!(
     projected::Bool = true,
     maxdim::Integer = psi.maxdim,
     cutoff::Real = 1e-12,
+    rel_floor::Real = 0.0,
     split_order = _STAR_DIRECTIONS,
 )::StarUpdateInfo
     finite_step = _validate_step(step)
     kept_maxdim = _validate_maxdim(maxdim)
     trunc_cutoff = _validate_cutoff(cutoff)
+    trunc_rel_floor = _validate_rel_floor(rel_floor)
     order = _validate_split_order(split_order)
     coords = _validate_distinct_star!(psi, center)
     touched_min_lambda = _pre_update_touched_min_lambda(psi, coords)
@@ -450,6 +487,23 @@ function project_star!(
     theta = noprime(theta)
     _assert_reduced_theta(theta, psi, coords, phys, qinds)
 
+    # A fully blockade-forbidden star (excited center with an excited neighbor)
+    # is annihilated by the projected PXP gate, leaving theta == 0. Detect it here
+    # and report the offending center clearly, instead of throwing an opaque
+    # "zero singular spectrum" deep inside the SVD split. This is the failure mode
+    # for :z_up (all-up) and for checkerboard seams on odd-period cells.
+    theta_norm = norm(theta)
+    isfinite(theta_norm) && theta_norm > sqrt(eps(Float64)) || throw(
+        ArgumentError(
+            "projected square-star update annihilated the state at center " *
+            "$(coords.center) (||theta|| = $theta_norm): this star is " *
+            "blockade-forbidden under the projected PXP gate (an excited center " *
+            "adjacent to an excited site). Initial states such as :z_up (all-up) " *
+            "and checkerboard seams on odd-period cells trigger this; use :down " *
+            "or an even-tileable checkerboard cell with schedule = :serial.",
+        ),
+    )
+
     center_core, leaf_active, new_links, new_weights, info =
         _split_reduced_theta(
             theta,
@@ -459,6 +513,7 @@ function project_star!(
             order,
             kept_maxdim,
             trunc_cutoff,
+            trunc_rel_floor,
             touched_min_lambda,
         )
 

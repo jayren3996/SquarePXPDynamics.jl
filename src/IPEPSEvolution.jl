@@ -24,7 +24,14 @@ const _TROTTER_SPLIT_DIRECTIONS = (:right, :up, :left, :down)
 Parameters for deterministic iPEPS Trotter evolution. `dt` is the positive
 full time-step size, `order` must be `1` or `2`, `evolution` must be `:real` or
 `:imaginary`, `schedule` must be `:five_color` or `:serial`, and
-`maxdim`/`cutoff`/`split_order` are forwarded to [`project_star!`](@ref).
+`maxdim`/`cutoff`/`split_order`/`rel_floor` are forwarded to
+[`project_star!`](@ref). `rel_floor` (default `1e-4`, in `[0, 1)`) imposes a
+relative singular-value condition floor on every bond split, capping the bond
+condition number at `1/rel_floor` to suppress the divide-by-near-zero-weight
+instability that otherwise makes larger `maxdim` worsen at tight `cutoff`.
+Verified on 3x3 PXP at t=0.2/cutoff=1e-12: `1e-4` collapses D=2/3/4 to the
+ED-matching density (D=4 error 9.7e-3 -> 8e-12); `0.0` reproduces the legacy
+instability. Set `rel_floor = 0.0` for the exact (unfloored) legacy update.
 The default `:five_color` schedule applies disjoint star layers. The `:serial`
 schedule applies one unit-cell center per layer in representative order, with
 second order using the corresponding reversed half sweep.
@@ -40,6 +47,7 @@ struct TrotterParams
     cutoff::Float64
     split_order::NTuple{4,Symbol}
     schedule::Symbol
+    rel_floor::Float64
 
     function TrotterParams(
         dt::Real,
@@ -49,6 +57,7 @@ struct TrotterParams
         cutoff::Real,
         split_order = _TROTTER_SPLIT_DIRECTIONS;
         schedule::Symbol = :five_color,
+        rel_floor::Real = 1e-4,
     )
         step = Float64(dt)
         isfinite(step) && step > 0 || throw(ArgumentError("dt must be finite and positive"))
@@ -64,7 +73,19 @@ struct TrotterParams
         order_values = _validate_trotter_split_order(split_order)
         schedule in (:five_color, :serial) ||
             throw(ArgumentError("schedule must be :five_color or :serial"))
-        return new(step, ord, evolution, dim, trunc_cutoff, order_values, schedule)
+        floor_value = Float64(rel_floor)
+        isfinite(floor_value) && 0 <= floor_value < 1 ||
+            throw(ArgumentError("rel_floor must be in [0, 1)"))
+        return new(
+            step,
+            ord,
+            evolution,
+            dim,
+            trunc_cutoff,
+            order_values,
+            schedule,
+            floor_value,
+        )
     end
 end
 
@@ -226,6 +247,7 @@ function _apply_star_layer!(
         evolution = params.evolution,
         maxdim = params.maxdim,
         cutoff = params.cutoff,
+        rel_floor = params.rel_floor,
         split_order = params.split_order,
     )
 end
@@ -441,10 +463,19 @@ function evolve!(
     maxdim::Integer = psi.maxdim,
     cutoff::Real = 1e-12,
     schedule::Symbol = :five_color,
+    rel_floor::Real = 1e-4,
 )::EvolutionLog
     actual_params = if params === nothing
         dt === nothing && throw(UndefKeywordError(:dt))
-        TrotterParams(dt, order, evolution, maxdim, cutoff; schedule = schedule)
+        TrotterParams(
+            dt,
+            order,
+            evolution,
+            maxdim,
+            cutoff;
+            schedule = schedule,
+            rel_floor = rel_floor,
+        )
     else
         params
     end
@@ -483,6 +514,7 @@ function reverse_evolve!(
         params.cutoff,
         params.split_order;
         schedule = params.schedule,
+        rel_floor = params.rel_floor,
     )
     actual_protocol = protocol === nothing ? StaticModel(PXPStarModel(true)) : protocol
     actual_protocol isa StaticModel || throw(
