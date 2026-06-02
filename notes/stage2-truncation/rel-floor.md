@@ -33,6 +33,10 @@ needed and adaptive-toward-0 is wrong. The 1e-4 "D=4 catastrophe" WAS
 endpoint-EXAGGERATED (3.65× at t=2.6 → only 1.5× by trajectory) but 1e-3 is
 genuinely better at D=4. So the default change STANDS. The floor is a conditioning
 knob, not an accuracy fix; the principled fix is environment-aware truncation
-(`improvement-roadmap.md`). **STILL TODO:** move the t=2.6 `@test_broken` revival
-regression gate to a trajectory (max/RMS) metric — the endpoint is the wrong gate
-even though the floor choice it informed happened to be right.
+(`improvement-roadmap.md`). **DONE (2026-06-02):** the revival regression gate in
+`test_d_convergence.jl` now uses the trajectory RMS metric (RMS of |n(t)−n_ED(t)|
+over [0,2.8], sampled every 0.2). The former t=2.6 `@test_broken err[4]<=err[3]`
+endpoint inversion is replaced by PASSING `@test rms[3]<=rms[2]`, `@test rms[4]<=rms[3]`
+monotonicity (measured RMS D2 2.62e-2, D3 1.82e-2, D4 9.79e-3; true gaps ~8e-3). The
+endpoint was the wrong gate even though the floor choice it informed happened to be
+right.

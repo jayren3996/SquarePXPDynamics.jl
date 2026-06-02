@@ -3,7 +3,7 @@
 # regime. D=1 is a product state and is NEVER validation. Error vs ED must be
 # non-increasing in D within tolerance and must shrink toward ED where D matters;
 # a larger D worse than a smaller D (fixed dt/cutoff/time) is a HARD REGRESSION.
-# See memory/stage1_d_convergence_rule.md.
+# See notes/methodology/revival-validation.md.
 #
 # The full D-ladder is slow (validate_pxp_ed_ipeps at t=0.3/0.5 for D=1..4), so
 # the load-bearing assertions run only under SQUAREPXP_EXTENDED_TESTS. The
@@ -37,7 +37,7 @@ end
     # bounds, NOT a ratio: the rel_floor=1e-3 default (chosen for revival
     # robustness) deliberately compresses the short-time D-separation, nudging e2
     # to ~3.4e-5 so e1/e2 ~ 46x; the old `e1 > 50*e2` ratio was brittle to D=2's
-    # exact error. See memory/stage2_rel_floor.md.
+    # exact error. See notes/stage2-truncation/rel-floor.md.
     @test e1 > 1e-3                    # D=1 is genuinely UNconverged (bad regime)
     @test e2 < 1e-4                    # D=2 trusted error is small (matches ED)
 end
@@ -64,37 +64,57 @@ if get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") != ""
         @test_broken f[3] <= f[2]
     end
 
-    @testset "Stage-2 revival D-ladder vs ED (exact 16-site oracle)" begin
-        # 4x4 Neel to the FIRST n(t) revival t=2.6 (ED peak 0.4825), measured by
-        # the EXACT 16-site contraction (exact_density_finite, NO CTM environment).
-        # The headline Stage-2 acceptance test. The exact oracle settled
-        # (2026-06-02) that (a) CTM chi=8 was contaminating this benchmark by
-        # ~3-13e-3 -- it FLATTERED the error (chi=8 put D=3/1e-4 at 4e-6 but the
-        # true error is 2.9e-3) -- and (b) the revival D-non-monotonicity is REAL
-        # evolution error: the mean-field-environment ceiling, NOT a measurement
-        # artifact. See memory/stage2_meanfield_environment_ceiling.md.
-        # Default rel_floor=1e-3; exact errors: D2 5.9e-3, D3 5.5e-3, D4 9.6e-3.
-        ED = 0.4825
-        err = Dict{Int,Float64}()
+    @testset "Stage-2 revival D-ladder vs ED (exact 16-site oracle, TRAJECTORY)" begin
+        # 4x4 Neel -> first n(t) collapse-and-revival, judged by the WHOLE n(t)
+        # TRAJECTORY error vs ED (RMS over [0, 2.8]), NOT the single t=2.6 endpoint.
+        # The headline Stage-2 acceptance test.
+        #
+        # WHY trajectory, not endpoint: t=2.6 (the revival peak) is a curve-CROSSING
+        # where every D-curve passes near ED, so per-D errors scramble there -- the
+        # EXACT t=2.6 errors are D2 6.5e-3, D3 6.0e-3, D4 1.02e-2, which falsely makes
+        # D=4 look WORST (this is what the old @test_broken endpoint gate encoded).
+        # By the full trajectory the ladder is cleanly MONOTONE: the error lives in
+        # the revival RISE (t~1.4-2.6, a slight phase lag) and higher D reduces it.
+        # The "mean-field-environment ceiling" read of the endpoint inversion was an
+        # ARTIFACT of judging one instant. See notes/methodology/revival-validation.md.
+        #
+        # Measurement is the EXACT 16-site contraction (exact_density_finite, NO CTM):
+        # the 2026-06-02 decontamination showed CTM chi=8 FLATTERS this benchmark by
+        # ~3-13e-3. ED reference: 4x4 PXP torus (743-state constrained sector),
+        # artifacts/neel_to_revival_4x4.json (ed.density[1:15]). Default rel_floor 1e-3.
+        # Cost: ~20 min (3 D x 15 exact 2^16 contractions) -- the price of the
+        # CTM-free oracle at D=4; do NOT swap in a (contaminating) CTM measurement.
+        TS = 0.0:0.2:2.8                                    # 15 samples, 10 steps each
+        ED = [0.5, 0.48026525133620573, 0.4241792325244558, 0.34070816732757286,
+              0.2442464623167832, 0.15549264928630516, 0.10057443671942552,
+              0.10056019790056131, 0.1555774954125962, 0.24370069054283897,
+              0.3373453880372616, 0.4159980265031265, 0.46695735678274974,
+              0.4830586210094464, 0.46229670220636837]
+        rms = Dict{Int,Float64}()
         for D in (2, 3, 4)
             psi = checkerboard_square_ipeps(
                 PeriodicSquareUnitCell(4, 4); excited_on = :even, maxdim = D)
             params = TrotterParams(0.02, 2, :real, D, 1e-12; schedule = :serial)  # default rel_floor 1e-3
-            for _ = 1:130
-                evolve!(psi, 0.02; params = params)            # -> t=2.6
+            traj = Float64[(GC.gc(); exact_density_finite(psi; max_sites = 16))]   # t=0
+            for _ = 2:length(TS)
+                for _ = 1:10
+                    evolve!(psi, 0.02; params = params)        # 0.2 per sample
+                end
+                push!(traj, (GC.gc(); exact_density_finite(psi; max_sites = 16)))
             end
-            err[D] = abs(exact_density_finite(psi; max_sites = 16) - ED)
+            e = abs.(traj .- ED)
+            rms[D] = sqrt(sum(e .^ 2) / length(e))
         end
-        # Every D reaches the revival, and rel_floor=1e-3 holds the D=4 peak well
-        # below the rel_floor=1e-4 catastrophe (exact D=4 error 3.45e-2 at 1e-4).
+        # Every D tracks the collapse-and-revival; a wrecked revival blows RMS far
+        # past this. rel_floor=1e-3 holds D=4 (9.8e-3) where 1e-4 had a revival-rise
+        # catastrophe (1.47e-2). Computed: D2 2.62e-2, D3 1.82e-2, D4 9.79e-3.
         for D in (2, 3, 4)
-            @test err[D] < 1.5e-2
+            @test rms[D] < 3.5e-2
         end
-        # ASPIRATIONAL (the env-ceiling target): strict D-monotonicity at the
-        # revival. FAILS today -- D=4 is worst (9.6e-3 > D=3 5.5e-3) because of the
-        # single-site mean-field environment. Flip to @test when an
-        # environment-aware (full/cluster) update lands.
-        # See memory/pxp_improvement_roadmap.md.
-        @test_broken err[4] <= err[3]
+        # THE headline -- now a PASSING @test (was @test_broken at the t=2.6
+        # endpoint, where it falsely inverted): by trajectory, D-convergence is
+        # MONOTONE. True gaps are ~8e-3, far above the 2e-3 cross-environment slack.
+        @test rms[3] <= rms[2] + 2e-3                  # D=3 beats D=2
+        @test rms[4] <= rms[3] + 2e-3                  # D=4 beats D=3
     end
 end

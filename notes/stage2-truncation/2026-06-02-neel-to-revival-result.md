@@ -200,6 +200,9 @@ the revival (t≈1.4–2.6) where the iPEPS lags ED slightly and higher D tracks
 
 Consequences: (1) judge revival dynamics by the TRAJECTORY, never t=2.6. (2) The
 rel_floor=1e-3 default and the t=2.6 `@test_broken` regression test were built on the
-endpoint and need re-evaluation by trajectory error. (3) The dense oracle can't reach
-the D=5 trajectory (OOM) — a memory-efficient boundary-MPS contractor is now the top
+endpoint and needed re-evaluation by trajectory error — both now DONE: the floor was
+confirmed by trajectory (`rel-floor.md`, commit bbd925c) and the regression gate was
+moved to trajectory-RMS monotonicity in `test_d_convergence.jl` (now a PASSING
+`@test`, no longer `@test_broken`). (3) The dense oracle can't reach the D=5
+trajectory (OOM) — a memory-efficient boundary-MPS contractor is now the top
 priority. The env ceiling is NOT demonstrated; D-convergence is clean to D=4.
