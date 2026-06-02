@@ -571,3 +571,37 @@ end
         1e-12
     @test log_norm(explicit) ≈ log_norm(legacy) atol = 1e-12
 end
+
+@testset "canonicalize_simple! preserves the state and reaches a fixed point" begin
+    # Idle (step=0, unprojected) star sweeps are exact local gauge transforms, so
+    # canonicalize_simple! must leave the physical state unchanged (gauge-invariant
+    # exact finite density) while relaxing the stored link weights to a fixed
+    # point. A small cell keeps the exact contraction cheap; entangle first so the
+    # state-preservation check is not vacuous.
+    cell = PeriodicSquareUnitCell(3, 3)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    evolve!(psi, 0.4; dt = 0.04, order = 1, maxdim = 2, schedule = :serial)
+    @test max_bond_entropy(psi) > 0.05
+
+    density_before = exact_density_finite(psi; max_sites = 9)
+    sweeps = canonicalize_simple!(psi)
+    density_after = exact_density_finite(psi; max_sites = 9)
+
+    @test sweeps >= 1
+    @test density_after ≈ density_before atol = 1e-8
+    for lambda in values(psi.link_weights)
+        @test norm(lambda) ≈ 1 atol = 1e-12
+    end
+
+    # Idempotent: a second pass converges in one sweep and does not move the state.
+    sweeps2 = canonicalize_simple!(psi)
+    @test sweeps2 == 1
+    @test exact_density_finite(psi; max_sites = 9) ≈ density_after atol = 1e-10
+end
+
+@testset "canonicalize_simple! argument validation" begin
+    cell = PeriodicSquareUnitCell(3, 3)
+    psi = product_square_ipeps(cell; state = :down, maxdim = 2)
+    @test_throws ArgumentError canonicalize_simple!(psi; max_sweeps = 0)
+    @test_throws ArgumentError canonicalize_simple!(psi; tol = 0.0)
+end

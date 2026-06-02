@@ -111,7 +111,7 @@ using .PEPSKitMeasurements: ctm_chi_sensitivity_sweep
 using .PEPSKitMeasurements: assert_fresh_pepskit_context
 using .CTMTrust: CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
 using .CTMTrust: tight_ctm_trust_policy, calibrated_ctm_trust_policy
-using .StarSimpleUpdate: StarUpdateInfo, project_star!
+using .StarSimpleUpdate: StarUpdateInfo, project_star!, canonicalize_simple!
 using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 using .FinitePXPEEDBenchmark:
     PXPSquareSpaceGroupBasis,
@@ -242,7 +242,7 @@ export ctm_chi_sensitivity_sweep
 export assert_fresh_pepskit_context
 export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
 export tight_ctm_trust_policy, calibrated_ctm_trust_policy
-export StarUpdateInfo, project_star!
+export StarUpdateInfo, project_star!, canonicalize_simple!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
 export PXPSquareSpaceGroupBasis
 export PXPEEDBenchmarkConfig, PXPEEDSample, PXPEEDBenchmarkResult

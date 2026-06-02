@@ -11,6 +11,7 @@ using ..SquareIPEPS:
     physical_index,
     link_index,
     link_weight,
+    log_norm,
     _link_weight_view,
     absorb_link_weight,
     deabsorb_link_weight,
@@ -18,9 +19,15 @@ using ..SquareIPEPS:
     _add_log_norm!
 using ..StarModels: AbstractStarModel, PXPStarModel, star_gate_itensor
 
-export StarUpdateInfo, project_star!
+export StarUpdateInfo, project_star!, canonicalize_simple!
 
 const _STAR_DIRECTIONS = (:right, :up, :left, :down)
+
+# State-preserving regauge cutoff: small enough that dropping the discarded
+# weight leaves the wavefunction unchanged to ~1e-10, large enough to discard
+# the genuinely-null directions whose near-zero weights would otherwise have to
+# be inverted during later de-absorption.
+const _GAUGE_CUTOFF = 1e-20
 
 """
     StarUpdateInfo
@@ -532,6 +539,71 @@ function project_star!(
 
     _commit_star_update!(psi, coords, new_tensors, new_links, new_weights, info)
     return info
+end
+
+function _max_link_weight_change(before, after)
+    change = 0.0
+    for (key, lambda_after) in after
+        lambda_before = get(before, key, nothing)
+        (lambda_before === nothing || length(lambda_before) != length(lambda_after)) &&
+            return Inf
+        change = max(change, maximum(abs.(lambda_after .- lambda_before)))
+    end
+    return change
+end
+
+"""
+    canonicalize_simple!(psi::SquareIPEPSState; max_sweeps = 8, tol = 1e-10)::Int
+
+Regauge `psi` toward the mean-field super-orthogonal (Vidal canonical) form so
+each stored link weight approximates the Schmidt spectrum of its bond. This is
+done with idle square-star updates — [`project_star!`](@ref) at `step = 0` with
+the unprojected identity gate — which are exact local gauge transformations:
+the represented wavefunction is left unchanged while the link weights relax
+toward canonical values. Serial sweeps over all unit-cell centers repeat until
+the largest change in any stored weight is below `tol` or `max_sweeps` sweeps
+have run; the return value is the number of sweeps performed. The log-norm
+ledger is restored afterward because a gauge transformation does not change the
+physical norm.
+
+# Example
+
+```julia
+using SquarePXPDynamics
+cell = PeriodicSquareUnitCell(4, 4)
+psi = checkerboard_square_ipeps(cell; maxdim = 2)
+evolve!(psi, 0.1; dt = 0.05, order = 1, maxdim = 2, schedule = :serial)
+canonicalize_simple!(psi)  # link weights now approximate Schmidt spectra
+```
+"""
+function canonicalize_simple!(
+    psi::SquareIPEPSState;
+    max_sweeps::Integer = 8,
+    tol::Real = 1e-10,
+)::Int
+    max_sweeps >= 1 || throw(ArgumentError("max_sweeps must be at least 1"))
+    tol > 0 || throw(ArgumentError("tol must be positive"))
+    saved_log_norm = log_norm(psi)
+    gauge_maxdim = maximum(dim(link) for link in values(psi.link_indices))
+    sweeps = 0
+    for _ = 1:max_sweeps
+        before = Dict(key => copy(lambda) for (key, lambda) in psi.link_weights)
+        for center in psi.unitcell.reps
+            project_star!(
+                psi,
+                center,
+                0.0;
+                projected = false,
+                maxdim = gauge_maxdim,
+                cutoff = _GAUGE_CUTOFF,
+                rel_floor = 0.0,
+            )
+        end
+        sweeps += 1
+        _max_link_weight_change(before, psi.link_weights) < tol && break
+    end
+    _add_log_norm!(psi, saved_log_norm - log_norm(psi))
+    return sweeps
 end
 
 end
