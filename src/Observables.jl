@@ -6,7 +6,6 @@ using ..SquareGeometry
 using ..SquarePXP: SQUARE_STAR_SITES, square_pxp_star_hamiltonian
 using ..SquareUnitCells
 using ..SquareIPEPS
-using ..StarModels: TFIMStarModel, star_hamiltonian
 using ..Internals: _DIRECTIONS, _validate_direction, _opposite_direction
 
 export local_density_simple, density_simple, sublattice_densities
@@ -16,8 +15,6 @@ export star_expectation_simple, pxp_energy_density_simple
 export mean_bond_entropy, max_bond_entropy
 export SimpleObservableSummary, measure_simple
 export local_x_simple, local_y_simple, local_z_simple, nearest_neighbor_zz_simple
-export tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
-export TFIMObservableSummary, measure_tfim_simple
 
 const _opposite_dir = _opposite_direction
 
@@ -400,46 +397,6 @@ function _mean_nearest_neighbor_zz_simple(psi::SquareIPEPSState, dir::Symbol)
            length(reps)
 end
 
-function _tfim_energy_density_star_simple(psi::SquareIPEPSState, model::TFIMStarModel)
-    Hstar = star_hamiltonian(model)
-    reps = psi.unitcell.reps
-    isempty(reps) && throw(ArgumentError("unit cell is empty"))
-    return sum(star_expectation_simple(psi, c, Hstar) for c in reps) / length(reps)
-end
-
-function _tfim_energy_density_decomposed_simple(psi::SquareIPEPSState, model::TFIMStarModel)
-    mean_x = _mean_one_site_expectation_simple(psi, pauli_x())
-    zz_right = _mean_nearest_neighbor_zz_simple(psi, :right)
-    zz_up = _mean_nearest_neighbor_zz_simple(psi, :up)
-    return -model.h * mean_x - model.J * (zz_right + zz_up)
-end
-
-"""
-    tfim_energy_density_star_simple(psi, model)::Float64
-
-Return the unit-cell average of `star_hamiltonian(model)` using
-[`star_expectation_simple`](@ref) over every unit-cell representative.
-"""
-function tfim_energy_density_star_simple(
-    psi::SquareIPEPSState,
-    model::TFIMStarModel,
-)::Float64
-    return _real_expectation(_tfim_energy_density_star_simple(psi, model))
-end
-
-"""
-    tfim_energy_density_decomposed_simple(psi, model)::Float64
-
-Return the decomposed TFIM energy density
-`-h * mean_x - J * (zz_right + zz_up)`, where all terms are unit-cell averages
-of simple-update local observables over canonical `:right` and `:up` bonds.
-"""
-function tfim_energy_density_decomposed_simple(
-    psi::SquareIPEPSState,
-    model::TFIMStarModel,
-)::Float64
-    return _real_expectation(_tfim_energy_density_decomposed_simple(psi, model))
-end
 
 """
     mean_bond_entropy(psi)::Float64
@@ -487,43 +444,6 @@ struct SimpleObservableSummary
 end
 
 """
-    TFIMObservableSummary
-
-Deterministic TFIM diagnostics from simple-update/local-environment
-observables, including Pauli means, canonical ZZ bonds, star and decomposed
-energy densities, Hermitian-observable imaginary residuals, and link-entropy
-summaries.
-"""
-struct TFIMObservableSummary
-    mean_x::Float64
-    mean_y::Float64
-    mean_z::Float64
-    z_even::Float64
-    z_odd::Float64
-    zz_right::Float64
-    zz_up::Float64
-    energy_density_star::Float64
-    energy_density_decomposed::Float64
-    energy_density_discrepancy::Float64
-    x_imag_abs::Float64
-    y_imag_abs::Float64
-    z_imag_abs::Float64
-    zz_imag_abs::Float64
-    energy_imag_abs::Float64
-    max_imag_abs::Float64
-    mean_bond_entropy::Float64
-    max_bond_entropy::Float64
-end
-
-function _validate_finite_summary(summary::TFIMObservableSummary)
-    for name in fieldnames(TFIMObservableSummary)
-        value = getfield(summary, name)
-        isfinite(value) || throw(ArgumentError("TFIM summary field $name must be finite"))
-    end
-    return summary
-end
-
-"""
     measure_simple(psi)::SimpleObservableSummary
 
 Compute cheap deterministic simple-update diagnostics for a custom ITensors
@@ -552,57 +472,5 @@ function measure_simple(psi::SquareIPEPSState)::SimpleObservableSummary
     )
 end
 
-"""
-    measure_tfim_simple(psi, model)::TFIMObservableSummary
-
-Compute cheap deterministic TFIM diagnostics for a square iPEPS state using
-simple-update local environments. This does not run CTMRG or refresh any
-environment. The reported discrepancy is
-`abs(energy_density_star - energy_density_decomposed)`.
-"""
-function measure_tfim_simple(
-    psi::SquareIPEPSState,
-    model::TFIMStarModel,
-)::TFIMObservableSummary
-    x = _mean_one_site_expectation_simple(psi, pauli_x())
-    y = _mean_one_site_expectation_simple(psi, pauli_y())
-    z = _mean_one_site_expectation_simple(psi, pauli_z())
-    z_even = _mean_one_site_expectation_simple(psi, pauli_z(); sublattice = :even)
-    z_odd = _mean_one_site_expectation_simple(psi, pauli_z(); sublattice = :odd)
-    zz_right = _mean_nearest_neighbor_zz_simple(psi, :right)
-    zz_up = _mean_nearest_neighbor_zz_simple(psi, :up)
-    energy_star = _tfim_energy_density_star_simple(psi, model)
-    energy_decomposed = -model.h * x - model.J * (zz_right + zz_up)
-
-    x_imag_abs = abs(imag(x))
-    y_imag_abs = abs(imag(y))
-    z_imag_abs = maximum(abs, imag.((z, z_even, z_odd)))
-    zz_imag_abs = maximum(abs, imag.((zz_right, zz_up)))
-    energy_imag_abs = maximum(abs, imag.((energy_star, energy_decomposed)))
-    max_imag_abs =
-        maximum((x_imag_abs, y_imag_abs, z_imag_abs, zz_imag_abs, energy_imag_abs))
-
-    summary = TFIMObservableSummary(
-        _real_expectation(x),
-        _real_expectation(y),
-        _real_expectation(z),
-        _real_expectation(z_even),
-        _real_expectation(z_odd),
-        _real_expectation(zz_right),
-        _real_expectation(zz_up),
-        _real_expectation(energy_star),
-        _real_expectation(energy_decomposed),
-        abs(_real_expectation(energy_star) - _real_expectation(energy_decomposed)),
-        Float64(x_imag_abs),
-        Float64(y_imag_abs),
-        Float64(z_imag_abs),
-        Float64(zz_imag_abs),
-        Float64(energy_imag_abs),
-        Float64(max_imag_abs),
-        mean_bond_entropy(psi),
-        max_bond_entropy(psi),
-    )
-    return _validate_finite_summary(summary)
 end
 
-end

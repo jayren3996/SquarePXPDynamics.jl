@@ -22,7 +22,6 @@ end
         "# Example",
         string(@doc SquarePXPDynamics.validate_pxp_ed_ipeps),
     )
-    @test occursin("# Example", string(@doc SquarePXPDynamics.run_benchmark))
 end
 
 @testset "public exports do not expose internal star helpers" begin

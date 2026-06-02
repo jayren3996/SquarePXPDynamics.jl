@@ -4,7 +4,11 @@ using ITensors
 using ..SquareGeometry
 using ..SquarePXP
 using ..SquareUnitCells
-import ..SquarePEPS: physical_index, link_index
+
+# physical_index / link_index are generic functions owned here (formerly declared
+# in the deleted SquarePEPS module). SquareIPEPSState methods attach below.
+function physical_index end
+function link_index end
 
 export SquareIPEPSState
 export product_square_ipeps, checkerboard_square_ipeps

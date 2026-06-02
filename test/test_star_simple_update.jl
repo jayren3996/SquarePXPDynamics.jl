@@ -570,9 +570,4 @@ end
     @test local_density_simple(explicit, center) ≈ local_density_simple(legacy, center) atol =
         1e-12
     @test log_norm(explicit) ≈ log_norm(legacy) atol = 1e-12
-
-    tfim = product_square_ipeps(cell; state = :up, maxdim = 1)
-    info = project_star!(tfim, center, 0.0; model = TFIMStarModel(1.0, 0.0), maxdim = 1)
-    @test info.max_truncerr ≥ 0
-    @test isfinite(log_norm(tfim))
 end

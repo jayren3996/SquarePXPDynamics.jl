@@ -72,17 +72,6 @@ end
     @test max_bond_entropy(down) ≈ 0.0 atol = 1e-12
 end
 
-@testset "TFIM energy decomposed equals star sum on product state" begin
-    cell = PeriodicSquareUnitCell(10, 10)
-    down = product_square_ipeps(cell; state = :down, maxdim = 1)
-    model = TFIMStarModel(1.0, 0.5)
-
-    star_value = tfim_energy_density_star_simple(down, model)
-    decomp_value = tfim_energy_density_decomposed_simple(down, model)
-    @test star_value ≈ decomp_value atol = 1e-12
-    @test isfinite(star_value)
-end
-
 @testset "measure_simple aggregates basic fields" begin
     cell = PeriodicSquareUnitCell(10, 10)
     down = product_square_ipeps(cell; state = :down, maxdim = 1)

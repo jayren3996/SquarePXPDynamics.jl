@@ -1,18 +1,16 @@
 module StarModels
 
 using ITensors
-using LinearAlgebra
-import ..SpinOps: pauli_x, pauli_z, identity2, kron_all, embed_one_site
 import ..SquarePXP:
     SQUARE_STAR_SITES,
     square_pxp_star_hamiltonian,
     square_pxp_gate,
     projected_square_pxp_gate
 
-export AbstractStarModel, PXPStarModel, TFIMStarModel
+export AbstractStarModel, PXPStarModel
 export AbstractModelProtocol, StaticModel, model_at
-export star_site_order, tfim_pauli_convention
-export star_hamiltonian, star_gate, star_gate_itensor, tfim_product_basis_energy
+export star_site_order
+export star_hamiltonian, star_gate, star_gate_itensor
 
 """
     AbstractStarModel
@@ -30,28 +28,6 @@ gates include the local blockade projector.
 struct PXPStarModel <: AbstractStarModel
     projected::Bool
 end
-
-"""
-    TFIMStarModel(J, h)
-
-Five-site square-star transverse-field Ising model with finite coupling `J`
-and finite transverse field `h`. Values are promoted to a common real type.
-The Hamiltonian convention is
-`-h * X_center - (J / 2) * Z_center * (Z_right + Z_up + Z_left + Z_down)`.
-"""
-struct TFIMStarModel{T<:Real} <: AbstractStarModel
-    J::T
-    h::T
-
-    function TFIMStarModel{T}(J::T, h::T) where {T<:Real}
-        isfinite(J) || throw(ArgumentError("J must be finite"))
-        isfinite(h) || throw(ArgumentError("h must be finite"))
-        return new{T}(J, h)
-    end
-end
-
-TFIMStarModel(J::Real, h::Real) =
-    TFIMStarModel{promote_type(typeof(J), typeof(h))}(promote(J, h)...)
 
 """
     AbstractModelProtocol
@@ -84,40 +60,12 @@ Return the dense square-star site order `(center, right, up, left, down)`.
 star_site_order() = (:center, :right, :up, :left, :down)
 
 """
-    tfim_pauli_convention()
-
-Return the TFIM Pauli convention: `Z |up> = +|up>` and transverse `X` field.
-"""
-tfim_pauli_convention() = (:Z_up_is_plus_one, :X_field)
-
-function _validate_finite_step(step::Real)
-    isfinite(step) || throw(ArgumentError("step must be finite"))
-    return step
-end
-
-function _validate_evolution(evolution::Symbol)
-    evolution === :real || evolution === :imaginary ||
-        throw(ArgumentError("evolution must be :real or :imaginary"))
-    return evolution
-end
-
-"""
     star_hamiltonian(model)
 
 Return the dense 32x32 Hamiltonian for a five-site square-star model in
 `star_site_order()`.
 """
 star_hamiltonian(model::PXPStarModel) = square_pxp_star_hamiltonian()
-
-function star_hamiltonian(model::TFIMStarModel)
-    nsites = SQUARE_STAR_SITES
-    z_center = embed_one_site(pauli_z(), 1, nsites)
-    H = -model.h * embed_one_site(pauli_x(), 1, nsites)
-    for site = 2:nsites
-        H .-= (model.J / 2) .* (z_center * embed_one_site(pauli_z(), site, nsites))
-    end
-    return H
-end
 
 """
     star_gate(model, step; evolution = :real)
@@ -129,13 +77,6 @@ Return the dense 32x32 square-star evolution gate for `model`. Use
 function star_gate(model::PXPStarModel, step::Real; evolution::Symbol = :real)
     return model.projected ? projected_square_pxp_gate(step; evolution) :
            square_pxp_gate(step; evolution)
-end
-
-function star_gate(model::TFIMStarModel, step::Real; evolution::Symbol = :real)
-    _validate_finite_step(step)
-    _validate_evolution(evolution)
-    H = star_hamiltonian(model)
-    return evolution === :real ? exp(-im * step * H) : exp(-step * H)
 end
 
 function _square_star_indices(site_indices)
@@ -200,33 +141,6 @@ function star_gate_itensor(
     evolution::Symbol = :real,
 )
     return star_gate_itensor(model, site_indices, step; evolution)
-end
-
-function _tfim_z_value(state)
-    state === :up && return 1
-    state === :z_up && return 1
-    state isa Integer && !(state isa Bool) && state == 1 && return 1
-    state === :down && return -1
-    state === :z_down && return -1
-    state isa Integer && !(state isa Bool) && state == 2 && return -1
-    state isa Integer && !(state isa Bool) && state == -1 && return -1
-    throw(ArgumentError("TFIM product basis states must be :up, :down, :z_up, :z_down, 1, 2, +1, or -1"))
-end
-
-"""
-    tfim_product_basis_energy(model, states)
-
-Return the diagonal TFIM bond energy
-`-(J / 2) * Z_center * (Z_right + Z_up + Z_left + Z_down)` for five product
-basis labels in `star_site_order()`. Accepted labels include `:up`, `:down`,
-`:z_up`, `:z_down`, `1`, `2`, `+1`, and `-1`.
-"""
-function tfim_product_basis_energy(model::TFIMStarModel, states)
-    length(states) == SQUARE_STAR_SITES ||
-        throw(ArgumentError("TFIM square-star product basis must have 5 states"))
-    z_center = _tfim_z_value(states[1])
-    z_neighbors = sum(_tfim_z_value(states[site]) for site = 2:SQUARE_STAR_SITES)
-    return -(model.J / 2) * z_center * z_neighbors
 end
 
 end

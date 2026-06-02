@@ -14,10 +14,8 @@ include("Internals.jl")
 include("SpinOps.jl")
 include("SquareGeometry.jl")
 include("SquarePXP.jl")
-include("SquarePEPS.jl")
 include("SquareUnitCells.jl")
 include("SquareIPEPS.jl")
-include("GaugeDiagnostics.jl")
 include("StarModels.jl")
 include("Observables.jl")
 include("FiniteIPEPSObservables.jl")
@@ -25,9 +23,6 @@ include("PEPSKitMeasurements.jl")
 include("CTMTrust.jl")
 include("StarSimpleUpdate.jl")
 include("IPEPSEvolution.jl")
-include("Benchmarks.jl")
-include("FiniteTFIMReference.jl")
-include("FiniteMPSTFIMReference.jl")
 include("FinitePXPEEDBenchmark.jl")
 include("PXPValidation.jl")
 include("CandidateSnapshots.jl")
@@ -65,18 +60,13 @@ using .SquarePXP:
 using .StarModels:
     AbstractStarModel,
     PXPStarModel,
-    TFIMStarModel,
     AbstractModelProtocol,
     StaticModel,
     model_at,
     star_site_order,
-    tfim_pauli_convention,
     star_hamiltonian,
     star_gate,
-    star_gate_itensor,
-    tfim_product_basis_energy
-using .SquarePEPS:
-    SquarePEPSState, product_square_peps, site_tensor, physical_index, link_index
+    star_gate_itensor
 using .SquareUnitCells:
     PeriodicSquareUnitCell,
     wrap,
@@ -87,6 +77,7 @@ using .SquareUnitCells:
     BondKey,
     bondkey
 using .SquareIPEPS: SquareIPEPSState, product_square_ipeps, checkerboard_square_ipeps
+using .SquareIPEPS: physical_index, link_index
 using .SquareIPEPS: unitcell_reps, physical_dim, simple_weight_dim, copy_state
 using .SquareIPEPS: link_weight, set_link_weight!, link_weight_tensor
 using .SquareIPEPS: state_version, log_norm
@@ -94,9 +85,6 @@ using .SquareIPEPS: absorb_link_weight, deabsorb_link_weight
 using .SquareIPEPS: weight_entropy, bond_entropy, all_bond_entropies
 using .SquareIPEPS: normalize_link_weights!
 using .SquareIPEPS: square_pxp_gate_itensor, projected_square_pxp_gate_itensor
-using .GaugeDiagnostics: SimpleGaugeDiagnostic
-using .GaugeDiagnostics: gauge_diagnostic_simple, gauge_deviation_simple
-using .GaugeDiagnostics: all_gauge_deviations_simple
 using .Observables: local_density_simple, density_simple, sublattice_densities
 using .Observables: sublattice_imbalance_simple, checkerboard_structure_factor_simple
 using .Observables: nearest_neighbor_density_simple, blockade_violation_simple
@@ -105,8 +93,6 @@ using .Observables: mean_bond_entropy, max_bond_entropy
 using .Observables: SimpleObservableSummary, measure_simple
 using .Observables: local_x_simple, local_y_simple, local_z_simple
 using .Observables: nearest_neighbor_zz_simple
-using .Observables: tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
-using .Observables: TFIMObservableSummary, measure_tfim_simple
 using .FiniteIPEPSObservables:
     dense_state_finite,
     exact_one_site_expectation_finite,
@@ -132,28 +118,6 @@ using .CTMTrust: CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm
 using .CTMTrust: tight_ctm_trust_policy, calibrated_ctm_trust_policy
 using .StarSimpleUpdate: StarUpdateInfo, project_star!
 using .IPEPSEvolution: TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
-using .Benchmarks:
-    BenchmarkSpec,
-    BenchmarkMetadata,
-    EvolutionDiagnostics,
-    BenchmarkSample,
-    BenchmarkResult,
-    run_benchmark,
-    write_benchmark_json,
-    write_benchmark_csv
-using .FiniteTFIMReference:
-    FiniteTFIMReferenceSample,
-    finite_tfim_hamiltonian,
-    finite_tfim_product_state,
-    measure_finite_tfim,
-    run_finite_tfim_reference
-using .FiniteMPSTFIMReference:
-    FiniteMPSTFIMMetadata,
-    FiniteMPSTFIMSample,
-    FiniteMPSTFIMResult,
-    finite_mps_site_index,
-    finite_mps_square_lattice_bonds,
-    run_finite_mps_tfim_reference
 using .FinitePXPEEDBenchmark:
     PXPSquareSpaceGroupBasis,
     PXPEEDBenchmarkConfig,
@@ -189,13 +153,6 @@ using .PXPValidation:
     write_pxp_convergence_json,
     PXPReversibilityReport,
     validate_pxp_reversibility,
-    PXPAuditConfig,
-    PXPAuditSummary,
-    PXPAuditRun,
-    PXPAuditReport,
-    run_pxp_audit_campaign,
-    write_pxp_audit_json,
-    write_pxp_audit_csv,
     PXPLargerDBenchmarkConfig,
     PXPLargerDBenchmarkSummary,
     PXPLargerDBenchmarkRun,
@@ -248,11 +205,11 @@ export square_neighbor, square_star_sites, square_star_color, disjoint_square_st
 export unit_cell_representatives, wrap_square_coord
 export SQUARE_STAR_SITES, square_pxp_star_hamiltonian, square_star_blockade_projector
 export square_pxp_gate, projected_square_pxp_gate, square_star_basis_allowed
-export AbstractStarModel, PXPStarModel, TFIMStarModel
+export AbstractStarModel, PXPStarModel
 export AbstractModelProtocol, StaticModel, model_at
-export star_site_order, tfim_pauli_convention
-export star_hamiltonian, star_gate, star_gate_itensor, tfim_product_basis_energy
-export SquarePEPSState, product_square_peps, site_tensor, physical_index, link_index
+export star_site_order
+export star_hamiltonian, star_gate, star_gate_itensor
+export physical_index, link_index
 export PeriodicSquareUnitCell
 export wrap, neighbor, update_centers, assert_five_color_compatible
 export stars_are_disjoint_mod_unitcell
@@ -264,8 +221,6 @@ export state_version, log_norm
 export absorb_link_weight, deabsorb_link_weight
 export weight_entropy, bond_entropy, all_bond_entropies, normalize_link_weights!
 export square_pxp_gate_itensor, projected_square_pxp_gate_itensor
-export SimpleGaugeDiagnostic
-export gauge_diagnostic_simple, gauge_deviation_simple, all_gauge_deviations_simple
 export local_density_simple, density_simple, sublattice_densities
 export sublattice_imbalance_simple, checkerboard_structure_factor_simple
 export nearest_neighbor_density_simple, blockade_violation_simple
@@ -274,8 +229,6 @@ export mean_bond_entropy, max_bond_entropy
 export SimpleObservableSummary, measure_simple
 export local_x_simple, local_y_simple, local_z_simple
 export nearest_neighbor_zz_simple
-export tfim_energy_density_star_simple, tfim_energy_density_decomposed_simple
-export TFIMObservableSummary, measure_tfim_simple
 export dense_state_finite
 export exact_one_site_expectation_finite, exact_nearest_neighbor_expectation_finite
 export exact_star_expectation_finite, exact_density_finite
@@ -296,14 +249,6 @@ export CTMTrustPolicy, CTMTrustAssessment, assess_ctm_trust, write_ctm_trust_csv
 export tight_ctm_trust_policy, calibrated_ctm_trust_policy
 export StarUpdateInfo, project_star!
 export TrotterParams, EvolutionLog, trotter_sequence, evolve!, reverse_evolve!
-export BenchmarkSpec, BenchmarkMetadata, EvolutionDiagnostics, BenchmarkSample, BenchmarkResult
-export run_benchmark, write_benchmark_json, write_benchmark_csv
-export FiniteTFIMReferenceSample
-export finite_tfim_hamiltonian, finite_tfim_product_state
-export measure_finite_tfim, run_finite_tfim_reference
-export FiniteMPSTFIMMetadata, FiniteMPSTFIMSample, FiniteMPSTFIMResult
-export finite_mps_site_index, finite_mps_square_lattice_bonds
-export run_finite_mps_tfim_reference
 export PXPSquareSpaceGroupBasis
 export PXPEEDBenchmarkConfig, PXPEEDSample, PXPEEDBenchmarkResult
 export pxp_ed_space_group_basis, pxp_ed_constrained_count, pxp_ed_group_order
@@ -318,8 +263,6 @@ export write_pxp_validation_json
 export PXPConvergenceConfig, PXPConvergenceReport, validate_pxp_convergence
 export write_pxp_convergence_json
 export PXPReversibilityReport, validate_pxp_reversibility
-export PXPAuditConfig, PXPAuditSummary, PXPAuditRun, PXPAuditReport
-export run_pxp_audit_campaign, write_pxp_audit_json, write_pxp_audit_csv
 export PXPLargerDBenchmarkConfig, PXPLargerDBenchmarkSummary
 export PXPLargerDBenchmarkRun, PXPLargerDBenchmarkReport
 export run_pxp_larger_d_benchmark
