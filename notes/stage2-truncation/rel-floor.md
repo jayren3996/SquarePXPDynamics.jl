@@ -17,13 +17,22 @@ The offset-documenting tests (`test_pxp_validation.jl`, `test_pxp_larger_d_ed_be
 were therefore moved to an entangled t=0.1 (offset ~6e-3 survives), with their
 `< 1e-6` exact-finite bounds relaxed to `< 1e-3`.
 
-**PROVISIONAL — re-evaluate by trajectory.** The 1e-4 → 1e-3 change was decided at
-the single t=2.6 ENDPOINT (1e-4 "D=4 catastrophe" 3.45e-2 vs 1e-3 9.6e-3). t=2.6
-is a misleading crossing point (see `../methodology/revival-validation.md`), and
-early trajectory data shows 1e-4 and 1e-3 within ~10% by RMS — nothing like the
-3.6× endpoint gap. So the catastrophe was likely an endpoint artifact and the
-default change is NOT settled. The floor is a conditioning/robustness knob, not an
-accuracy fix; the principled fix is environment-aware truncation
-(`improvement-roadmap.md`). Re-pick the default by TRAJECTORY RMS across floors
-(`scripts/dev_relfloor_trajectory.jl`), and move the t=2.6 `@test_broken`
-regression test to a trajectory metric.
+**TRAJECTORY VERDICT (2026-06-02): 1e-3 is justified — keep it.** Re-evaluated all
+floors by trajectory RMS (`scripts/dev_relfloor_trajectory.jl`), not the t=2.6
+endpoint:
+
+| floor | D=2 | D=3 | D=4 |
+|---|---|---|---|
+| 1e-4 | 2.87e-2 | **1.68e-2** | 1.47e-2 |
+| **1e-3** | **2.62e-2** | 1.82e-2 | **9.8e-3** |
+| 0 | 2.91e-2 | 2.90e-2 | crashed (conditioning) |
+
+1e-3 wins D=2 and (clearly) D=4, is marginally behind 1e-4 at D=3, and rel_floor=0
+is bad by trajectory (D=3 2.9e-2, and a high-D conditioning crash) — so a floor is
+needed and adaptive-toward-0 is wrong. The 1e-4 "D=4 catastrophe" WAS
+endpoint-EXAGGERATED (3.65× at t=2.6 → only 1.5× by trajectory) but 1e-3 is
+genuinely better at D=4. So the default change STANDS. The floor is a conditioning
+knob, not an accuracy fix; the principled fix is environment-aware truncation
+(`improvement-roadmap.md`). **STILL TODO:** move the t=2.6 `@test_broken` revival
+regression gate to a trajectory (max/RMS) metric — the endpoint is the wrong gate
+even though the floor choice it informed happened to be right.
