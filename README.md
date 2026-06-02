@@ -5,6 +5,14 @@
 local/CTMRG observables, ED reference benchmarks, and a ScarFinder
 candidate-search loop.
 
+![2D PXP quench: simple-update iPEPS reproduces the ED scar revival](artifacts/revival_ipeps_vs_ed.png)
+
+**Milestone:** simple-update iPEPS reproduces the exact-diagonalization
+collapse-and-revival of the 2D PXP quantum many-body scar model (4x4 Neel quench
+to the first revival), measured by an exact 16-site contraction. By the n(t)
+trajectory error the bond-dimension ladder converges monotonically toward ED
+(D=4 best of 2-4).
+
 ## Requirements
 
 - Julia 1.12 or newer (the package pins `julia = "1.12"` in `Project.toml`).
@@ -45,41 +53,42 @@ tests and regression checks, **not** CTMRG-quality measurements.
 
 ## Status
 
-The package now contains the S0-S7 prototype pipeline for square-lattice PXP
-dynamics plus a v1 infinite TFIM benchmark runner: dense local model
-definitions, finite and periodic PEPS/iPEPS state containers, QR-reduced
-five-site star updates, deterministic Trotter evolution, simple/local
-observables, reproducible TFIM/PXP validation records, and ScarFinder
-orchestration with explicit objectives, optional trusted finite-`chi` CTM
-measurement backends, candidate metadata persistence, CTM trust/readiness
-diagnostics, and transactional CTM gauge conditioning.
+The package does simple-update iPEPS real-time dynamics of the 2D square-lattice
+PXP (Rydberg-blockade / quantum many-body scar) model, validated against exact
+diagonalization. Core pipeline: Gamma-lambda (Vidal) iPEPS states, QR-reduced
+five-site "star" updates (`project_star!`), deterministic Trotter evolution
+(`evolve!`), and measurement via either an exact finite contraction (small cells,
+trusted) or PEPSKit CTMRG (`measure_ctm`). ED references use a constraint-resolved
+PXP basis (`FinitePXPEEDBenchmark.jl`, `PXPValidation.jl`).
 
-Simple/local observables are useful diagnostics for development and regression
-tests, but they are not final CTMRG-quality measurements. ScarFinder still
-defaults to this fast simple/local path for development. Physics-facing
-candidate ranking should instead use `TrustedCTMBackend`, an explicit
-objective such as `RevivalObjective` or `CompositeObjective`, and
-`require_trusted_ctm = true`. Do not make physics claims from simple
-diagnostics alone.
+Progress against the three project goals:
 
-This checkout also contains PEPSKit/TensorKit-facing measurement code in
-`src/PEPSKitMeasurements.jl` and S7a CTM trust helpers in `src/CTMTrust.jl`.
-The PEPSKit CTMRG measurement adapter is shipped as an experimental S5c-facing
-API and can now be selected as ScarFinder's trusted measurement backend.
-Within that adapter, density,
-blockade diagnostics, and five-site square-star PXP energy density use PEPSKit
-CTMRG. The dense square-star Hamiltonian remains the source of truth for the
-PXP energy operator, with site order `(center, right, up, left, down)` and
-basis order `1 = :up`, `2 = :down`. PEPSKit and TensorKit therefore remain main
-dependencies while this exported measurement surface is present.
+1. **Reliable dynamics matching ED — largely achieved up to D=4.** On the 4x4
+   Neel quench to the first scar revival, the iPEPS `n(t)` trajectory converges
+   monotonically toward ED as bond dimension grows (trajectory RMS error D=2
+   2.6e-2 -> D=4 9.8e-3; see the figure above). The trusted measurement is the
+   exact 16-site contraction `exact_density_finite(max_sites = 16)` — CTM chi=8
+   was found to *flatter* the revival error by ~3-13e-3, so it is not used for the
+   headline benchmark. **Methodology:** judge revival dynamics by the `n(t)`
+   trajectory, never a single time — the revival peak (t~2.6) is a curve-crossing
+   point that scrambles the per-D ranking. Reaching the D>=5 trajectory needs a
+   memory-efficient boundary-MPS contractor (the dense one OOMs at 16 sites, D>=5).
 
-The original S0-S7 implementation plan has been reconciled against the current
-architecture in `docs/superpowers/specs/2026-05-16-s0-s7-completion-design.md`.
-The current S0.5/S1 backend-facade items are superseded by the concrete custom
-ITensors iPEPS stack unless a second update backend is introduced. S7b now has
-CTM local norm-matrix diagnostics, readiness checks, and transactional
-`fix_bond_gauge!` paths for D=1 no-op/product bonds and D>1 PEPSKit
-bond-environment gauge conditioning.
+2. **Bond truncation + conditioning — partial.** Simple update truncates against
+   the single-site lambda^2 mean-field environment. A relative singular-value
+   condition floor (`rel_floor`, default 1e-3) caps the bond condition number and
+   removes a short-time tight-cutoff instability. Environment-aware (full/cluster)
+   update — truncating against a real bond environment — is the main open item.
+
+3. **ScarFinder (better-than-Neel initial state) — scaffolding only.** A
+   single-seed evolve/measure/rank loop exists (`ScarFinder.jl`); a real search
+   over initial states, a return-amplitude / Loschmidt objective, and a Neel
+   baseline are future work.
+
+Simple/local observables (`measure_simple`) are development diagnostics only, not
+CTMRG-quality measurements — do not make D>1 physics claims from them. The dense
+square-star PXP Hamiltonian is the source of truth for the energy operator (site
+order `(center, right, up, left, down)`, basis `1 = :up`, `2 = :down`).
 
 ## Package Layout
 
@@ -91,37 +100,19 @@ bond-environment gauge conditioning.
 
 ## Currently shipped
 
-- Generic spin-1/2 operators (`src/SpinOps.jl`).
-- Square-lattice geometry and 5-site star scheduling helpers (`src/SquareGeometry.jl`).
-- Dense square-star PXP Hamiltonian, blockade projector, and projected real/imaginary gates (`src/SquarePXP.jl`).
-- Finite ITensors-backed square PEPS product-state construction (`src/SquarePEPS.jl`).
-- Periodic square iPEPS product and checkerboard states in Gamma-lambda simple-update form (`src/SquareIPEPS.jl`).
-- Periodic iPEPS helper APIs, link-weight normalization, and bond-entropy diagnostics (`src/SquareIPEPS.jl`).
-- ITensor wrappers for dense square-star PXP gates (`src/SquareIPEPS.jl`).
-- QR-reduced five-site star update with pre-update touched-link minima diagnostics via `project_star!` (`src/StarSimpleUpdate.jl`).
-- Deterministic five-color and serial Trotter evolution with model metadata and log-normalization ledger diagnostics via `evolve!` (`src/IPEPSEvolution.jl`).
-- Simple/local density, blockade, energy-density, and entropy observables via `measure_simple` (`src/Observables.jl`).
-- Simple/local TFIM observables and reproducible JSON/CSV benchmark records via `run_benchmark` (`src/Benchmarks.jl`).
-- Experimental PEPSKit/TensorKit CTMRG density, blockade, and five-site PXP energy measurement adapter via `measure_ctm` (`src/PEPSKitMeasurements.jl`).
-- CTM finite-`chi` trust assessment and audit CSV output via `assess_ctm_trust` and `write_ctm_trust_csv` (`src/CTMTrust.jl`).
-- PXP validation and convergence reports that compare finite ED all-down trajectories against
-  matched iPEPS trajectories and optionally attach trusted finite-`chi` CTM
-  measurement sweeps via `validate_pxp_ed_ipeps` and
-  `write_pxp_validation_json`, or sweep `dt`, `D`, cutoff, and CTM finite-`chi`
-  settings via `validate_pxp_convergence` and
-  `write_pxp_convergence_json` (`src/PXPValidation.jl`).
-- M3 larger-D PXP ED benchmark reports via `run_pxp_larger_d_benchmark`, with
-  exact finite 3x3 iPEPS observables when enabled and symmetric PBC ED global
-  density/return-probability metadata for larger odd cells
-  (`src/PXPValidation.jl`).
-- Read-only local simple-gauge diagnostics via `gauge_diagnostic_simple` (`src/GaugeDiagnostics.jl`).
-- CTM local bond norm diagnostics, `ctm_ready_for_gauge_updates`,
-  `pepskit_private_full_update_available`, and transactional `fix_bond_gauge!`
-  gauge conditioning (`src/CTMGaugeReadiness.jl`).
-- `scarfinder!` orchestration, guarded simple-energy correction,
-  objective-based candidate ranking, optional trusted CTM measurement backends,
-  JSON candidate metadata persistence, and CSV/JSON diagnostic logging
-  (`src/ScarFinder.jl`).
+- `SquarePXPDynamics.jl` — package entrypoint and public API surface.
+- `Lattice.jl` — square-lattice geometry, periodic unit cells, 5-site star scheduling.
+- `PXPModel.jl` — dense square-star PXP Hamiltonian, blockade projector, real/imaginary projected gates.
+- `SquareIPEPS.jl` — periodic Gamma-lambda iPEPS states (product, checkerboard/Neel), link-weight normalization, bond-entropy diagnostics.
+- `StarSimpleUpdate.jl` — QR-reduced five-site star update (`project_star!`, with touched-link conditioning diagnostics and the `rel_floor` SV condition floor) and `canonicalize_simple!` Vidal regauging.
+- `IPEPSEvolution.jl` — deterministic Trotter evolution (`evolve!`, `reverse_evolve!`), serial/five-color schedules, `TrotterParams`, log-normalization ledger.
+- `Observables.jl` — simple/local observables (`measure_simple`) and exact finite-contraction observables (`dense_state_finite`, `exact_density_finite`, energy / return probability) for small cells.
+- `PEPSKitMeasurements.jl` — PEPSKit/TensorKit CTMRG density / blockade / PXP-energy measurement adapter (`measure_ctm`).
+- `CTMTrust.jl` — finite-`chi` CTM trust assessment and audit CSV (`assess_ctm_trust`).
+- `FinitePXPEEDBenchmark.jl` — constraint-resolved PXP exact-diagonalization reference (Krylov dynamics, density operators).
+- `PXPValidation.jl` — ED-vs-iPEPS validation / convergence reports (`validate_pxp_ed_ipeps`, `validate_pxp_convergence`) and the larger-D ED benchmark (`run_pxp_larger_d_benchmark`).
+- `ScarFinder.jl`, `ScarFinderSupport.jl`, `ScarFinderAudit.jl` — single-seed candidate-state evolve/measure/rank loop, objectives, optional trusted-CTM backend, and audit harness.
+- `Internals.jl` — shared internal helpers.
 
 ## Not Yet Shipped
 
@@ -149,34 +140,6 @@ using the current 5-argument `TrotterParams` constructor. Two notes:
   smoke tests and regression checks, but they are not CTMRG-quality
   measurements; route physics-facing measurements through
   [`measure_ctm`](@ref) and [`measure_ctm_trusted`](@ref).
-
-### TFIM Benchmark Smoke Run
-
-```julia
-using SquarePXPDynamics
-
-spec = BenchmarkSpec(
-    "tfim-j0",
-    StaticModel(TFIMStarModel(0.0, 1.0)),
-    PeriodicSquareUnitCell(3, 3),
-    :z_up,
-    0.02,
-    TrotterParams(0.01, 1, :real, 1, 1e-12; schedule = :serial),
-    1,
-)
-
-result = run_benchmark(spec; run_label = "local-smoke")
-write_benchmark_json(result, "tfim-j0.json")
-write_benchmark_csv([result], "tfim-j0.csv")
-```
-
-The v1 TFIM benchmark uses simple-update diagnostics. Treat these outputs as
-implementation regression records, not CTMRG-quality physics estimates.
-For small cells such as `3 x 3`, `run_finite_tfim_reference` provides a dense
-finite-Hilbert-space TFIM reference trajectory with matching conventions.
-For larger finite references, `run_finite_mps_tfim_reference` runs an
-open-boundary square-lattice TFIM benchmark with a snake-MPS mapping and
-ITensorMPS TDVP; `scripts/finite_mps_tfim_6x6.jl` is the 6x6 smoke script.
 
 ### PXP ED Benchmark
 

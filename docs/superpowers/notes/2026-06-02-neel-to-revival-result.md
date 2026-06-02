@@ -148,3 +148,58 @@ The exact-16 oracle is now the trusted benchmark measurement (committed as the
 every future env fix on it, NOT on CTM. The implementation is cheap: the existing
 `dense_state_finite` already contracts the 16-site cell exactly (~4s, ~const in D);
 `exact_density_finite` was just refactored to build that state once (not 16×).
+
+## EXTENDED D-LADDER (2026-06-02) — it is NOT a flat ceiling; D=5 is the BEST
+
+`scripts/dev_revival_dladder_extend.jl` pushed the exact-oracle D-ladder past D=4
+(rel_floor=1e-3, exact_density_finite(16) vs ED 0.4825):
+
+| D | err vs ED | max_truncerr | wall |
+|---|---|---|---|
+| 2 | 5.9e-3 | 1.9e-4 | 106s |
+| 3 | 5.5e-3 | 1.6e-4 | 54s |
+| 4 | **9.6e-3 (bad pocket)** | **1.8e-3 (10× spike)** | 157s |
+| 5 | **2.7e-3 (BEST)** | **5.4e-5 (lowest)** | 768s |
+| 6 | dense oracle **OutOfMemoryError** | — | — |
+
+This REVISES the "flat mean-field ceiling" reading. **D=5 reaches the revival at
+2.7e-3 — the best of the whole ladder, with the lowest truncerr** — so "more D
+doesn't help at high entanglement" is FALSE. The D=4 result is a CONDITIONING
+bad-pocket (truncerr spikes 10×), and which D is worst MOVES with the floor (D=4 at
+1e-3, D=3 at 0/1e-6). The non-monotonicity is conditioning pockets, not a flat
+wall. Consequences:
+- The revival IS reachable with simple update (D=5: 2.7e-3) — more capable than the
+  D≤4 ladder suggested. The hard-rule D-monotonicity still fails (D=4 pocket).
+- Whether accuracy improves past 2.7e-3 is OPEN: the exact dense contractor OOMs at
+  D>=6 on the 16-site cell. Probing higher D needs a boundary-MPS contractor
+  (bond ≤ D⁴), which is also memory-cheaper.
+- Env-aware (cluster/full) truncation is now framed as "remove the conditioning
+  pockets → clean D-monotonicity + probe the true plateau", not "break a hard wall".
+  See `memory/stage2_meanfield_environment_ceiling.md`.
+
+## TRAJECTORY vs ENDPOINT (2026-06-02) — the endpoint was misleading; RETRACTS the above
+
+Everything above this section measured the revival at the SINGLE t=2.6 endpoint.
+t=2.6 is the revival PEAK — a CROSSING POINT where every D-curve passes near the ED
+peak (0.483), so per-D errors converge AND scramble there. Comparing the full n(t)
+trajectory (exact oracle, every 0.2 over [0,2.8]; `scripts/dev_revival_trajectory.jl`,
+plot `plot_revival_trajectory.py`) overturns the endpoint conclusions:
+
+| D | rms\|err\|_traj | max\|err\|_traj | err@2.6 (endpoint) |
+|---|---|---|---|
+| 2 | 2.6e-2 | 5.6e-2 | 6.5e-3 |
+| 3 | 1.8e-2 | 4.1e-2 | 6.0e-3 |
+| 4 | **9.8e-3 (best)** | **2.5e-2 (best)** | 1.0e-2 (looked WORST) |
+| 5 | dense oracle OOM (15 contractions) | — | 2.7e-3 |
+
+By TRAJECTORY the ladder is CLEAN MONOTONE — D=4 best, error decreasing with D. The
+"D=4 bad pocket", "D=5 best", "non-monotone conditioning pockets", and "mean-field
+CEILING" readings ABOVE are all t=2.6 endpoint ARTIFACTS — RETRACTED. The plot shows
+the collapse (t<1.4) tracked near-perfectly by all D; the error lives in the RISE to
+the revival (t≈1.4–2.6) where the iPEPS lags ED slightly and higher D tracks better.
+
+Consequences: (1) judge revival dynamics by the TRAJECTORY, never t=2.6. (2) The
+rel_floor=1e-3 default and the t=2.6 `@test_broken` regression test were built on the
+endpoint and need re-evaluation by trajectory error. (3) The dense oracle can't reach
+the D=5 trajectory (OOM) — a memory-efficient boundary-MPS contractor is now the top
+priority. The env ceiling is NOT demonstrated; D-convergence is clean to D=4.
