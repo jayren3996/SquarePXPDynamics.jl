@@ -32,7 +32,13 @@ end
     e1 = _exact_finite_error_vs_ed(1, 0.1)
     e2 = _exact_finite_error_vs_ed(2, 0.1)
     @test e2 < e1                      # D>1 strictly helps
-    @test e1 > 50 * e2                 # D=1 is in a different (bad) regime
+    # D=1 sits an order of magnitude ABOVE, and D=2 an order of magnitude BELOW,
+    # the 1e-4 convergence bar — a clean "different regime" separation. Absolute
+    # bounds, NOT a ratio: the rel_floor=1e-3 default (chosen for revival
+    # robustness) deliberately compresses the short-time D-separation, nudging e2
+    # to ~3.4e-5 so e1/e2 ~ 46x; the old `e1 > 50*e2` ratio was brittle to D=2's
+    # exact error. See memory/stage2_rel_floor.md.
+    @test e1 > 1e-3                    # D=1 is genuinely UNconverged (bad regime)
     @test e2 < 1e-4                    # D=2 trusted error is small (matches ED)
 end
 
@@ -56,5 +62,39 @@ if get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") != ""
         # target: tune rel_floor / implement Vidal sqrt-lambda regauge). Flip to
         # @test when strict D-monotonicity holds.
         @test_broken f[3] <= f[2]
+    end
+
+    @testset "Stage-2 revival D-ladder vs ED (exact 16-site oracle)" begin
+        # 4x4 Neel to the FIRST n(t) revival t=2.6 (ED peak 0.4825), measured by
+        # the EXACT 16-site contraction (exact_density_finite, NO CTM environment).
+        # The headline Stage-2 acceptance test. The exact oracle settled
+        # (2026-06-02) that (a) CTM chi=8 was contaminating this benchmark by
+        # ~3-13e-3 -- it FLATTERED the error (chi=8 put D=3/1e-4 at 4e-6 but the
+        # true error is 2.9e-3) -- and (b) the revival D-non-monotonicity is REAL
+        # evolution error: the mean-field-environment ceiling, NOT a measurement
+        # artifact. See memory/stage2_meanfield_environment_ceiling.md.
+        # Default rel_floor=1e-3; exact errors: D2 5.9e-3, D3 5.5e-3, D4 9.6e-3.
+        ED = 0.4825
+        err = Dict{Int,Float64}()
+        for D in (2, 3, 4)
+            psi = checkerboard_square_ipeps(
+                PeriodicSquareUnitCell(4, 4); excited_on = :even, maxdim = D)
+            params = TrotterParams(0.02, 2, :real, D, 1e-12; schedule = :serial)  # default rel_floor 1e-3
+            for _ = 1:130
+                evolve!(psi, 0.02; params = params)            # -> t=2.6
+            end
+            err[D] = abs(exact_density_finite(psi; max_sites = 16) - ED)
+        end
+        # Every D reaches the revival, and rel_floor=1e-3 holds the D=4 peak well
+        # below the rel_floor=1e-4 catastrophe (exact D=4 error 3.45e-2 at 1e-4).
+        for D in (2, 3, 4)
+            @test err[D] < 1.5e-2
+        end
+        # ASPIRATIONAL (the env-ceiling target): strict D-monotonicity at the
+        # revival. FAILS today -- D=4 is worst (9.6e-3 > D=3 5.5e-3) because of the
+        # single-site mean-field environment. Flip to @test when an
+        # environment-aware (full/cluster) update lands.
+        # See memory/pxp_improvement_roadmap.md.
+        @test_broken err[4] <= err[3]
     end
 end

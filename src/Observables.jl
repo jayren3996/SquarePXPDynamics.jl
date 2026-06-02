@@ -681,12 +681,20 @@ Return the average exact finite contraction of the Rydberg density over all
 unit-cell representatives of the supplied iPEPS state.
 """
 function exact_density_finite(psi::SquareIPEPSState; max_sites::Integer = 12)::Float64
+    nsites = _check_tiny_finite_cell(psi, max_sites)
+    # Build the exact dense state ONCE and read every site's density from it.
+    # (The per-site exact_one_site_expectation_finite rebuilds the dense
+    # contraction each call — 16x redundant on a 4x4 cell; this makes the
+    # exact, CTM-free oracle tractable at 16 sites.)
+    state = dense_state_finite(psi; max_sites)
     n = projector_up()
-    values = [
-        real(exact_one_site_expectation_finite(psi, c, n; max_sites)) for
-        c in psi.unitcell.reps
-    ]
-    return sum(values) / length(values)
+    reps = psi.unitcell.reps
+    total = 0.0
+    for c in reps
+        positions = _local_positions(psi.unitcell, (c,))
+        total += real(_local_expectation_from_state(state, nsites, positions, n))
+    end
+    return total / length(reps)
 end
 
 """

@@ -25,13 +25,18 @@ Parameters for deterministic iPEPS Trotter evolution. `dt` is the positive
 full time-step size, `order` must be `1` or `2`, `evolution` must be `:real` or
 `:imaginary`, `schedule` must be `:five_color` or `:serial`, and
 `maxdim`/`cutoff`/`split_order`/`rel_floor` are forwarded to
-[`project_star!`](@ref). `rel_floor` (default `1e-4`, in `[0, 1)`) imposes a
+[`project_star!`](@ref). `rel_floor` (default `1e-3`, in `[0, 1)`) imposes a
 relative singular-value condition floor on every bond split, capping the bond
 condition number at `1/rel_floor` to suppress the divide-by-near-zero-weight
-instability that otherwise makes larger `maxdim` worsen at tight `cutoff`.
-Verified on 3x3 PXP at t=0.2/cutoff=1e-12: `1e-4` collapses D=2/3/4 to the
-ED-matching density (D=4 error 9.7e-3 -> 8e-12); `0.0` reproduces the legacy
-instability. Set `rel_floor = 0.0` for the exact (unfloored) legacy update.
+instability that otherwise makes larger `maxdim` worsen at tight `cutoff`
+(at `rel_floor = 0` the D=4 short-time error blows up to ~1e-2). `1e-3` is the
+most ROBUST choice across regimes: on the 4x4 Néel first-revival benchmark it
+gives the tightest D-band and removes the D=4 catastrophe that `1e-4` produces
+(revival D=4 error 2.2e-2 at `1e-4` -> 5.7e-3 at `1e-3`), at a negligible
+short-time cost (caps all D at ~8e-5 vs `1e-4`'s 2.5e-5). NOTE: no floor makes
+the revival strictly D-monotone — that needs environment-aware (full) update;
+the floor is a conditioning/robustness knob only. Set `rel_floor = 0.0` for the
+exact (unfloored) legacy update.
 The default `:five_color` schedule applies disjoint star layers. The `:serial`
 schedule applies one unit-cell center per layer in representative order, with
 second order using the corresponding reversed half sweep.
@@ -57,7 +62,7 @@ struct TrotterParams
         cutoff::Real,
         split_order = _TROTTER_SPLIT_DIRECTIONS;
         schedule::Symbol = :five_color,
-        rel_floor::Real = 1e-4,
+        rel_floor::Real = 1e-3,
     )
         step = Float64(dt)
         isfinite(step) && step > 0 || throw(ArgumentError("dt must be finite and positive"))
@@ -463,7 +468,7 @@ function evolve!(
     maxdim::Integer = psi.maxdim,
     cutoff::Real = 1e-12,
     schedule::Symbol = :five_color,
-    rel_floor::Real = 1e-4,
+    rel_floor::Real = 1e-3,
 )::EvolutionLog
     actual_params = if params === nothing
         dt === nothing && throw(UndefKeywordError(:dt))

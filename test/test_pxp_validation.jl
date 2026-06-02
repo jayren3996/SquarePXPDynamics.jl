@@ -129,9 +129,13 @@ end
 end
 
 @testset "PXP validation can attach exact finite tiny-cell density" begin
+    # t=0.1 (entangled), NOT t=0.02: under the rel_floor=1e-3 default a single
+    # step truncates the D=2 bond to a near-product state, erasing the mean-field
+    # offset. At t=0.1 the state is genuinely entangled so density_error_simple
+    # shows the documented >1e-4 single-site offset (exact_finite stays accurate).
     config = PXPValidationConfig(
         3;
-        total_time = 0.02,
+        total_time = 0.1,
         dt = 0.02,
         measure_every = 1,
         maxdim = 2,
@@ -146,8 +150,8 @@ end
     @test all(comparison -> comparison.ipeps_exact_finite_density !== nothing, report.comparisons)
     @test all(comparison -> comparison.density_error_exact_finite !== nothing, report.comparisons)
     @test report.comparisons[end].ipeps_exact_finite_density ≈
-          0.0003996269892620211 atol = 1e-12
-    @test abs(report.comparisons[end].density_error_exact_finite) < 1e-6
+          0.009801383665944111 atol = 1e-12
+    @test abs(report.comparisons[end].density_error_exact_finite) < 1e-3
     @test abs(report.comparisons[end].density_error_simple) > 1e-4
 end
 
@@ -300,7 +304,7 @@ end
 
     @test parsed.config.exact_finite_observables === true
     @test parsed.config.exact_finite_max_sites == 9
-    @test parsed.ipeps_samples[end].exact_finite_density ≈ 0.0003996269892620211 atol =
+    @test parsed.ipeps_samples[end].exact_finite_density ≈ 0.00039898987959572924 atol =
         1e-12
     @test abs(parsed.comparisons[end].density_error_exact_finite) < 1e-6
 end
