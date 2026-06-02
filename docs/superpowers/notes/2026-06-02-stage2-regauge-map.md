@@ -67,3 +67,35 @@ REAL environment inside the evolution loop, not a better knob.
 CTM environment already available via `pepskit_ctmrg_context` /
 `to_pepskit_infinitepeps` (PEPSKitMeasurements.jl) — the full-update path can
 reuse it rather than building a new contractor.
+
+## DECISIVE EXPERIMENT (2026-06-02): regauging is NOT the Stage-2 fix
+
+Implemented `canonicalize_simple!` (StarSimpleUpdate.jl) — Vidal-gauge
+super-orthogonalization via idle (step=0, unprojected, identity-gate) star
+sweeps. VERIFIED correct: on an entangled 3x3 state (bond entropy 0.383) it is
+state-preserving to machine precision (|Δdensity| 1.4e-13, fidelity exactly 1.0),
+idempotent (7 sweeps → converges), and meaningfully regauges (87–100 sweeps/step
+during evolution; stored λ shift so bond entropy moves, e.g. 0.3835→0.3633 — the
+plain simple-update λ slightly OVER-report entanglement; canonical values are
+the true Schmidt entropy).
+
+Measured effect on dynamics (3x3 PXP, :down, dt=0.02, exact_finite vs ED):
+- Short time t=0.2, D=4: rel_floor=0 err 9.7e-3 → +regauge 8.7e-3 (only ~10%);
+  rel_floor=1e-4 gives 2.5e-5. Regauge does NOT rescue rel_floor=0.
+- Entangled t=0.5: rel_floor=1e-4 plain vs +regauge are IDENTICAL to 4–5 sig
+  figs (D2 1.2097e-3 both; D3 1.237e-3 vs 1.256e-3; D4 7.33e-4 vs 7.26e-4)
+  despite 87–100 regauge sweeps/step. The D=3 wrinkle (f[3]>f[2]) is NOT fixed.
+  rel_floor=0+regauge mitigates the D=4 blowup (3.07e-2→2.23e-2) but stays bad.
+
+**Conclusion (physically expected, now empirical):** regauging is a pure gauge
+transformation — it leaves the represented wavefunction unchanged, so it cannot
+change what the next Trotter step truncates. The simple-update truncation quality
+is governed by the mean-field (λ²) ENVIRONMENT, which is identical in every gauge.
+Therefore proper regauging — the literal Stage-2 "recover good condition" ask and
+the roadmap's hypothesized fix — is EMPIRICALLY RULED OUT as sufficient. The
+remaining real fix is environment-aware truncation (full update with the CTM bond
+environment). `rel_floor` stays the practical conditioning knob until then.
+
+`canonicalize_simple!` is kept as a correct, tested primitive (accurate Schmidt /
+entanglement diagnostics, and the canonicalization a full-update step will need),
+but is NOT wired into `evolve!` — it is not a dynamics fix.

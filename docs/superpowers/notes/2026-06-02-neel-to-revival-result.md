@@ -68,6 +68,35 @@ Non-monotonic and regime-dependent: the rel_floor that is OPTIMAL at short time
 the revival; rel_floor=0 (which FAILS at short time with the conditioning blowup)
 is BEST at the revival. **No single rel_floor is optimal across regimes.**
 
+## DECISIVE revival D-ladder across floors (2026-06-02, current code)
+
+Re-ran 4x4 Neel to the revival t=2.6 (CTM chi=8 vs ED 0.4825) for the FULL
+D-ladder at several floors (scripts/dev_relfloor_revival_confirm.jl +
+dev_relfloor_revival_lowfloor.jl):
+
+| rel_floor | D=2 | D=3 | D=4 | worst-D | worst D |
+|---|---|---|---|---|---|
+| 1e-4 (old default) | 4.7e-3 | 4.3e-6 | 2.2e-2 | 2.2e-2 | D=4 catastrophe |
+| 1e-3 | 3.4e-3 | 2.6e-3 | 5.7e-3 | 5.7e-3 | D=4 mild |
+| 1e-6 | 4.7e-3 | 1.3e-2 | 5.6e-3 | 1.3e-2 | D=3 |
+| 0    | 4.7e-3 | 1.3e-2 | 3.5e-3 | 1.3e-2 | D=3 |
+
+**No floor is D-monotone at the revival, and WHICH D is worst shifts with the
+floor (D=4 at 1e-4, D=3 at 0/1e-6).** This erratic shift confirms the revival
+non-monotonicity is the mean-field-ENVIRONMENT limit, not a conditioning effect:
+no rel_floor (constant OR adaptive) fixes it. FULL UPDATE is required for true
+D-monotone reliability at the revival.
+
+Floor consequences (a floor is a robustness knob, not an accuracy fix):
+- **1e-3 is the most ROBUST floor** — tightest D-band (2.6e-3..5.7e-3), kills the
+  D=4 catastrophe (2.2e-2 -> 5.7e-3). Cost: it over-truncates short time, capping
+  all D at ~8e-5 (vs 1e-4's 2.5e-5) and flattening short-time D-resolution.
+- **rel_floor=0 is NOT robustly best** (D=3 -> 1.3e-2). So adaptive-toward-0 is
+  WRONG; the only defensible ramp is 1e-4 (low entanglement) -> 1e-3 (high), which
+  is mostly captured by just using the constant 1e-3.
+- Regauging (canonicalize_simple!) was separately ruled out (gauge transform;
+  cannot change truncation quality). See 2026-06-02-stage2-regauge-map.md.
+
 ## Takeaway for the roadmap
 The true acceptance test (D-converged Néel dynamics to ≥ first revival) is
 PARTIALLY met: reachable + D-monotone in buildup, but not D-monotone at the
@@ -83,3 +112,39 @@ revival peak with the current default. Key conclusions:
 3. Immediate cheap step: re-verify a robust rel_floor (or an adaptive rule) on
    BOTH the short-time D-ladder AND the revival D-ladder before changing the
    default; never tune to one regime alone (that is how 1e-4 got its bad pocket).
+
+## EXACT-ORACLE DECONTAMINATION (2026-06-02) — the benchmark is now CTM-free
+
+The chi-sweep above argued "env-limit, not measurement" from chi 8→16 not moving
+the error. The exact 16-site contraction (`exact_density_finite(max_sites=16)`,
+zero environment approximation) now settles it directly and REFINES that argument.
+`scripts/dev_exact_oracle_decontaminate.jl` (refactor bit-identical to old per-site
+formula, |diff|=0). 4×4 Néel to t=2.6, CTM chi=8 vs EXACT-16, vs ED 0.4825:
+
+| rel_floor | D | CTM chi=8 err | EXACT-16 err | CTM contamination |
+|---|---|---|---|---|
+| 1e-4 | 2 | 4.7e-3 | 1.01e-2 | 5.4e-3 |
+| 1e-4 | 3 | **4.3e-6** | 2.89e-3 | 2.89e-3 |
+| 1e-4 | 4 | 2.15e-2 | **3.45e-2** | 1.30e-2 |
+| **1e-3** | 2 | 3.4e-3 | **5.91e-3** | 2.50e-3 |
+| **1e-3** | 3 | 2.6e-3 | **5.48e-3** | 2.91e-3 |
+| **1e-3** | 4 | 5.7e-3 | **9.65e-3** | 3.92e-3 |
+
+1. **CTM chi=8 contaminated this benchmark by 2.5e-3–1.3e-2 — the SAME ORDER as the
+   signal.** It FLATTERED every result (exact error is always larger). The
+   near-perfect chi=8 D=3/1e-4 (4e-6) was a measurement artifact; the true error is
+   2.9e-3. chi 8→16 (0.0221→0.0241) was creeping toward the exact 0.0345 — CTM was
+   under-converged, not converged. So the old "the error did not move" sub-claim was
+   imprecise; the env-limit CONCLUSION stands and is now exact-confirmed.
+2. **The revival D-non-monotonicity is REAL evolution error.** D=4 is worst at the
+   peak under exact measurement too, and BIGGER than CTM showed. The mean-field
+   environment ceiling is not a CTM artifact. (See
+   `memory/stage2_meanfield_environment_ceiling.md`.)
+3. **1e-3 > 1e-4 holds under exact measurement** (D=4 9.65e-3 vs 3.45e-2
+   catastrophe) — the rel_floor default decision was not a CTM illusion.
+
+The exact-16 oracle is now the trusted benchmark measurement (committed as the
+`test_d_convergence.jl` revival D-ladder, `@test_broken err[4]<=err[3]`). Score
+every future env fix on it, NOT on CTM. The implementation is cheap: the existing
+`dense_state_finite` already contracts the 16-site cell exactly (~4s, ~const in D);
+`exact_density_finite` was just refactored to build that state once (not 16×).
