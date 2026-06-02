@@ -33,6 +33,7 @@ const TEST_FILES = [
     "test_pepskit_measurements.jl",
     "test_pxp_validation.jl",
     "test_pxp_d2_localization.jl",
+    "test_d_convergence.jl",
     "test_scarfinder.jl",
     "test_candidate_snapshots.jl",
     "test_ipeps_compression.jl",

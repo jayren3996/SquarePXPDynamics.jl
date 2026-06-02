@@ -43,6 +43,30 @@ by the 25-min wall before its push). Before picking a new slice:
 
 Ship-stranded or new-slice, **one per pass** — do not stack them.
 
+## HARD RULE — Stage 1 is about D>1 (read before ANY dynamics/truncation work)
+
+The entire point of iPEPS is the **D>1** case. A reliable code's result quality
+must **improve (converge toward ED) as bond dimension D increases**. Therefore:
+
+1. **D=1 is NEVER validation.** It is an exact product state — it trivially
+   matches ED and exercises none of the entanglement/truncation/regauging
+   machinery. Never report "matches at D=1" as a Stage-1 result, and never
+   "validate" a dynamics/truncation change at D=1 only.
+2. **Judge reliability with a D-ladder D ∈ {2,3,4} in an ENTANGLED regime**
+   (time/quench long enough that D=2 is not already converged), using the
+   TRUSTED observable (`exact_density_finite` for tiny cells, CTM otherwise) —
+   NEVER `density_simple`/`measure_simple` (mean-field, wrong for D>1 by design).
+3. **Error vs ED must be non-increasing in D within tolerance** (`err(D=4) ≤
+   err(D=3) ≤ err(D=2)`), and must measurably SHRINK toward ED where D matters.
+   A larger D giving a WORSE result than a smaller D (fixed dt/cutoff/time) is a
+   **HARD REGRESSION — reject it even if every unit test passes.**
+4. The simple-observable D>1 offset is a known mean-field artifact (CASE B); it
+   is NOT a defense for a trusted-observable D-convergence failure and is NOT a
+   convergence metric.
+
+This rule is the acceptance gate for all Stage-1/Stage-2 work. The `rel_floor`
+fix exists precisely because D=4 was once catastrophically worse than D=2.
+
 ## Active priority: execute the 3-stage roadmap
 
 The consolidated review and backlog live in
@@ -191,7 +215,11 @@ path above.
    `timeout 540 julia --project=test test/runtests.jl test_ipeps_evolution.jl`.
    Always wrap with `timeout`. Reserve the full `Pkg.test()` (~10 min) for a
    slice you cannot otherwise convince yourself is safe; it will not fit the
-   pass budget alongside much else.
+   pass budget alongside much else. For ANY change to evolution, truncation, or
+   regauging you MUST also run the Stage-1 D-convergence gate in extended mode:
+   `SQUAREPXP_EXTENDED_TESTS=1 timeout 540 julia --project=test test/runtests.jl test_d_convergence.jl`
+   and confirm the D-ladder still converges toward ED (D=4 not worse than D=2).
+   A change that worsens larger-D error vs ED is a hard regression — drop it.
 
 3. If tests **pass**: `git push origin main`.
 

@@ -36,8 +36,23 @@ Slowest tests: `test_ipeps_compression.jl` 582s, `test_pepskit_measurements.jl`
 
 ## Stage 1 — reliable iPEPS dynamics matching ED
 
-**Status: essentially achieved. Evolution is correct; the one real defect (Stage-2
-conditioning) is fixed; the D>1 "simple error" is an inherent diagnostic limit, not a bug.**
+**HARD RULE (owner, 2026-06-02): D=1 is NEVER validation.** iPEPS reliability is
+judged ONLY by the trusted observable (`exact_density_finite`/CTM) converging
+toward ED across a D-ladder (D≥2,3,4) in an entangled regime; error vs ED must be
+non-increasing in D within tolerance and shrink toward ED where D matters; a
+larger-D-worse-than-smaller-D result is a HARD REGRESSION. The simple/local
+observable is mean-field (wrong for D>1) and is never the convergence metric. See
+`memory/stage1_d_convergence_rule.md`; enforced by `test/test_d_convergence.jl`.
+
+D-ladder evidence (3x3, dt=0.02, cutoff 1e-12, rel_floor 1e-4; |exact_finite−ED|):
+t=0.1 → D1 1.6e-3, D2/3/4 2.8e-6 (D=1 useless, D≥2 converged). t=0.3 → D1 6.0e-2,
+D2/3/4 1.6e-4. t=0.5 (entangled) → D1 1.5e-1, D2 1.21e-3, **D3 1.24e-3 (slightly
+worse — residual non-monotonicity)**, **D4 7.3e-4 (better than D2 — D helps)**.
+The D=3/t=0.5 wrinkle is the next Stage-2 target (tune rel_floor / Vidal √λ).
+
+**Status: largely achieved. Evolution is correct; the catastrophic Stage-2
+conditioning defect is fixed (rel_floor); the D>1 "simple error" is an inherent
+diagnostic limit, not a bug; one small residual D-non-monotonicity remains at long time.**
 
 1. **D>1 `measure_simple` density is NOT a bug — UPDATED 2026-06-02 (CASE B,
    rigorously settled).** `local_density_simple` computes the canonical Vidal
