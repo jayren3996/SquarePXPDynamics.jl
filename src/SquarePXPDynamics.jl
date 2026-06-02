@@ -11,22 +11,17 @@ module SquarePXPDynamics
 import EDKit
 
 include("Internals.jl")
-include("SpinOps.jl")
-include("SquareGeometry.jl")
-include("SquarePXP.jl")
-include("SquareUnitCells.jl")
+include("Lattice.jl")          # SquareGeometry + SquareUnitCells
+include("PXPModel.jl")         # SpinOps + SquarePXP + StarModels
 include("SquareIPEPS.jl")
-include("StarModels.jl")
-include("Observables.jl")
-include("FiniteIPEPSObservables.jl")
+include("Observables.jl")      # Observables + FiniteIPEPSObservables
 include("PEPSKitMeasurements.jl")
 include("CTMTrust.jl")
 include("StarSimpleUpdate.jl")
 include("IPEPSEvolution.jl")
 include("FinitePXPEEDBenchmark.jl")
 include("PXPValidation.jl")
-include("CandidateSnapshots.jl")
-include("IPEPSCompression.jl")
+include("ScarFinderSupport.jl") # CandidateSnapshots + IPEPSCompression
 include("ScarFinder.jl")
 include("ScarFinderAudit.jl")
 
