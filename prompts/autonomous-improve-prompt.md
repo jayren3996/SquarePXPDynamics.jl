@@ -63,6 +63,12 @@ must **improve (converge toward ED) as bond dimension D increases**. Therefore:
 4. The simple-observable D>1 offset is a known mean-field artifact (CASE B); it
    is NOT a defense for a trusted-observable D-convergence failure and is NOT a
    convergence metric.
+5. **Benchmark to at least the first n(t) revival.** The PXP scar signature is
+   the revival of the order parameter. Benchmarks/revival scoring must use a time
+   window reaching ≥ the first n(t) revival (from ED: 6×6 Néel collapses at
+   t≈1.3, first revival peak at t≈2.6) — NOT the t≤0.5 used in the legacy
+   configs. The true acceptance test is iPEPS Néel dynamics D-converged toward ED
+   out to ≥ the first revival. See `memory/benchmark_to_first_revival.md`.
 
 This rule is the acceptance gate for all Stage-1/Stage-2 work. The `rel_floor`
 fix exists precisely because D=4 was once catastrophically worse than D=2.
