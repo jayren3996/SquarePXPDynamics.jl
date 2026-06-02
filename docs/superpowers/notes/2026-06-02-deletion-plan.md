@@ -3,6 +3,20 @@
 Grep-verified, ordered, one-slice-per-pass. Run the suite after each slice.
 Net: ~2,100 src + ~1,400 test lines + 4 scripts + 1 dep. Two targets BLOCKED.
 
+## STATUS — COMPLETE (2026-06-02)
+All five slices executed and verified green (full parallel suite, julia exit 0).
+Plus a final round of module merges to address "too many source files":
+- Lattice.jl (SquareGeometry + SquareUnitCells)
+- PXPModel.jl (SpinOps + SquarePXP + StarModels)
+- Observables.jl += FiniteIPEPSObservables
+- ScarFinderSupport.jl (CandidateSnapshots + IPEPSCompression)
+- PXPValidation.jl += PXPValidationSerialization (the include was already
+  splicing it into the module; inlined and dropped the file)
+Result: **27 → 15 src files**, ~2,500 src lines + ~1,400 test lines removed,
+ITensorMPS dep dropped. The two BLOCKED targets below were correctly left alone.
+Slice 4 (audit removal) detail in the section below matches what was executed,
+except the audit StructTypes/JSON/CSV now live inline in PXPValidation.jl.
+
 Execution order: 1 → 2 → 3 → 4 → 5. After Slice 5 specifically verify
 `test_aqua`, `test_star_models`, `test_observables`, `test_star_simple_update`,
 `test_public_docs`.
