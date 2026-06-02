@@ -334,8 +334,11 @@ end
 
 function _reversibility_report(cfg::ScarFinderAuditConfig, dt::Float64,
                                target_maxdim::Int, cutoff::Float64)
-    cell = PeriodicSquareUnitCell(cfg.cell_Lx, cfg.cell_Ly)
-    psi = product_square_ipeps(cell; state = cfg.initial_state, maxdim = target_maxdim)
+    # Use the shared _build_state so :checkerboard_even/_odd construct correctly;
+    # calling product_square_ipeps directly threw for checkerboard states and the
+    # exception was swallowed upstream, silently dropping reversibility data for
+    # every checkerboard audit row.
+    psi = _build_state(cfg, target_maxdim)
     trotter = TrotterParams(
         dt, cfg.order, :real, cfg.evolve_maxdim, cutoff; schedule = cfg.schedule,
     )

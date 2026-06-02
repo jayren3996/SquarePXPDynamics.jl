@@ -91,7 +91,10 @@ function main()
 
     cell_Lx = _env_int("SQUAREPXP_AUDIT_CELL_LX", 3)
     cell_Ly = _env_int("SQUAREPXP_AUDIT_CELL_LY", 3)
-    initial_state = _env_symbol("SQUAREPXP_AUDIT_INITIAL_STATE", :z_up)
+    # Default :down — it is the only product state that evolves under the
+    # projected PXP gate. :z_up (all-up) is blockade-forbidden and crashes the
+    # star projection; :checkerboard_* work on even-tileable cells with :serial.
+    initial_state = _env_symbol("SQUAREPXP_AUDIT_INITIAL_STATE", :down)
     projection_time = _env_float("SQUAREPXP_AUDIT_PROJECTION_TIME", 0.08)
     iterations = _env_int("SQUAREPXP_AUDIT_ITERATIONS", 4)
     dt_values = _env_float_list("SQUAREPXP_AUDIT_DT", "0.02")
