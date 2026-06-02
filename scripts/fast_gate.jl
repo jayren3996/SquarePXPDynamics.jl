@@ -31,15 +31,16 @@ const SELECTED = isempty(ARGS) ? FAST_FILES : ARGS
 failed = String[]
 total = @elapsed for f in SELECTED
     print(stderr, "▶ fast-gate: $f ... ")
+    ok = true
     t = @elapsed try
         Base.include(Main, joinpath(TEST_DIR, f))
-        @printf(stderr, "PASS  %.1fs\n", t)
     catch e
+        ok = false
         push!(failed, f)
-        @printf(stderr, "FAIL  %.1fs\n", t)
         showerror(stderr, e, catch_backtrace())
         println(stderr)
     end
+    @printf(stderr, "%s  %.1fs\n", ok ? "PASS" : "FAIL", t)
 end
 
 println(stderr, "="^56)
