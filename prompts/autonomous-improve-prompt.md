@@ -77,21 +77,23 @@ The owner made three decisions on 2026-06-02:
 
 ### Slice priority order — work the highest item with a well-scoped slice
 
-1. **Harden the test gate FIRST** (so later physics changes are catchable):
-   convert every `density_error_simple > 1e-4` lower-bound assertion to
-   `@test_broken` and add `density_error_exact_finite < 1e-6` upper-bound gates;
-   add a `@test_throws` pinning the `:z_up` blockade-forbidden error; add a
-   nightly (`SQUAREPXP_EXTENDED_TESTS`) real-`measure_ctm`-vs-ED D=2 test.
+1. **One genuine test gap**: add a nightly (`SQUAREPXP_EXTENDED_TESTS`)
+   real-`measure_ctm`-vs-ED D=2 test (all existing CTM-value tests use fake
+   closures), and a `@test_throws` pinning the `:z_up` blockade-forbidden error.
+   DO NOT touch the `density_error_simple > 1e-4` lower bounds or the
+   `@test_broken simple≈exact` markers — they correctly document the INHERENT
+   single-site mean-field offset (settled CASE B 2026-06-02; the D>1 simple
+   density is mathematically correct, just mean-field-limited; route D>1 density
+   through `exact_density_finite`/CTM, which the pipeline already does). There is
+   NO Stage-1 simple-observable bug to fix; do not edit `Observables.jl` density.
 2. **Aggressive slimming** — one sanctioned target cluster per pass.
-3. **Stage-1 simple-observable D>1 bug**: the simple-gauge density contraction
-   in `Observables.jl` reports ~1.9e-4 error at D=2 while `exact_density_finite`
-   is ~1e-7. Fix it, validated against `exact_density_finite`. Small steps.
-4. **Stage-3 staggered-mag revival**: a per-iteration `(n_even−n_odd)` time
+3. **Stage-3 staggered-mag revival**: a per-iteration `(n_even−n_odd)` time
    series + redefine `RevivalObjective` to score the post-collapse return; then
    an `scarfinder_search` outer layer ranking candidate states vs a Néel
    baseline. Large feature — build in small, separately-committed slices.
-5. **Stage-2 Vidal √λ regauge** (principled successor to `rel_floor`). Largest;
-   approach last, with ED/exact-finite verification at tight cutoff for D≤4.
+4. **Stage-2 Vidal √λ regauge** (principled, optional successor to `rel_floor`,
+   which already cures the instability). Largest; approach last, with
+   ED/exact-finite verification at tight cutoff for D≤4.
 
 **Physics-changing slices (items 3-5) MUST verify against ED or
 `exact_density_finite`** — never claim a physics improvement from

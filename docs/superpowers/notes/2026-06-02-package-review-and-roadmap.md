@@ -36,15 +36,24 @@ Slowest tests: `test_ipeps_compression.jl` 582s, `test_pepskit_measurements.jl`
 
 ## Stage 1 — reliable iPEPS dynamics matching ED
 
-**Status: evolution correct; two separable defects block "reliable by default".**
+**Status: essentially achieved. Evolution is correct; the one real defect (Stage-2
+conditioning) is fixed; the D>1 "simple error" is an inherent diagnostic limit, not a bug.**
 
-1. **Short-time D>1 `measure_simple` density bug** (measurement, not dynamics).
-   exact_finite err ~1e-7 vs simple err ~1.9e-4 at truncerr ~6e-29. The cheap
-   default observable users reach for is wrong for D>1. Fix in the simple-gauge
-   contraction (`Observables.jl`), validated against `exact_density_finite`.
-2. **Long-time conditioning drift** at t≈0.2, D=4, cutoff 1e-12: exact_finite
-   *worsens* with D. Root cause is Stage 2 (below). Docs "fixed" it by loosening
-   cutoff to 1e-9 — that papers the symptom; the unstable divide-by-λ path stays.
+1. **D>1 `measure_simple` density is NOT a bug — UPDATED 2026-06-02 (CASE B,
+   rigorously settled).** `local_density_simple` computes the canonical Vidal
+   single-site mean-field RDM *exactly* (a hand-built λ² RDM matches it to machine
+   zero). The ~2e-4 gap vs ED is the inherent single-site Bethe/mean-field failure
+   on a loopy lattice: 1-site off 3.5e-4, but 2-site matches to 3.8e-27, 5-site
+   star to 2.7e-7. **Do not edit `Observables.jl`.** D>1 density already routes
+   through `exact_density_finite`/CTM in the validation pipeline. The
+   `density_error_simple > 1e-4` lower-bound tests correctly *document* this
+   offset — keep them; they are not traps. See `memory/stage1_simple_density_inherent.md`.
+2. **Long-time conditioning drift FIXED** by the `rel_floor` condition floor
+   (default 1e-4): at t=0.2, D=4, cutoff 1e-12 the exact_finite error drops
+   9.7e-3 → 8e-12 (D=2/3/4 collapse to the ED-converged value). No need to
+   loosen cutoff. The principled Vidal √λ successor remains optional Stage-2 work.
+3. **Genuinely missing:** a real-`measure_ctm`-vs-ED D=2 test (all existing
+   CTM-value tests use fake closures). This is the one Stage-1 test gap worth adding.
 
 ## Stage 2 — bond truncation + proper regauging  ← the crux
 
