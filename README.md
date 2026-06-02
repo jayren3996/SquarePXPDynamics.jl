@@ -45,9 +45,10 @@ tests and regression checks, **not** CTMRG-quality measurements.
 |---|---|
 | Public API and exports                      | `src/SquarePXPDynamics.jl` |
 | Per-module narrative                        | `## Currently shipped` below |
-| Conventions, physics context, decisions     | `memory/README.md` and tiered `memory/{long,mid,short}_term/` |
+| Durable knowledge: findings, conventions, methodology, decisions | `notes/` (start at `notes/README.md`) |
+| How to evaluate the dynamics (read first)   | `notes/methodology/revival-validation.md` |
 | Original design specs / multi-stage plans   | `docs/superpowers/specs/`, `docs/superpowers/plans/` |
-| Historical scoping notes                    | `Notes/` |
+| Historical / superseded notes               | `notes/archive/` |
 | Agent-facing instructions                   | `AGENTS.md` |
 | Autonomous-loop prompts                     | `prompts/` |
 
