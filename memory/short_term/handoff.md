@@ -1,11 +1,23 @@
 # Agent Handoff
 
-## Current Objective
+## Current Objective (2026-06-02)
 
-Active implementation branch: `codex/m3-larger-d-pxp-ed-benchmark`.
+Execute the 3-stage roadmap in
+`docs/superpowers/notes/2026-06-02-package-review-and-roadmap.md`. That note +
+the priority order in `prompts/autonomous-improve-prompt.md` are the
+authoritative backlog (they supersede the older CTM-throughput objective below).
 
-Current objective: improve iPEPS+CTM observable efficiency and CPU utilization.
-Do not spend more time optimizing ED unless the user explicitly redirects.
+Owner decisions: Stage-3 metric = staggered-magnetization revival; slimming =
+aggressive delete (sanctioned targets in the prompt); Stage-3 geometry =
+even-Lx/Ly + `:serial`. Slice priority: (1) harden the test gate, (2) aggressive
+slimming, (3) Stage-1 simple-observable D>1 bug, (4) Stage-3 staggered-mag
+revival + search, (5) Stage-2 Vidal √λ regauge.
+
+Shipped 2026-06-02 (commits 272d295..1f917ff): `Pkg.test()` restored
+(Distributed+Printf), `rel_floor` condition floor (default 1e-4, cures
+larger-D-worsens-at-tight-cutoff, verified D=4 err 9.7e-3→8e-12), legible
+blockade-forbidden error, checkerboard audit reversibility, fast-gate +
+durable tmux job launcher.
 
 ## What Was Just Done
 
@@ -61,8 +73,11 @@ Current code now exposes CTM threading controls through
 
 ## Next Recommended Actions
 
-Run the warmed CTM threading/timing matrix and record the best command pattern
-before launching larger iPEPS+CTM observable sweeps.
+Pick the highest slice from the priority order above that has a well-scoped,
+budget-fitting change. Start with test-gate hardening (de-trap the D>1 golden
+tests; pin the :z_up error) so subsequent physics changes are catchable, then
+aggressive slimming. Verify physics slices against `exact_density_finite`/ED,
+never `measure_simple`. Use `scripts/fast_gate.jl` as the per-pass check.
 
 ## Things Not To Do
 
