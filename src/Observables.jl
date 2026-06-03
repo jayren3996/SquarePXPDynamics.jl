@@ -754,12 +754,17 @@ function _boundary_density_finite(psi::SquareIPEPSState; max_sites::Integer = 16
     reps = psi.unitcell.reps
     Z = _boundary_scalar(psi, folded, combs; op_site = nothing)
     abs(Z) > 1e-300 || throw(ArgumentError("double-layer norm is zero"))
-    total = 0.0
-    for c in reps
-        Zc = _boundary_scalar(psi, folded, combs; op_site = c)
-        total += real(Zc / Z)
+    # Each site's Z_c is an independent boundary sweep (it builds its own tensors
+    # and shares only the read-only `folded`/`combs`), so the N sweeps run in
+    # parallel across Julia threads when available — the dominant cost is N+1
+    # sweeps, and this turns it into ~wall-time of one. (Falls back to serial with
+    # a single thread.) Caching per-row environments would cut it to ~2 sweeps; see
+    # notes/stage2-truncation/improvement-roadmap.md.
+    contribs = Vector{Float64}(undef, length(reps))
+    Threads.@threads for i in eachindex(reps)
+        contribs[i] = real(_boundary_scalar(psi, folded, combs; op_site = reps[i]) / Z)
     end
-    return total / length(reps)
+    return sum(contribs) / length(reps)
 end
 
 function _local_positions(cell::PeriodicSquareUnitCell, coords)
