@@ -14,11 +14,23 @@ evolution is exact-finite-correct; CTM flatters (use the exact oracle); regaugin
 
 ## Top priorities
 
-1. **Boundary-MPS exact contractor (bond ≤ D⁴).** The dense `dense_state_finite`
-   OOMs at the D=5 trajectory and D=6, so we cannot currently test whether
-   convergence continues past D=4. A memory-efficient row-by-row boundary-MPS
-   contraction of the finite double layer (in `Observables.jl`) extends the exact
-   oracle to higher D. This is the gating infrastructure — do it first.
+1. **Boundary-MPS exact contractor — DONE (2026-06-03), perf follow-up open.**
+   Built in `src/Observables.jl`: a double-layer column-ring boundary contraction
+   (`exact_density_finite(...; method = :boundary)`), exact, with bounded memory
+   (closes physical legs locally → no `2^N` factor; boundary kept factorized).
+   Validated == the dense path to ~1e-9 on 3×3 and 4×4 (D=2,3,4), including the
+   evolved-checkerboard benchmark; reproduces the recorded trajectory RMS
+   (D2 2.62e-2, D3 1.82e-2, D4 9.79e-3). `method=:auto` uses dense for ≤16 sites,
+   boundary for larger.
+   - **Why it was needed (confirmed):** the dense single-layer contraction is
+     memory-pathological for *entangled* D≥5 on a 4×4 torus (~`2^(N/2)·D^(2Lx)`;
+     observed **~244 GB** RSS at D=5 on the shared host — i.e. the OOM is real, not
+     just on small nodes). The boundary path stays bounded.
+   - **Open perf follow-up:** the boundary path is slow at full-rank D≥5 (~one
+     `D^12` seam SVD per sweep, and `_boundary_density_finite` does N+1 sweeps per
+     density). Cheap wins: per-site **environment caching** (N+1 sweeps → ~2) and
+     proper **periodic-MPS seam canonicalization** (avoid the bloated seam tensor).
+     Needed to make the full D=5,6 trajectory fast; a background run is in flight.
 2. **Re-settle rel_floor + the regression test by TRAJECTORY** (not t=2.6). See
    `rel-floor.md`. Move the `test_d_convergence.jl` revival gate off the endpoint
    to a max/RMS trajectory metric.

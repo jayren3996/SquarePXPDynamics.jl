@@ -40,10 +40,16 @@ fixed dt/cutoff/time, by the TRAJECTORY metric) is a hard regression. Enforced b
 
 CTM chi=8 was found to *flatter* the 4×4 revival error by ~3–13e-3 (it
 under-measures). The trusted measurement is the exact 16-site contraction
-`exact_density_finite(max_sites = 16)` (~4s/call, no environment approximation).
-Caveat: the dense contractor OOMs at the D=5 trajectory and D=6 — reaching higher
-D needs a memory-efficient boundary-MPS contractor (bond ≤ D⁴), the current top
-infrastructure priority.
+`exact_density_finite(max_sites = 16)`, no environment approximation. Two exact
+backends (they agree to ~1e-9):
+- `method = :dense` — the single-layer `2^N` contraction. Fast for low-entanglement
+  states, but memory-pathological for *entangled* D≥5 on a 4×4 torus
+  (~`2^(N/2)·D^(2Lx)`; observed ~244 GB at D=5), so it cannot do the D≥5 revival
+  trajectory reliably.
+- `method = :boundary` — double-layer column-ring boundary contraction (added
+  2026-06-03). Bounded memory at any D; the reliable oracle for D≥5 and for cells
+  > 16 sites. Slower at full-rank D≥5 (per-site sweeps; environment caching is the
+  open optimization). `:auto` picks dense ≤16 sites, boundary above.
 
 ## 4. Benchmark must reach ≥ the first revival
 

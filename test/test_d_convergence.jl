@@ -82,8 +82,10 @@ if get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") != ""
         # the 2026-06-02 decontamination showed CTM chi=8 FLATTERS this benchmark by
         # ~3-13e-3. ED reference: 4x4 PXP torus (743-state constrained sector),
         # artifacts/neel_to_revival_4x4.json (ed.density[1:15]). Default rel_floor 1e-3.
-        # Cost: ~20 min (3 D x 15 exact 2^16 contractions) -- the price of the
-        # CTM-free oracle at D=4; do NOT swap in a (contaminating) CTM measurement.
+        # Oracle: exact_density_finite (:auto -> dense at 16 sites). The
+        # double-layer boundary contractor (method=:boundary) is the memory-safe
+        # alternative for hosts where dense OOMs / for cells > 16 sites; both agree
+        # to ~1e-9. Do NOT swap in a (contaminating) CTM measurement.
         TS = 0.0:0.2:2.8                                    # 15 samples, 10 steps each
         ED = [0.5, 0.48026525133620573, 0.4241792325244558, 0.34070816732757286,
               0.2442464623167832, 0.15549264928630516, 0.10057443671942552,
@@ -95,12 +97,13 @@ if get(ENV, "SQUAREPXP_EXTENDED_TESTS", "") != ""
             psi = checkerboard_square_ipeps(
                 PeriodicSquareUnitCell(4, 4); excited_on = :even, maxdim = D)
             params = TrotterParams(0.02, 2, :real, D, 1e-12; schedule = :serial)  # default rel_floor 1e-3
-            traj = Float64[(GC.gc(); exact_density_finite(psi; max_sites = 16))]   # t=0
+            meas() = (GC.gc(); exact_density_finite(psi; max_sites = 16))
+            traj = Float64[meas()]                              # t=0
             for _ = 2:length(TS)
                 for _ = 1:10
                     evolve!(psi, 0.02; params = params)        # 0.2 per sample
                 end
-                push!(traj, (GC.gc(); exact_density_finite(psi; max_sites = 16)))
+                push!(traj, meas())
             end
             e = abs.(traj .- ED)
             rms[D] = sqrt(sum(e .^ 2) / length(e))

@@ -560,6 +560,208 @@ function dense_state_finite(psi::SquareIPEPSState; max_sites::Integer = 12)
     return state
 end
 
+# ---------------------------------------------------------------------------
+# Memory-efficient EXACT oracle: double-layer (boundary) contraction
+# ---------------------------------------------------------------------------
+# `dense_state_finite` builds the single-layer 2^N state vector; its intermediate
+# carries the accumulating physical legs (2^k) AND the full torus vertical
+# boundary (~2*Lx dangling D-bonds) at once, peaking at ~2^(N/2)*D^(2Lx) -> OOM
+# for D>=5 on 4x4. Here we contract the DOUBLE layer (ket * conj(bra) with the
+# physical legs closed locally) so there is NO 2^k factor; densities are scalars
+# <n_c> = Z_c / Z. The construction below (E-tensors + per-bond combiners) is the
+# correctness foundation, validated by a naive full contraction against the dense
+# path; the memory-efficient boundary sweep builds on these same E-tensors.
+# See notes/stage2-truncation/improvement-roadmap.md (priority #1).
+
+_identity_2x2() = ComplexF64[1.0 0.0; 0.0 1.0]
+
+# One combiner per undirected bond, shared by BOTH incident sites so the combined
+# D^2 index is the same Index object across neighbors (and across the periodic
+# wrap), which lets neighbor E-tensors auto-contract on a single doubled leg.
+function _bond_combiners(psi::SquareIPEPSState)
+    combs = Dict{Index,ITensor}()
+    for c in psi.unitcell.reps
+        for dir in (:right, :up)            # canonical owners cover every bond once
+            li = link_index(psi, c, dir)
+            haskey(combs, li) && continue
+            combs[li] = combiner(li, prime(li))
+        end
+    end
+    return combs
+end
+
+# Double-layer site tensor for rep `c`: ket * op * conj(bra), physical legs closed,
+# four doubled virtual legs combined to dim-D^2 indices shared with neighbors.
+# `op` is a 2x2 single-site operator inserted between ket and bra (identity -> norm).
+function _double_layer_site(
+    psi::SquareIPEPSState,
+    folded::Dict{SquareCoord,ITensor},
+    c::SquareCoord,
+    combs::Dict{Index,ITensor};
+    op::AbstractMatrix = _identity_2x2(),
+)
+    K = folded[c]
+    p = physical_index(psi, c)
+    Kp = prime(dag(K))                       # conj(bra), all indices at plev 1
+    opT = ITensor(ComplexF64, prime(p), p)   # op[out,in]: p(plev0,ket) -> p'(plev1,bra)
+    for i = 1:2, j = 1:2
+        opT[prime(p)=>i, p=>j] = op[i, j]
+    end
+    raw = @disable_warn_order (K * opT) * Kp
+    E = raw
+    for dir in (:left, :right, :up, :down)
+        E = @disable_warn_order E * combs[link_index(psi, c, dir)]
+    end
+    return E
+end
+
+# Naive full contraction of the double-layer network to a scalar (Z or Z_c).
+# Correctness reference only: it forms dense intermediates whose boundary scales
+# as D^(2*Lx) per layer, so it is tractable on tiny cells (3x3) but not the memory
+# win. The boundary sweep replaces this for large cells while matching it exactly.
+function _naive_double_layer_scalar(
+    psi::SquareIPEPSState,
+    folded::Dict{SquareCoord,ITensor},
+    combs::Dict{Index,ITensor};
+    op_site::Union{Nothing,SquareCoord} = nothing,
+)
+    acc = ITensor(ComplexF64(1.0))
+    for c in psi.unitcell.reps
+        op =
+            (op_site !== nothing && c == op_site) ? projector_up() : _identity_2x2()
+        E = _double_layer_site(psi, folded, c, combs; op = op)
+        acc = @disable_warn_order acc * E
+    end
+    return scalar(acc)
+end
+
+function _naive_double_layer_density(psi::SquareIPEPSState; max_sites::Integer = 16)::Float64
+    _check_tiny_finite_cell(psi, max_sites)
+    folded = _absorb_all_weights_once(psi)
+    combs = _bond_combiners(psi)
+    reps = psi.unitcell.reps
+    Z = _naive_double_layer_scalar(psi, folded, combs; op_site = nothing)
+    abs(Z) > 1e-300 || throw(ArgumentError("double-layer norm is zero"))
+    total = 0.0
+    for c in reps
+        Zc = _naive_double_layer_scalar(psi, folded, combs; op_site = c)
+        total += real(Zc / Z)
+    end
+    return total / length(reps)
+end
+
+# Combined (D^2) index for the bond owning `li` (the shared combiner output).
+_cidx(combs::Dict{Index,ITensor}, li::Index) = combinedind(combs[li])
+
+# Exact two-site SVD recompression sweep around the column ring. With a tiny
+# cutoff this is lossless (it only refactors), but it caps each horizontal bond
+# at the true Schmidt rank so the boundary stays factorized instead of growing
+# D^2 per absorbed row.
+function _recompress_ring!(B::Vector{ITensor}; cutoff::Float64 = 1e-14)
+    Lx = length(B)
+    Lx >= 2 || return B
+    sweep(order) = for x in order
+        xn = x == Lx ? 1 : x + 1
+        bond = commoninds(B[x], B[xn])
+        isempty(bond) && continue
+        T = @disable_warn_order B[x] * B[xn]
+        linds = uniqueinds(B[x], B[xn])
+        U, S, V, _, _, _ = svd(T, linds...; cutoff = cutoff)
+        B[x] = U
+        B[xn] = @disable_warn_order S * V
+    end
+    sweep(1:Lx)              # forward (recompresses the seam bond at x=Lx)
+    sweep(reverse(1:Lx))     # backward, for a tighter gauge
+    return B
+end
+
+# Build the column-ring boundary for the double layer and contract it to a scalar
+# (Z if `op_site===nothing`, else Z_c with `projector_up()` inserted at `op_site`).
+# Vertical sweep over rows: the boundary is a ring of Lx tensors; each carries its
+# frontier vertical leg and a RENAMED copy of the row-1 bottom leg (the vertical
+# wrap), closed by a delta at the end. The horizontal wrap closes via the ring.
+function _boundary_scalar(
+    psi::SquareIPEPSState,
+    folded::Dict{SquareCoord,ITensor},
+    combs::Dict{Index,ITensor};
+    op_site::Union{Nothing,SquareCoord} = nothing,
+    cutoff::Float64 = 1e-14,
+)
+    cell = psi.unitcell
+    Lx, Ly = cell.Lx, cell.Ly
+    siteop(c) = (op_site !== nothing && c == op_site) ? projector_up() : _identity_2x2()
+
+    # Row 1: rename each bottom (wrap) leg to a fresh index so it does not clash
+    # with the row-Ly frontier (which is the same torus Index) at closing time.
+    B = Vector{ITensor}(undef, Lx)
+    widx = Vector{Index}(undef, Lx)
+    for x = 1:Lx
+        c = SquareCoord(x, 1)
+        E = _double_layer_site(psi, folded, c, combs; op = siteop(c))
+        cd = _cidx(combs, link_index(psi, c, :down))
+        w = Index(dim(cd), "wrap,$x")
+        B[x] = replaceind(E, cd, w)
+        widx[x] = w
+    end
+
+    # Absorb rows 2..Ly with a left-to-right ZIP so the running horizontal bond is
+    # SVD-recompressed after every column. Forming the whole row at once would hold
+    # Lx rank-6 tensors of size ~(D^2)^6 = D^12 simultaneously (OOM at D>=5); the
+    # zip keeps only one such tensor live at a time (the seam column), then peels
+    # an orthogonalized site off and carries a small bond onward.
+    for y = 2:Ly
+        Erow = [_double_layer_site(psi, folded, SquareCoord(x, y), combs; op = siteop(SquareCoord(x, y)))
+                for x = 1:Lx]
+        newB = Vector{ITensor}(undef, Lx)
+        carry = nothing
+        for x = 1:Lx
+            # (carry * B[x]) * Erow[x]: carry already absorbed the left bonds into a
+            # small index, so only the seam column (x=1, no carry) forms the big tensor.
+            T = carry === nothing ? (@disable_warn_order B[x] * Erow[x]) :
+                (@disable_warn_order (carry * B[x]) * Erow[x])
+            if x < Lx
+                xn = x + 1
+                rights = unique(vcat(commoninds(T, B[xn]), commoninds(T, Erow[xn])))
+                lefts = setdiff(collect(inds(T)), rights)
+                U, S, V, _, _, _ = svd(T, lefts...; cutoff = cutoff)
+                newB[x] = U
+                carry = @disable_warn_order S * V
+            else
+                newB[Lx] = T            # keeps the seam bonds (shared with newB[1]) open
+            end
+        end
+        B = newB
+        _recompress_ring!(B; cutoff = cutoff)   # merges/recompresses all bonds incl. the seam
+    end
+
+    # Close the vertical wrap (row-Ly frontier == row-1 bottom == renamed widx).
+    for x = 1:Lx
+        fcu = _cidx(combs, link_index(psi, SquareCoord(x, Ly), :up))
+        B[x] = @disable_warn_order B[x] * delta(fcu, widx[x])
+    end
+    # Contract the ring (the horizontal wrap closes on the final product).
+    acc = B[1]
+    for x = 2:Lx
+        acc = @disable_warn_order acc * B[x]
+    end
+    return scalar(acc)
+end
+
+function _boundary_density_finite(psi::SquareIPEPSState; max_sites::Integer = 16)::Float64
+    _check_tiny_finite_cell(psi, max_sites)
+    folded = _absorb_all_weights_once(psi)
+    combs = _bond_combiners(psi)
+    reps = psi.unitcell.reps
+    Z = _boundary_scalar(psi, folded, combs; op_site = nothing)
+    abs(Z) > 1e-300 || throw(ArgumentError("double-layer norm is zero"))
+    total = 0.0
+    for c in reps
+        Zc = _boundary_scalar(psi, folded, combs; op_site = c)
+        total += real(Zc / Z)
+    end
+    return total / length(reps)
+end
+
 function _local_positions(cell::PeriodicSquareUnitCell, coords)
     sites = Tuple(wrap(cell, c) for c in coords)
     positions = Tuple(findfirst(==(site), cell.reps) for site in sites)
@@ -675,13 +877,37 @@ function exact_star_expectation_finite(
 end
 
 """
-    exact_density_finite(psi; max_sites = 12)
+    exact_density_finite(psi; max_sites = 12, method = :auto)
 
 Return the average exact finite contraction of the Rydberg density over all
 unit-cell representatives of the supplied iPEPS state.
+
+`method` selects the contraction backend; both are exact and agree to machine
+precision:
+
+- `:dense` — single-layer `dense_state_finite` (the original path). Builds the
+  `2^N` state, so it is limited to small cells; its intermediate peaks at
+  ~`2^(N/2)·D^(2Lx)`. On a large-memory host this comfortably reaches `D = 6` on a
+  16-site (4×4) torus (a few seconds/call); on memory-constrained hosts it can OOM
+  at `D ≥ 5` — pass `:boundary` there.
+- `:boundary` — double-layer column-ring boundary contraction. Closes physical
+  legs locally (no `2^N` factor) and keeps the boundary factorized, so its memory
+  is bounded regardless of `D`. This is the path for cells too large for `2^N`
+  (`> 16` sites) and the memory-safe fallback when dense OOMs. It is slower than
+  dense on full-rank `D ≥ 5` bonds (per-site sweeps; environment caching is the
+  documented next optimization).
+- `:auto` (default) — `:dense` for `nsites ≤ 16` (fast where the `2^N` state fits),
+  `:boundary` for larger cells. Never changes the result.
 """
-function exact_density_finite(psi::SquareIPEPSState; max_sites::Integer = 12)::Float64
+function exact_density_finite(
+    psi::SquareIPEPSState;
+    max_sites::Integer = 12,
+    method::Symbol = :auto,
+)::Float64
     nsites = _check_tiny_finite_cell(psi, max_sites)
+    chosen = method === :auto ? (nsites > 16 ? :boundary : :dense) : method
+    chosen === :boundary && return _boundary_density_finite(psi; max_sites)
+    chosen === :dense || throw(ArgumentError("method must be :auto, :dense, or :boundary"))
     # Build the exact dense state ONCE and read every site's density from it.
     # (The per-site exact_one_site_expectation_finite rebuilds the dense
     # contraction each call — 16x redundant on a 4x4 cell; this makes the

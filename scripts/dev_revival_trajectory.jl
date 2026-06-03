@@ -20,7 +20,10 @@ const STEP_PER_SAMPLE = 10   # 0.2 / 0.02
 function ipeps_trajectory(D)
     psi = checkerboard_square_ipeps(PeriodicSquareUnitCell(4, 4); excited_on = :even, maxdim = D)
     params = TrotterParams(DT, 2, :real, D, 1e-12; schedule = :serial)  # default rel_floor 1e-3
-    measure() = (GC.gc(); exact_density_finite(psi; max_sites = 16))   # GC: 2^16 contraction is memory-heavy at D=5
+    # Exact 16-site oracle (:auto -> dense; the 2^16 state fits comfortably on a
+    # large-memory host, reaching D=6 in seconds). On a memory-constrained host
+    # pass method=:boundary (memory-bounded double-layer contraction, ~1e-9 agreement).
+    measure() = (GC.gc(); exact_density_finite(psi; max_sites = 16))
     dens = Float64[measure()]   # t=0
     for _ = 2:length(TS)
         for _ = 1:STEP_PER_SAMPLE
@@ -44,7 +47,7 @@ function save_results()
 end
 
 @printf("%-4s %-12s %-12s %-12s\n", "D", "max|err|_traj", "rms|err|_traj", "err@2.6")
-for D in (2, 3, 4, 5)
+for D in (2, 3, 4, 5, 6)
     try
         traj = ipeps_trajectory(D)
         results[D] = traj
