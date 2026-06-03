@@ -72,8 +72,13 @@ Progress against the three project goals:
    was found to *flatter* the revival error by ~3-13e-3, so it is not used for the
    headline benchmark. **Methodology:** judge revival dynamics by the `n(t)`
    trajectory, never a single time — the revival peak (t~2.6) is a curve-crossing
-   point that scrambles the per-D ranking. Reaching the D>=5 trajectory needs a
-   memory-efficient boundary-MPS contractor (the dense one OOMs at 16 sites, D>=5).
+   point that scrambles the per-D ranking. The oracle has two exact backends
+   (`method = :dense | :boundary | :auto`, agreeing to ~1e-9): the single-layer
+   dense path is memory-pathological for *entangled* D>=5 on a 16-site torus
+   (~244 GB observed), so a memory-bounded double-layer boundary contractor
+   (`method = :boundary`) was added. It is correct but slow at full-rank D>=5, so
+   the *entangled* D=5,6 trajectory still needs a faster contraction — see
+   `notes/stage2-truncation/improvement-roadmap.md` (priority #1).
 
 2. **Bond truncation + conditioning — partial.** Simple update truncates against
    the single-site lambda^2 mean-field environment. A relative singular-value
@@ -107,7 +112,7 @@ order `(center, right, up, left, down)`, basis `1 = :up`, `2 = :down`).
 - `SquareIPEPS.jl` — periodic Gamma-lambda iPEPS states (product, checkerboard/Neel), link-weight normalization, bond-entropy diagnostics.
 - `StarSimpleUpdate.jl` — QR-reduced five-site star update (`project_star!`, with touched-link conditioning diagnostics and the `rel_floor` SV condition floor) and `canonicalize_simple!` Vidal regauging.
 - `IPEPSEvolution.jl` — deterministic Trotter evolution (`evolve!`, `reverse_evolve!`), serial/five-color schedules, `TrotterParams`, log-normalization ledger.
-- `Observables.jl` — simple/local observables (`measure_simple`) and exact finite-contraction observables (`dense_state_finite`, `exact_density_finite`, energy / return probability) for small cells.
+- `Observables.jl` — simple/local observables (`measure_simple`) and exact finite-contraction observables (`dense_state_finite`, `exact_density_finite` with `:dense`/`:boundary`/`:auto` backends, energy / return probability) for small cells.
 - `PEPSKitMeasurements.jl` — PEPSKit/TensorKit CTMRG density / blockade / PXP-energy measurement adapter (`measure_ctm`).
 - `CTMTrust.jl` — finite-`chi` CTM trust assessment and audit CSV (`assess_ctm_trust`).
 - `FinitePXPEEDBenchmark.jl` — constraint-resolved PXP exact-diagonalization reference (Krylov dynamics, density operators).
