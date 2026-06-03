@@ -2,8 +2,8 @@
 
 Purpose: pin down a default threading layout for `measure_ctm` / PEPSKit CTMRG
 on this server so audit campaigns (Phases 2-5 of the ScarFinder reliability
-plan) are tractable. Replaces the ad-hoc guidance in
-`memory/short_term/next_steps.md` once a recommended row is selected.
+plan) are tractable. Replaces the earlier ad-hoc guidance (the retired
+`memory/short_term/next_steps.md`) once a recommended row is selected.
 
 ## Why this exists
 

@@ -105,4 +105,4 @@ unit of D_target. CTM ranking is independent of D_target to 1e-5.
   truncerr at the same D_target for highly entangled states).
 - CTM-aware / full-update evolution (only if the D_target=2 candidate
   diverges from larger D_target at long times).
-- Update `memory/short_term/handoff.md` once the user explicitly requests it.
+- Record the handoff in the relevant `notes/` file once the user explicitly requests it.

@@ -23,7 +23,7 @@ claim.
 - S0.5 is complete by decision: `AbstractProjectionBackend` and
   `projection_backend` are superseded until a second update backend exists.
   See `docs/superpowers/specs/2026-05-16-s0-s7-completion-design.md` and
-  `memory/mid_term/decision_log.md`.
+  `notes/archive/decision_log.md`.
 - S1 periodic unit-cell and iPEPS state helpers are shipped in
   `src/SquareIPEPS.jl` and exported from `src/SquarePXPDynamics.jl`.
   Coverage: `test/test_square_ipeps.jl`.

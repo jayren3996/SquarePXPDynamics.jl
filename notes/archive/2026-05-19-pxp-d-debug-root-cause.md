@@ -61,7 +61,7 @@ No code change required: the dense five-site PXP gate, simple-update star
 split, CTM density operator, and exact-finite contraction are all consistent.
 
 Operational recommendation, already captured in
-`memory/mid_term/decision_log.md` (2026-05-17 entry "Treat Larger-D PXP
+`notes/archive/decision_log.md` (2026-05-17 entry "Treat Larger-D PXP
 Simple-Update Cutoff As A Stability Parameter"):
 
 - For larger-D PXP probes, sweep `cutoff ∈ {1e-12, 1e-10, 1e-9, 1e-8}` and

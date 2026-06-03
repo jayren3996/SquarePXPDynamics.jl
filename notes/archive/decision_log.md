@@ -943,7 +943,7 @@ Source:
 
 User confirmation in current thread; `Notes/2026-05-15-chatgpt-pro-ipeps-review-plan.md`;
 `Notes/2026-05-15-ipeps-superpowers-multistage-plan.md`;
-`memory/long_term/literature_context.md`
+`notes/conventions/literature_context.md`
 
 Status: active
 

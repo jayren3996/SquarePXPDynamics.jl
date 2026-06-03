@@ -114,5 +114,5 @@
 - Source: `Notes/2026-05-15-ipeps-literature-code-algorithm-notes.md`
 - Source: `README.md`
 - Source: `src/SquarePXPDynamics.jl`
-- Source: `memory/short_term/current_state.md`
+- Source: `memory/short_term/current_state.md` (retired 2026-06-02)
 - Source: `docs/superpowers/notes/2026-05-17-m3-systematic-larger-d-results.md`

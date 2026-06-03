@@ -1,14 +1,14 @@
 # SquarePXPDynamics.jl — consolidated review + 3-stage roadmap
 
 Date: 2026-06-02. Author: review campaign (4-agent audit + independent read +
-empirical ground-truth). Supersedes scattered status in `memory/short_term/`.
+empirical ground-truth). Supersedes scattered status in the now-retired `memory/short_term/`.
 
 ## Executive summary
 
 The package is **heavier than it needs to be (~3–4k of 12k src lines are
 removable)** and its *physics core is actually sound where it counts* — but the
 reliability is gated by three concrete, fixable defects, one per user stage.
-Crucially, several "known facts" in `memory/` are **stale**:
+Crucially, several "known facts" in the now-retired `memory/` layer were **stale**:
 
 - **The test suite was completely broken** (`Pkg.test()` could not even load:
   `runtests.jl` uses `Distributed`+`Printf` but they were undeclared in

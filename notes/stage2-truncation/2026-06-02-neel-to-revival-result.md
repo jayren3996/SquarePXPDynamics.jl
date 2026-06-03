@@ -139,7 +139,7 @@ formula, |diff|=0). 4×4 Néel to t=2.6, CTM chi=8 vs EXACT-16, vs ED 0.4825:
 2. **The revival D-non-monotonicity is REAL evolution error.** D=4 is worst at the
    peak under exact measurement too, and BIGGER than CTM showed. The mean-field
    environment ceiling is not a CTM artifact. (See
-   `memory/stage2_meanfield_environment_ceiling.md`.)
+   `notes/methodology/revival-validation.md`; this ceiling reading is RETRACTED below.)
 3. **1e-3 > 1e-4 holds under exact measurement** (D=4 9.65e-3 vs 3.45e-2
    catastrophe) — the rel_floor default decision was not a CTM illusion.
 
