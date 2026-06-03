@@ -26,11 +26,21 @@ evolution is exact-finite-correct; CTM flatters (use the exact oracle); regaugin
      memory-pathological for *entangled* D≥5 on a 4×4 torus (~`2^(N/2)·D^(2Lx)`;
      observed **~244 GB** RSS at D=5 on the shared host — i.e. the OOM is real, not
      just on small nodes). The boundary path stays bounded.
-   - **Open perf follow-up:** the boundary path is slow at full-rank D≥5 (~one
-     `D^12` seam SVD per sweep, and `_boundary_density_finite` does N+1 sweeps per
-     density). Cheap wins: per-site **environment caching** (N+1 sweeps → ~2) and
-     proper **periodic-MPS seam canonicalization** (avoid the bloated seam tensor).
-     Needed to make the full D=5,6 trajectory fast; a background run is in flight.
+   - **Open perf follow-up (gates the D=5,6 trajectory).** At full-rank D≥5 the
+     boundary path is slow. Measured (4×4, D=5, one sweep): rows 3–4 are cheap
+     (~6–8 s) but **row 2 dominates** — zip 46 s + recompress 116 s ≈ 162 s — because
+     that is where the full-`D²` boundary first forms and a ~`D^12` (≈3.9 GB) seam
+     intermediate appears in BOTH the column-1 zip and the seam two-site SVD.
+     `_boundary_density_finite` then repeats a full sweep N+1 times (Z + one per
+     site) ⇒ ~46 min/density at D=5. Naive thread-parallelism over the N sweeps is
+     a trap: each concurrent sweep holds its own ~3.9 GB seam, so `-t 16` blew RSS
+     to ~146 GB and stalled (kept the `Threads.@threads`, but it only helps when
+     per-sweep memory is small). **The fix is per-row environment caching**: one
+     bottom sweep + one top sweep cache the op-free row environments, then each
+     site's `Z_c` recontracts only its own row (N+1 sweeps → ~2). Pair with a
+     lighter seam recompression (the 116 s seam two-site re-forms the ~3.9 GB
+     tensor). Until then, the dense path is fine for D≤6 on a large-memory host;
+     the D=5,6 boundary trajectory is a slow best-effort background run.
 2. **Re-settle rel_floor + the regression test by TRAJECTORY** (not t=2.6). See
    `rel-floor.md`. Move the `test_d_convergence.jl` revival gate off the endpoint
    to a max/RMS trajectory metric.
