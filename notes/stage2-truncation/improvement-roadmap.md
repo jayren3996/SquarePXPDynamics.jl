@@ -32,15 +32,28 @@ evolution is exact-finite-correct; CTM flatters (use the exact oracle); regaugin
      that is where the full-`D²` boundary first forms and a ~`D^12` (≈3.9 GB) seam
      intermediate appears in BOTH the column-1 zip and the seam two-site SVD.
      `_boundary_density_finite` then repeats a full sweep N+1 times (Z + one per
-     site) ⇒ ~46 min/density at D=5. Naive thread-parallelism over the N sweeps is
-     a trap: each concurrent sweep holds its own ~3.9 GB seam, so `-t 16` blew RSS
-     to ~146 GB and stalled (kept the `Threads.@threads`, but it only helps when
-     per-sweep memory is small). **The fix is per-row environment caching**: one
-     bottom sweep + one top sweep cache the op-free row environments, then each
-     site's `Z_c` recontracts only its own row (N+1 sweeps → ~2). Pair with a
-     lighter seam recompression (the 116 s seam two-site re-forms the ~3.9 GB
-     tensor). Until then, the dense path is fine for D≤6 on a large-memory host;
-     the D=5,6 boundary trajectory is a slow best-effort background run.
+     site) ⇒ ~46 min/density at D=5. **Two optimizations were tried and FAILED for
+     the entangled regime (2026-06-03):**
+     - *Thread-parallelism over the N sweeps* — each concurrent sweep holds its own
+       ~3.9 GB seam, so `-t 16` blew RSS to ~146 GB and stalled. (Kept the
+       `Threads.@threads`; it only helps when per-sweep memory is small.)
+     - *Per-row environment caching* (one bottom + one top sweep, then each `Z_c` a
+       cheap ring combine of cached environments). Correct (== dense to ~1e-9 on
+       4×4 D≤4) and N+1→2 sweeps in principle, BUT the combine does no
+       recompression, so on an *entangled* state the bottom+row+top ring contraction
+       forms ~`χ^4` intermediates and **OOMs at the D=5 revival peak** (t=2.6); even
+       the product point was not faster (~700 s). Reverted.
+     - **Root cause / real fix:** the per-sweep cost and these OOMs all trace to the
+       same thing — the *entangled* double-layer boundary genuinely has large bonds
+       (Schmidt rank up to ~`D^4`), and a `D²`-bonded seam contraction is ~`D^12`.
+       A practical contractor needs recompression *interleaved with* the
+       environment combine (a proper boundary-MPS-with-environments / variational
+       contraction), or a different decomposition — non-trivial, still open.
+     - **For now:** the committed boundary path is correct + memory-bounded but slow
+       (~46 min/density at D=5); the dense path is fine for D≤6 *low-entanglement*
+       but OOMs (~244 GB) at the entangled peak. So the full D=5,6 *trajectory*
+       (which must reach the entangled revival) is still gated on the faster
+       contraction above.
 2. **Re-settle rel_floor + the regression test by TRAJECTORY** (not t=2.6). See
    `rel-floor.md`. Move the `test_d_convergence.jl` revival gate off the endpoint
    to a max/RMS trajectory metric.
