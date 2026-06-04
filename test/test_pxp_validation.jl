@@ -128,6 +128,56 @@ end
     @test report.metadata.julia_version == string(VERSION)
 end
 
+@testset "ED-vs-iPEPS validation runs on the :pepskit_simple engine" begin
+    # Same short-time 3x3 validation, native PEPSKit engine. The native simple
+    # observables go through the shared measure_simple/evolve! generics, so at
+    # D=1 (maxdim=1) they must agree bit-for-bit with the legacy ITensors engine,
+    # which is itself ED-validated. This is the direct native<->ED short-time
+    # comparison on the ungating gate list.
+    legacy = validate_pxp_ed_ipeps(
+        PXPValidationConfig(3; total_time = 0.02, dt = 0.01, measure_every = 1);
+        ctm_params = nothing,
+    )
+    native_config = PXPValidationConfig(
+        3;
+        total_time = 0.02,
+        dt = 0.01,
+        measure_every = 1,
+        tensor_engine = :pepskit_simple,
+    )
+    native = validate_pxp_ed_ipeps(native_config; ctm_params = nothing)
+
+    @test native isa PXPValidationReport
+    @test native.config.tensor_engine === :pepskit_simple
+    @test [s.step for s in native.ipeps_samples] == [0, 1, 2]
+    @test [s.time for s in native.ipeps_samples] ≈ [0.0, 0.01, 0.02] atol = 1e-12
+    @test native.ipeps_samples[1].evolution === nothing
+    @test native.ipeps_samples[2].evolution isa EvolutionLog
+    @test all(c -> c.ipeps_ctm_density === nothing, native.comparisons)
+    # t=0 density is exact against ED; the ED side is shared, so this pins wiring.
+    @test native.comparisons[1].density_error_simple ≈ 0.0 atol = 1e-12
+    # Native matches the ED-validated legacy engine bit-for-bit at D=1.
+    for (cn, cl) in zip(native.comparisons, legacy.comparisons)
+        @test cn.ipeps_simple_density ≈ cl.ipeps_simple_density atol = 1e-10
+        @test cn.density_error_simple ≈ cl.density_error_simple atol = 1e-10
+        @test cn.simple_blockade_violation ≈ cl.simple_blockade_violation atol = 1e-10
+        @test isfinite(cn.density_error_simple)
+    end
+
+    # Native engine rejects the legacy-only validation features.
+    @test_throws ArgumentError PXPValidationConfig(
+        3;
+        tensor_engine = :pepskit_simple,
+        exact_finite_observables = true,
+        exact_finite_max_sites = 12,
+    )
+    @test_throws ArgumentError validate_pxp_ed_ipeps(
+        native_config;
+        ctm_params = default_ctmrg_params(; chi = 4),
+    )
+    @test_throws ArgumentError PXPValidationConfig(3; tensor_engine = :bogus)
+end
+
 @testset "PXP validation can attach exact finite tiny-cell density" begin
     # t=0.1 (entangled), NOT t=0.02: under the rel_floor=1e-3 default a single
     # step truncates the D=2 bond to a near-product state, erasing the mean-field
@@ -258,6 +308,38 @@ end
     @test report.density_drift <= 1e-10
     @test report.blockade_drift <= 1e-10
     @test report.energy_drift <= 1e-10
+end
+
+@testset "PXP reversibility report runs on the :pepskit_simple engine" begin
+    cell = PeriodicSquareUnitCell(4, 4)
+
+    # Single star layer (maxdim=1): from all-down the first star is a pure
+    # single-site rotation, so reverse_evolve! is the exact algebraic inverse and
+    # the round trip returns to the start to machine precision.
+    psi1 = product_pxp_pepskit_state(cell; state = :down, D = 1)
+    params1 = TrotterParams(0.01, 1, :real, 1, 0.0; schedule = :serial, rel_floor = 0.0)
+    rep1 = validate_pxp_reversibility(psi1, 0.01; params = params1)
+    @test rep1 isa PXPReversibilityReport
+    @test rep1.forward_log isa EvolutionLog
+    @test rep1.reverse_log isa EvolutionLog
+    @test rep1.forward_log.nsteps == 1 && rep1.reverse_log.nsteps == 1
+    @test rep1.density_drift <= 1e-9
+    @test rep1.blockade_drift <= 1e-9
+    @test rep1.energy_drift <= 1e-9
+
+    # Multi-step, maxdim=2, rel_floor=0: the bond never exceeds 2 so there is no
+    # truncation (forward max_truncerr == 0), yet the drift is ~1e-6 rather than
+    # machine precision. That residual is the simple-update integrator's intrinsic
+    # non-exact reversibility (the per-bond Vidal-gauge fixing is not the exact
+    # inverse), NOT lost information. It stays small and bounded.
+    psi2 = product_pxp_pepskit_state(cell; state = :down, D = 1)
+    params2 = TrotterParams(0.01, 1, :real, 2, 0.0; schedule = :serial, rel_floor = 0.0)
+    rep2 = validate_pxp_reversibility(psi2, 0.02; params = params2)
+    @test rep2.forward_log.nsteps == 2 && rep2.reverse_log.nsteps == 2
+    @test rep2.forward_log.max_truncerr == 0.0          # bond stayed within maxdim=2
+    @test 0.0 <= rep2.density_drift <= 1e-4
+    @test 0.0 <= rep2.blockade_drift <= 1e-4
+    @test 0.0 <= rep2.energy_drift <= 1e-4
 end
 
 @testset "PXP validation report writes JSON artifact" begin

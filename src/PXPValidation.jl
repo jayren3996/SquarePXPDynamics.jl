@@ -6,6 +6,7 @@ using JSON3
 
 using ..SquareIPEPS: SquareIPEPSState, copy_state, log_norm, product_square_ipeps
 using ..SquareUnitCells: PeriodicSquareUnitCell
+using ..PEPSKitBackend: product_pxp_pepskit_state, PXPIPEPSState
 using ..Observables: SimpleObservableSummary, measure_simple
 using ..FiniteIPEPSObservables: exact_density_finite, exact_all_down_return_probability_finite
 using ..PEPSKitMeasurements:
@@ -99,6 +100,11 @@ Controls for a short-time finite-ED versus iPEPS PXP validation run. The ED
 side uses [`PXPEEDBenchmarkConfig`](@ref); the iPEPS side uses a periodic
 `n x n` unit cell, all-down product initialization, real-time PXP evolution,
 and a serial star schedule by default so `3 x 3` smoke validation is supported.
+
+`tensor_engine` selects the iPEPS backend: `:legacy_itensors` (default) or
+`:pepskit_simple` (the PEPSKit-native simple-update engine, dispatched through
+the shared `evolve!`/`measure_simple` generics). The native engine does not yet
+support `exact_finite_observables` or CTM trust sweeps; both are rejected.
 """
 struct PXPValidationConfig
     n::Int
@@ -118,6 +124,7 @@ struct PXPValidationConfig
     schedule::Symbol
     exact_finite_observables::Bool
     exact_finite_max_sites::Int
+    tensor_engine::Symbol
 
     function PXPValidationConfig(
         n::Integer;
@@ -137,6 +144,7 @@ struct PXPValidationConfig
         schedule::Symbol = :serial,
         exact_finite_observables::Bool = false,
         exact_finite_max_sites::Integer = 12,
+        tensor_engine::Symbol = :legacy_itensors,
     )
         n_int = _positive_int(n, "n")
         total = _finite_nonnegative(total_time, "total_time")
@@ -160,6 +168,16 @@ struct PXPValidationConfig
         exact_limit = _positive_int(exact_finite_max_sites, "exact_finite_max_sites")
         exact_finite_observables && n_int^2 > exact_limit &&
             throw(ArgumentError("exact finite observables require n^2 <= exact_finite_max_sites"))
+        tensor_engine in (:legacy_itensors, :pepskit_simple) || throw(
+            ArgumentError("tensor_engine must be :legacy_itensors or :pepskit_simple"),
+        )
+        # The PEPSKit-native engine has no ITensor exact-finite contraction yet;
+        # CTM trust sweeps are likewise legacy-only (rejected at the call site).
+        tensor_engine === :pepskit_simple && exact_finite_observables && throw(
+            ArgumentError(
+                "exact_finite_observables is not supported on the :pepskit_simple engine",
+            ),
+        )
 
         PXPEEDBenchmarkConfig(
             n_int;
@@ -194,6 +212,7 @@ struct PXPValidationConfig
             schedule,
             exact_finite_observables,
             exact_limit,
+            tensor_engine,
         )
     end
 end
@@ -594,6 +613,7 @@ function _copy_config(
         schedule = base.schedule,
         exact_finite_observables = base.exact_finite_observables,
         exact_finite_max_sites = base.exact_finite_max_sites,
+        tensor_engine = base.tensor_engine,
     )
 end
 
@@ -618,7 +638,7 @@ The supplied state is copied before mutation, so the returned
 the caller's `psi`.
 """
 function validate_pxp_reversibility(
-    psi::SquareIPEPSState,
+    psi::Union{SquareIPEPSState,PXPIPEPSState},
     total_time::Real;
     params::TrotterParams,
     protocol = nothing,
@@ -645,6 +665,9 @@ end
 function _validation_initial_state(config::PXPValidationConfig)
     cell = PeriodicSquareUnitCell(config.n, config.n)
     state = config.initial_state === :all_down ? :down : config.initial_state
+    if config.tensor_engine === :pepskit_simple
+        return product_pxp_pepskit_state(cell; state, D = config.maxdim)
+    end
     return product_square_ipeps(cell; state, maxdim = config.maxdim)
 end
 
@@ -671,11 +694,13 @@ function _validation_metadata()
 end
 
 function _maybe_trusted_ctm(
-    psi::SquareIPEPSState,
+    psi::Union{SquareIPEPSState,PXPIPEPSState},
     ctm_params,
     trust_policy::CTMTrustPolicy,
     ctm_measure,
 )
+    # The native engine reaches here only with ctm_params === nothing (CTM sweeps
+    # are rejected upstream), so the legacy-typed measure_ctm_trusted is never hit.
     ctm_params === nothing && return nothing
     return measure_ctm_trusted(
         psi;
@@ -779,6 +804,11 @@ function validate_pxp_ed_ipeps(
     trust_policy::CTMTrustPolicy = CTMTrustPolicy(),
     ctm_measure = measure_ctm,
 )::PXPValidationReport
+    config.tensor_engine === :pepskit_simple && ctm_params !== nothing && throw(
+        ArgumentError(
+            "CTM trust sweeps are not supported on the :pepskit_simple engine; pass ctm_params = nothing",
+        ),
+    )
     ed_result = run_pxp_ed_benchmark(_validation_ed_config(config))
     return _validate_pxp_ipeps_against_ed(
         config,
@@ -870,22 +900,6 @@ end
 function _maximum_or_zero(values)
     isempty(values) && return 0.0
     return maximum(values)
-end
-
-function _minimum_or_zero(values)
-    isempty(values) && return 0.0
-    return minimum(values)
-end
-
-function _finite_chi_max(samples, field::Symbol)
-    values = Float64[]
-    for sample in samples
-        sample.ctm === nothing && continue
-        value = getfield(sample.ctm.trust, field)
-        value === nothing && continue
-        push!(values, value)
-    end
-    return _finite_max_or_nothing(values)
 end
 
 function _audit_trust_status(samples)

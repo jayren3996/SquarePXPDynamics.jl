@@ -6,6 +6,7 @@ using Statistics: mean, std
 using ..Internals: _csv_value
 using ..SquareUnitCells: PeriodicSquareUnitCell
 using ..SquareIPEPS: SquareIPEPSState, product_square_ipeps, checkerboard_square_ipeps
+using ..PEPSKitBackend: product_pxp_pepskit_state, checkerboard_pxp_pepskit_state
 using ..IPEPSEvolution: TrotterParams
 using ..PEPSKitMeasurements: PEPSKitCTMRGParams
 using ..CTMTrust: CTMTrustPolicy
@@ -75,6 +76,7 @@ struct ScarFinderAuditConfig
     ctm_trust_policy::CTMTrustPolicy
     require_trusted_ctm::Bool
     top_k::Int
+    tensor_engine::Symbol
 
     function ScarFinderAuditConfig(;
         cell_Lx::Integer,
@@ -99,6 +101,7 @@ struct ScarFinderAuditConfig
         ctm_trust_policy::CTMTrustPolicy = CTMTrustPolicy(),
         require_trusted_ctm::Bool = false,
         top_k::Integer = 3,
+        tensor_engine::Symbol = :legacy_itensors,
     )
         cell_Lx >= 2 || throw(ArgumentError("cell_Lx must be at least 2"))
         cell_Ly >= 2 || throw(ArgumentError("cell_Ly must be at least 2"))
@@ -135,6 +138,23 @@ struct ScarFinderAuditConfig
         require_trusted_ctm && isempty(chi_grid) &&
             throw(ArgumentError("require_trusted_ctm requires nonempty chi_values"))
 
+        tensor_engine in (:legacy_itensors, :pepskit_simple) ||
+            throw(ArgumentError("tensor_engine must be :legacy_itensors or :pepskit_simple"))
+        if tensor_engine === :pepskit_simple
+            # The PEPSKit-native engine (M6 increment 1) supports the
+            # simple-update backend only: no trusted-CTM rows and no
+            # per-iteration compression yet. Restrict the grid accordingly so
+            # the audit fails loudly rather than silently degrading.
+            isempty(chi_grid) ||
+                throw(ArgumentError(":pepskit_simple does not support chi_values (CTM) yet"))
+            require_trusted_ctm &&
+                throw(ArgumentError(":pepskit_simple does not support require_trusted_ctm yet"))
+            all(==(Int(evolve_maxdim)), target_grid) || throw(ArgumentError(
+                ":pepskit_simple does not support per-iteration compression yet; " *
+                "every target_maxdim must equal evolve_maxdim",
+            ))
+        end
+
         return new(
             Int(cell_Lx),
             Int(cell_Ly),
@@ -158,6 +178,7 @@ struct ScarFinderAuditConfig
             ctm_trust_policy,
             require_trusted_ctm,
             Int(top_k),
+            tensor_engine,
         )
     end
 end
@@ -189,6 +210,7 @@ struct ScarFinderAuditRow
     cutoff::Float64
     chi::Union{Nothing,Int}
     backend::Symbol
+    tensor_engine::Symbol
     accepted::Int
     rejected::Int
     iterations_run::Int
@@ -257,6 +279,15 @@ end
 
 function _build_state(cfg::ScarFinderAuditConfig, target_maxdim::Int)
     cell = PeriodicSquareUnitCell(cfg.cell_Lx, cfg.cell_Ly)
+    if cfg.tensor_engine === :pepskit_simple
+        if cfg.initial_state === :checkerboard_even
+            return checkerboard_pxp_pepskit_state(cell; excited_on = :even, D = target_maxdim)
+        elseif cfg.initial_state === :checkerboard_odd
+            return checkerboard_pxp_pepskit_state(cell; excited_on = :odd, D = target_maxdim)
+        else
+            return product_pxp_pepskit_state(cell; state = cfg.initial_state, D = target_maxdim)
+        end
+    end
     if cfg.initial_state === :checkerboard_even
         return checkerboard_square_ipeps(cell; excited_on = :even, maxdim = target_maxdim)
     elseif cfg.initial_state === :checkerboard_odd
@@ -271,6 +302,9 @@ function _scarfinder_params(cfg::ScarFinderAuditConfig, dt::Float64, target_maxd
     trotter = TrotterParams(
         dt, cfg.order, :real, cfg.evolve_maxdim, cutoff; schedule = cfg.schedule,
     )
+    # The native engine has no per-iteration compression yet (the constructor
+    # guarantees target_maxdim == evolve_maxdim), so disable the compression step.
+    effective_target = cfg.tensor_engine === :pepskit_simple ? nothing : target_maxdim
     return ScarFinderParams(
         cfg.projection_time,
         trotter,
@@ -279,7 +313,7 @@ function _scarfinder_params(cfg::ScarFinderAuditConfig, dt::Float64, target_maxd
         cfg.truncation_tol,
         cfg.entropy_cap,
         false;
-        target_maxdim = target_maxdim,
+        target_maxdim = effective_target,
         compression_cutoff = cfg.compression_cutoff,
     )
 end
@@ -425,7 +459,8 @@ function _row_from_result(result::Union{Nothing,ScarFinderResult}, backend::Symb
     rev_energy = rev === nothing ? nothing : rev.energy_drift
     if result === nothing
         return ScarFinderAuditRow(
-            dt, target_maxdim, cfg.evolve_maxdim, cutoff, chi, backend, 0, 0, 0,
+            dt, target_maxdim, cfg.evolve_maxdim, cutoff, chi, backend,
+            cfg.tensor_engine, 0, 0, 0,
             nothing, nothing, Int[], Float64[],
             backend === :ctm ? 0 : nothing,
             nothing, nothing, nothing, nothing,
@@ -439,6 +474,7 @@ function _row_from_result(result::Union{Nothing,ScarFinderResult}, backend::Symb
     max_comp_trunc, mean_comp_trunc, max_comp_density_shift = _compression_stats(result)
     return ScarFinderAuditRow(
         dt, target_maxdim, cfg.evolve_maxdim, cutoff, chi, backend,
+        cfg.tensor_engine,
         result.accepted_iterations,
         result.rejected_iterations,
         length(result.iterations),
@@ -537,11 +573,17 @@ function run_scarfinder_audit(
         target_maxdim in config.target_maxdim_values,
         cutoff in config.cutoff_values
 
-        rev = try
-            _reversibility_report(config, dt, target_maxdim, cutoff)
-        catch err
-            @warn "reversibility check failed" dt target_maxdim cutoff exception = err
+        # The reversibility probe uses the legacy validator; skip it for the
+        # native engine (M6 increment 1) rather than spuriously warning.
+        rev = if config.tensor_engine === :pepskit_simple
             nothing
+        else
+            try
+                _reversibility_report(config, dt, target_maxdim, cutoff)
+            catch err
+                @warn "reversibility check failed" dt target_maxdim cutoff exception = err
+                nothing
+            end
         end
         push!(rows, _run_simple_row(config, dt, target_maxdim, cutoff, objective, rev))
         for chi in config.chi_values
@@ -555,7 +597,7 @@ function run_scarfinder_audit(
 end
 
 const _AUDIT_CSV_COLUMNS = (
-    :dt, :target_maxdim, :evolve_maxdim, :cutoff, :chi, :backend,
+    :dt, :target_maxdim, :evolve_maxdim, :cutoff, :chi, :backend, :tensor_engine,
     :accepted, :rejected, :iterations_run,
     :best_iteration, :best_score,
     :top_k_iteration_indices, :ctm_trusted_count,
@@ -611,6 +653,7 @@ function _config_payload(cfg::ScarFinderAuditConfig)
         cell_Lx = cfg.cell_Lx,
         cell_Ly = cfg.cell_Ly,
         initial_state = String(cfg.initial_state),
+        tensor_engine = String(cfg.tensor_engine),
         projection_time = cfg.projection_time,
         total_evolution_time = cfg.projection_time * cfg.iterations,
         iterations = cfg.iterations,
@@ -652,6 +695,7 @@ function _row_payload(row::ScarFinderAuditRow)
         cutoff = row.cutoff,
         chi = row.chi,
         backend = String(row.backend),
+        tensor_engine = String(row.tensor_engine),
         accepted = row.accepted,
         rejected = row.rejected,
         iterations_run = row.iterations_run,

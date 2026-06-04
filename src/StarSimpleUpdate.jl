@@ -113,14 +113,6 @@ function _validate_distinct_star!(psi::SquareIPEPSState, center::SquareCoord)
     return coords
 end
 
-function _opposite_dir(dir::Symbol)
-    dir === :right && return :left
-    dir === :up && return :down
-    dir === :left && return :right
-    dir === :down && return :up
-    throw(ArgumentError("direction must be :right, :up, :left, or :down"))
-end
-
 function _center_dir_for_leaf(dir::Symbol)
     dir === :right && return :left
     dir === :up && return :down
