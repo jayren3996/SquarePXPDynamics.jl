@@ -5,6 +5,7 @@ using JSON3
 using ..CandidateSnapshots: write_square_ipeps_snapshot
 using ..IPEPSCompression: IPEPSCompressionInfo, compress_to_target_maxdim!
 using ..SquareIPEPS: SquareIPEPSState, copy_state, state_version, log_norm
+using ..PEPSKitBackend: PXPIPEPSState
 using ..IPEPSEvolution: TrotterParams, EvolutionLog, evolve!
 using ..StarModels: AbstractModelProtocol
 using ..Observables: SimpleObservableSummary, measure_simple
@@ -18,6 +19,13 @@ using ..Internals:
     _nonnegative_float,
     _nonnegative_int,
     _optional_finite_float
+
+# ScarFinder orchestrates either tensor engine through ordinary dispatch: the
+# legacy ITensors `SquareIPEPSState` or the PEPSKit-native `PXPIPEPSState`. The
+# state-changing helpers below accept either; engine-specific operations
+# (`evolve!`, `measure_simple`, trusted-CTM, snapshots) dispatch on the concrete
+# type. See docs/pepskit-native-refactor.md (M6).
+const ScarFinderState = Union{SquareIPEPSState,PXPIPEPSState}
 
 export ScarFinderParams, ScarFinderCandidateScore, ScarFinderIteration, ScarFinderResult
 export ScarFinderCompressionInfo
@@ -155,7 +163,7 @@ struct TrustedCTMBackend <: MeasurementBackend
 end
 
 """Measure `psi` with a ScarFinder measurement backend."""
-measure_scarfinder(psi::SquareIPEPSState, ::SimpleBackend) = measure_simple(psi)
+measure_scarfinder(psi::ScarFinderState, ::SimpleBackend) = measure_simple(psi)
 
 function measure_scarfinder(psi::SquareIPEPSState, backend::TrustedCTMBackend)
     return measure_ctm_trusted(
@@ -164,6 +172,13 @@ function measure_scarfinder(psi::SquareIPEPSState, backend::TrustedCTMBackend)
         policy = backend.policy,
         measure = backend.measure,
     )
+end
+
+function measure_scarfinder(::PXPIPEPSState, ::TrustedCTMBackend)
+    throw(ArgumentError(
+        "trusted-CTM measurement is not yet supported on the PEPSKit-native " *
+        "backend (:pepskit_simple); use SimpleBackend",
+    ))
 end
 
 """
@@ -425,9 +440,9 @@ ScarFinderIteration(
     nothing,
 )
 
-store_candidate!(::NoCandidateStore, psi::SquareIPEPSState, iteration::ScarFinderIteration) = nothing
+store_candidate!(::NoCandidateStore, psi::ScarFinderState, iteration::ScarFinderIteration) = nothing
 
-function _candidate_metadata_payload(psi::SquareIPEPSState, iteration::ScarFinderIteration)
+function _candidate_metadata_payload(psi::ScarFinderState, iteration::ScarFinderIteration)
     return (;
         iteration = iteration.iteration,
         accepted = iteration.accepted,
@@ -441,7 +456,7 @@ function _candidate_metadata_payload(psi::SquareIPEPSState, iteration::ScarFinde
     )
 end
 
-function _write_candidate_metadata(directory::AbstractString, psi::SquareIPEPSState,
+function _write_candidate_metadata(directory::AbstractString, psi::ScarFinderState,
                                    iteration::ScarFinderIteration)
     path = joinpath(directory, "candidate_$(lpad(iteration.iteration, 6, '0')).json")
     payload = _candidate_metadata_payload(psi, iteration)
@@ -454,7 +469,7 @@ end
 
 function store_candidate!(
     store::JSONCandidateStore,
-    psi::SquareIPEPSState,
+    psi::ScarFinderState,
     iteration::ScarFinderIteration,
 )
     return _write_candidate_metadata(store.directory, psi, iteration)
@@ -484,7 +499,7 @@ diagnostics. Simple diagnostics are not CTMRG-quality environment
 measurements.
 """
 struct ScarFinderResult
-    state::SquareIPEPSState
+    state::ScarFinderState
     params::ScarFinderParams
     iterations::Vector{ScarFinderIteration}
     accepted_iterations::Int
@@ -840,12 +855,16 @@ function _correction_params(params::ScarFinderParams)
 end
 
 function _maybe_apply_energy_correction!(
-    psi::SquareIPEPSState,
+    psi::ScarFinderState,
     obs::SimpleObservableSummary,
     params::ScarFinderParams,
 )
     target = params.target_energy
     target === nothing && return (nothing, nothing, nothing, obs)
+    psi isa PXPIPEPSState && throw(ArgumentError(
+        "imaginary-time energy correction is not yet supported on the " *
+        "PEPSKit-native backend (:pepskit_simple); set target_energy = nothing",
+    ))
     before_energy = obs.pxp_energy_density
     best_objective = abs(before_energy - target)
     best_state = nothing
@@ -910,7 +929,7 @@ function _should_measure_ctm(iteration::Int, total::Int, ctm_every::Int, ctm_at_
 end
 
 function _scheduled_ctm_observation(
-    psi::SquareIPEPSState,
+    psi::ScarFinderState,
     measurement::MeasurementBackend,
     ctm_callback,
     iteration::Int,
@@ -1038,7 +1057,7 @@ result = scarfinder!(psi, params)
 ```
 """
 function scarfinder!(
-    psi::SquareIPEPSState,
+    psi::ScarFinderState,
     params::ScarFinderParams;
     objective::ScarFinderObjective = CompositeObjective(),
     measurement::MeasurementBackend = SimpleBackend(),
@@ -1198,7 +1217,7 @@ diagnostics from [`measure_simple`](@ref), with optional guarded energy
 correction fields when `target_energy` is supplied.
 """
 function scarfinder!(
-    psi::SquareIPEPSState;
+    psi::ScarFinderState;
     projection_time::Real,
     trotter,
     iterations::Integer,

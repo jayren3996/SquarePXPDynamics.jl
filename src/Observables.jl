@@ -378,25 +378,6 @@ function pxp_energy_density_simple(psi::SquareIPEPSState)::Float64
     return _real_expectation(value)
 end
 
-function _mean_one_site_expectation_simple(
-    psi::SquareIPEPSState,
-    O::AbstractMatrix;
-    sublattice = nothing,
-)
-    reps = _selected_reps(psi.unitcell, sublattice)
-    isempty(reps) && throw(ArgumentError("selected sublattice is empty"))
-    return sum(_one_site_expectation_simple(psi, c, O) for c in reps) / length(reps)
-end
-
-function _mean_nearest_neighbor_zz_simple(psi::SquareIPEPSState, dir::Symbol)
-    _validate_canonical_bond_dir(dir)
-    reps = psi.unitcell.reps
-    isempty(reps) && throw(ArgumentError("unit cell is empty"))
-    Ozz = kron(pauli_z(), pauli_z())
-    return sum(_nearest_neighbor_expectation_simple(psi, c, dir, Ozz) for c in reps) /
-           length(reps)
-end
-
 
 """
     mean_bond_entropy(psi)::Float64
@@ -619,37 +600,6 @@ end
 # Correctness reference only: it forms dense intermediates whose boundary scales
 # as D^(2*Lx) per layer, so it is tractable on tiny cells (3x3) but not the memory
 # win. The boundary sweep replaces this for large cells while matching it exactly.
-function _naive_double_layer_scalar(
-    psi::SquareIPEPSState,
-    folded::Dict{SquareCoord,ITensor},
-    combs::Dict{Index,ITensor};
-    op_site::Union{Nothing,SquareCoord} = nothing,
-)
-    acc = ITensor(ComplexF64(1.0))
-    for c in psi.unitcell.reps
-        op =
-            (op_site !== nothing && c == op_site) ? projector_up() : _identity_2x2()
-        E = _double_layer_site(psi, folded, c, combs; op = op)
-        acc = @disable_warn_order acc * E
-    end
-    return scalar(acc)
-end
-
-function _naive_double_layer_density(psi::SquareIPEPSState; max_sites::Integer = 16)::Float64
-    _check_tiny_finite_cell(psi, max_sites)
-    folded = _absorb_all_weights_once(psi)
-    combs = _bond_combiners(psi)
-    reps = psi.unitcell.reps
-    Z = _naive_double_layer_scalar(psi, folded, combs; op_site = nothing)
-    abs(Z) > 1e-300 || throw(ArgumentError("double-layer norm is zero"))
-    total = 0.0
-    for c in reps
-        Zc = _naive_double_layer_scalar(psi, folded, combs; op_site = c)
-        total += real(Zc / Z)
-    end
-    return total / length(reps)
-end
-
 # Combined (D^2) index for the bond owning `li` (the shared combiner output).
 _cidx(combs::Dict{Index,ITensor}, li::Index) = combinedind(combs[li])
 

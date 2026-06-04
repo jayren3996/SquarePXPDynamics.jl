@@ -20,8 +20,26 @@ include("CTMTrust.jl")
 include("StarSimpleUpdate.jl")
 include("IPEPSEvolution.jl")
 include("FinitePXPEEDBenchmark.jl")
-include("PXPValidation.jl")
+
+# PEPSKit-native backend (introduced in parallel; see docs/pepskit-native-refactor.md).
+# Included before ScarFinderSupport/PXPValidation/ScarFinder so candidate
+# snapshots, the ED-vs-iPEPS validation, and the orchestration can dispatch on
+# PXPIPEPSState (M6 tensor-engine selector). PEPSKitObservables provides both the
+# CTMRG observables and the simple measure_simple/evolve! bridge onto the shared
+# generics; it follows PEPSKitEvolution because the bridge calls evolve_pepskit!.
+include("PEPSKitBackend.jl")
+include("PEPSKitStarUpdate.jl")
+include("PEPSKitEvolution.jl")
+include("PEPSKitObservables.jl")
+include("PEPSKitStarSnake.jl")   # M7: experimental star-gate MPO
+
+# CandidateSnapshots/IPEPSCompression now serialize both the legacy and the
+# native state, so they follow the native backend.
 include("ScarFinderSupport.jl") # CandidateSnapshots + IPEPSCompression
+
+# PXPValidation runs the ED-vs-iPEPS comparison on either tensor engine, so it is
+# included after the native backend it can now construct/evolve.
+include("PXPValidation.jl")
 include("ScarFinder.jl")
 include("ScarFinderAudit.jl")
 
@@ -158,7 +176,10 @@ using .PXPValidation:
 using .CandidateSnapshots:
     SQUARE_IPEPS_SNAPSHOT_FORMAT_VERSION,
     write_square_ipeps_snapshot,
-    load_square_ipeps_snapshot
+    load_square_ipeps_snapshot,
+    PXP_PEPSKIT_SNAPSHOT_FORMAT_VERSION,
+    write_pxp_pepskit_snapshot,
+    load_pxp_pepskit_snapshot
 using .IPEPSCompression:
     IPEPSCompressionInfo,
     compress_to_target_maxdim!
@@ -192,6 +213,42 @@ using .ScarFinderAudit:
     run_scarfinder_audit,
     write_scarfinder_audit_json,
     write_scarfinder_audit_csv
+using .PEPSKitBackend:
+    PXPIPEPSState,
+    product_pxp_pepskit_state,
+    checkerboard_pxp_pepskit_state,
+    mark_mutated!,
+    add_log_norm!,
+    pepskit_peps,
+    pepskit_weights,
+    squarecoord_to_cartesianindex,
+    cartesianindex_to_squarecoord,
+    measurement_peps
+using .PEPSKitStarUpdate:
+    pxp_star_hamiltonian_matrix,
+    pxp_star_gate_tensormap,
+    pxp_star_gate_dense,
+    StarUpdateInfoPK,
+    project_star_pepskit!
+using .PEPSKitEvolution:
+    TrotterParamsPK,
+    trotter_sequence_pk,
+    evolve_pepskit!,
+    EvolutionLogPK
+using .PEPSKitObservables:
+    density_operator,
+    blockade_operator,
+    pxp_star_operator,
+    pxp_energy_operator,
+    PEPSKitNativeContext,
+    pepskit_native_context,
+    measure_ctm_pepskit,
+    density_ctm_pepskit,
+    blockade_violation_ctm_pepskit,
+    pxp_energy_density_ctm_pepskit,
+    PEPSKitNativeSummary,
+    pxpipeps_from_square_ipeps
+using .PEPSKitStarSnake: StarGateMPO, star_gate_mpo, reconstruct_star_gate, star_mpo_bond_dims
 
 export pauli_x, pauli_y, pauli_z, identity2, projector_up, projector_down
 export kron_all, embed_one_site
@@ -268,6 +325,8 @@ export MeasurementBackend, SimpleBackend, TrustedCTMBackend, measure_scarfinder
 export CandidateStore, NoCandidateStore, JSONCandidateStore, JLD2CandidateStore
 export SQUARE_IPEPS_SNAPSHOT_FORMAT_VERSION
 export write_square_ipeps_snapshot, load_square_ipeps_snapshot
+export PXP_PEPSKIT_SNAPSHOT_FORMAT_VERSION
+export write_pxp_pepskit_snapshot, load_pxp_pepskit_snapshot
 export IPEPSCompressionInfo, compress_to_target_maxdim!
 export ScarFinderObjective, RevivalObjective, TargetEnergyObjective
 export LowVarianceObjective, CompositeObjective
@@ -275,5 +334,18 @@ export rank_scarfinder_candidates, write_scarfinder_log, scarfinder!
 export ScarFinderAuditConfig, ScarFinderAuditRow, ScarFinderAuditStability
 export ScarFinderAuditReport
 export run_scarfinder_audit, write_scarfinder_audit_json, write_scarfinder_audit_csv
+# PEPSKit-native backend
+export PXPIPEPSState, product_pxp_pepskit_state, checkerboard_pxp_pepskit_state
+export mark_mutated!, add_log_norm!, pepskit_peps, pepskit_weights
+export squarecoord_to_cartesianindex, cartesianindex_to_squarecoord, measurement_peps
+export density_operator, blockade_operator, pxp_star_operator, pxp_energy_operator
+export PEPSKitNativeContext, pepskit_native_context, measure_ctm_pepskit
+export density_ctm_pepskit, blockade_violation_ctm_pepskit, pxp_energy_density_ctm_pepskit
+export PEPSKitNativeSummary
+export pxp_star_hamiltonian_matrix, pxp_star_gate_tensormap, pxp_star_gate_dense
+export StarUpdateInfoPK, project_star_pepskit!
+export TrotterParamsPK, trotter_sequence_pk, evolve_pepskit!, EvolutionLogPK
+export pxpipeps_from_square_ipeps
+export StarGateMPO, star_gate_mpo, reconstruct_star_gate, star_mpo_bond_dims
 
 end

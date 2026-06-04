@@ -96,6 +96,44 @@ CTMRG-quality measurements — do not make D>1 physics claims from them. The den
 square-star PXP Hamiltonian is the source of truth for the energy operator (site
 order `(center, right, up, left, down)`, basis `1 = :up`, `2 = :down`).
 
+### PEPSKit-native backend migration (in progress)
+
+The package is migrating its tensor stack from the custom ITensors Γ-λ iPEPS
+backend to a **PEPSKit-native** backend (PEPSKit's `InfinitePEPS` + `SUWeight`),
+introduced *in parallel* so parity can be proven before anything is deleted. The
+end state is a single tensor engine with no ITensors dependency and a
+substantially smaller codebase. See `docs/pepskit-native-refactor.md` for the
+full design, milestones, and consolidation roadmap.
+
+Landed so far:
+
+- **Native state / gate / update / evolution / observables** (`PEPSKitBackend`,
+  `PEPSKitStarUpdate`, `PEPSKitEvolution`, `PEPSKitObservables`): the
+  PEPSKit-native `PXPIPEPSState`, the genuine five-site square-star gate and
+  simple update (`project_star_pepskit!`), the five-colour Trotter driver
+  (`evolve_pepskit!`), and both CTMRG and simple observables. The native
+  single-step star update matches the legacy backend to ~1e-6.
+- **Tensor-engine selector.** ScarFinder, the audit harness, and
+  `validate_pxp_ed_ipeps` accept a `tensor_engine` of `:legacy_itensors`
+  (default) or `:pepskit_simple`, dispatching the same orchestration onto either
+  backend through the shared `measure_simple` / `evolve!` / `reverse_evolve!`
+  generics.
+- **Native validation.** Direct native↔ED short-time comparison (bit-for-bit
+  versus the ED-validated legacy engine at `D = 1`) and a multi-step
+  reversibility audit, plus native JLD2 candidate snapshots
+  (`write_pxp_pepskit_snapshot` / `load_pxp_pepskit_snapshot`).
+- **Experimental** (`PEPSKitStarSnake`): an exact matrix-product-operator
+  factorization of the five-site star gate (`star_gate_mpo`), for research only —
+  *not* wired into production evolution.
+
+The **legacy ITensors backend remains the production default** and is retained
+intentionally; it will be deleted incrementally as each native equivalent
+(per-iteration compression, CTM-trust, imaginary-time energy correction) reaches
+parity and ScarFinder's production path is re-pointed. The remaining
+ITensors-coupled files are `SquareIPEPS.jl`, `StarSimpleUpdate.jl`,
+`IPEPSEvolution.jl`, the conversion half of `PEPSKitMeasurements.jl`, and the
+ITensors half of `Observables.jl`.
+
 ## Package Layout
 
 - `Project.toml`: package metadata, dependencies, compatibility bounds, and the test workspace.
@@ -117,8 +155,16 @@ order `(center, right, up, left, down)`, basis `1 = :up`, `2 = :down`).
 - `CTMTrust.jl` — finite-`chi` CTM trust assessment and audit CSV (`assess_ctm_trust`).
 - `FinitePXPEEDBenchmark.jl` — constraint-resolved PXP exact-diagonalization reference (Krylov dynamics, density operators).
 - `PXPValidation.jl` — ED-vs-iPEPS validation / convergence reports (`validate_pxp_ed_ipeps`, `validate_pxp_convergence`) and the larger-D ED benchmark (`run_pxp_larger_d_benchmark`).
-- `ScarFinder.jl`, `ScarFinderSupport.jl`, `ScarFinderAudit.jl` — single-seed candidate-state evolve/measure/rank loop, objectives, optional trusted-CTM backend, and audit harness.
+- `ScarFinder.jl`, `ScarFinderSupport.jl`, `ScarFinderAudit.jl` — single-seed candidate-state evolve/measure/rank loop, objectives, optional trusted-CTM backend, audit harness, and JLD2 candidate snapshots (legacy + native).
 - `Internals.jl` — shared internal helpers.
+
+PEPSKit-native backend (see the migration note above and `docs/pepskit-native-refactor.md`):
+
+- `PEPSKitBackend.jl` — PEPSKit-native `PXPIPEPSState` (`InfinitePEPS` + `SUWeight`), product/checkerboard constructors, shared state generics, and the dense-operator→`TensorMap` helpers.
+- `PEPSKitStarUpdate.jl` — native five-site square-star gate and the `project_star_pepskit!` simple update.
+- `PEPSKitEvolution.jl` — native Trotter driver (`evolve_pepskit!`) preserving the five-colour palindromic schedule.
+- `PEPSKitObservables.jl` — native CTMRG observables plus the simple/local observables and the `measure_simple`/`evolve!`/`reverse_evolve!` adapters and `pxpipeps_from_square_ipeps` converter.
+- `PEPSKitStarSnake.jl` — experimental exact MPO factorization of the star gate (research only, not in production).
 
 ## Not Yet Shipped
 

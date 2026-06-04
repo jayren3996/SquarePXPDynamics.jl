@@ -2,12 +2,17 @@ module CandidateSnapshots
 
 using ITensors: ITensor, Index, dim
 using JLD2
+using TensorKit
+using PEPSKit: InfinitePEPS, SUWeight
 using ..SquareGeometry: SquareCoord
 using ..SquareUnitCells: PeriodicSquareUnitCell, neighbor
 using ..SquareIPEPS: SquareIPEPSState, BondKey, log_norm, state_version
+using ..PEPSKitBackend: PXPIPEPSState, pepskit_peps, pepskit_weights
 
 export write_square_ipeps_snapshot, load_square_ipeps_snapshot
 export SQUARE_IPEPS_SNAPSHOT_FORMAT_VERSION
+export write_pxp_pepskit_snapshot, load_pxp_pepskit_snapshot
+export PXP_PEPSKIT_SNAPSHOT_FORMAT_VERSION
 
 """
     SQUARE_IPEPS_SNAPSHOT_FORMAT_VERSION
@@ -134,6 +139,128 @@ function load_square_ipeps_snapshot(path::AbstractString)::SquareIPEPSState
         link_weights,
         Int(data["maxdim"]),
         Symbol(data["gauge"]),
+        Ref(Int(data["mutation_version"])),
+        Ref(Float64(data["log_norm_value"])),
+    )
+end
+
+# --- PEPSKit-native snapshots -------------------------------------------------
+
+"""
+    PXP_PEPSKIT_SNAPSHOT_FORMAT_VERSION
+
+Integer constant identifying the on-disk format for the PEPSKit-native
+[`write_pxp_pepskit_snapshot`](@ref) / [`load_pxp_pepskit_snapshot`](@ref).
+Bump it whenever the serialized layout changes.
+"""
+const PXP_PEPSKIT_SNAPSHOT_FORMAT_VERSION = 1
+
+"""
+    write_pxp_pepskit_snapshot(path, state::PXPIPEPSState)
+
+Write a PEPSKit-native `PXPIPEPSState` to `path` as a JLD2 snapshot. Only plain
+arrays are stored — no TensorKit space/`TensorMap` objects — so the file is
+independent of TensorKit internals. Each `InfinitePEPS` site tensor is saved as
+its dense `[p, N, E, S, W]` array (keyed by PEPSKit `(row, col)`); each `SUWeight`
+diagonal is saved as a `Float64` vector keyed by `(slot, row, col)` where
+`slot` is `1 = east/right`, `2 = north/up`. On load the tensors are rebuilt with
+the fixed PEPSKit convention `P ← N ⊗ E ⊗ S' ⊗ W'` (`N,E` non-dual; `S,W` dual)
+and the weights as non-dual `DiagonalTensorMap`s, matching the native
+constructors.
+"""
+function write_pxp_pepskit_snapshot(path::AbstractString, state::PXPIPEPSState)
+    cell = state.unitcell
+    Nr, Nc = cell.Ly, cell.Lx
+    peps = pepskit_peps(state)
+    weights = pepskit_weights(state)
+
+    site_arrays = Dict{Tuple{Int,Int},Array{ComplexF64,5}}()
+    for row in 1:Nr, col in 1:Nc
+        site_arrays[(row, col)] = ComplexF64.(convert(Array, peps[row, col]))
+    end
+
+    weight_values = Dict{Tuple{Int,Int,Int},Vector{Float64}}()
+    for slot in 1:2, row in 1:Nr, col in 1:Nc
+        weight_values[(slot, row, col)] = Float64.(weights.data[slot, row, col].data)
+    end
+
+    JLD2.jldsave(
+        String(path);
+        format_version = PXP_PEPSKIT_SNAPSHOT_FORMAT_VERSION,
+        Lx = cell.Lx,
+        Ly = cell.Ly,
+        log_norm_value = log_norm(state),
+        mutation_version = state_version(state),
+        site_arrays = site_arrays,
+        weight_values = weight_values,
+    )
+    return String(path)
+end
+
+# Rebuild one InfinitePEPS site tensor from its dense [p,N,E,S,W] array using the
+# fixed PEPSKit convention (N,E non-dual, S,W dual), matching to_pepskit_infinitepeps.
+function _pepskit_site_from_array(arr::Array{ComplexF64,5})
+    _, dN, dE, dS, dW = size(arr)
+    p = ComplexSpace(2)
+    north = ComplexSpace(dN)
+    east = ComplexSpace(dE)
+    south = ComplexSpace(dS)'
+    west = ComplexSpace(dW)'
+    return TensorMap(arr, p ← north ⊗ east ⊗ south ⊗ west)
+end
+
+"""
+    load_pxp_pepskit_snapshot(path)::PXPIPEPSState
+
+Reconstruct a PEPSKit-native `PXPIPEPSState` from a JLD2 snapshot written by
+[`write_pxp_pepskit_snapshot`](@ref). The round trip reproduces the
+`InfinitePEPS` and `SUWeight` exactly (up to floating-point storage), so all
+native observables and subsequent evolution match the saved state.
+"""
+function load_pxp_pepskit_snapshot(path::AbstractString)::PXPIPEPSState
+    data = JLD2.load(String(path))
+
+    format_version = data["format_version"]
+    format_version == PXP_PEPSKIT_SNAPSHOT_FORMAT_VERSION || throw(
+        ArgumentError(
+            "unsupported PXPIPEPSState snapshot format_version $format_version " *
+            "(expected $PXP_PEPSKIT_SNAPSHOT_FORMAT_VERSION)",
+        ),
+    )
+
+    cell = PeriodicSquareUnitCell(Int(data["Lx"]), Int(data["Ly"]))
+    Nr, Nc = cell.Ly, cell.Lx
+
+    saved_site = data["site_arrays"]
+    tensors = Matrix{
+        TensorMap{ComplexF64,ComplexSpace,1,4,Vector{ComplexF64}},
+    }(
+        undef,
+        Nr,
+        Nc,
+    )
+    for row in 1:Nr, col in 1:Nc
+        tensors[row, col] = _pepskit_site_from_array(saved_site[(row, col)])
+    end
+    peps = InfinitePEPS(tensors)
+
+    saved_weights = data["weight_values"]
+    weight_data = Array{DiagonalTensorMap{Float64,ComplexSpace,Vector{Float64}},3}(
+        undef,
+        2,
+        Nr,
+        Nc,
+    )
+    for slot in 1:2, row in 1:Nr, col in 1:Nc
+        vals = Float64.(saved_weights[(slot, row, col)])
+        weight_data[slot, row, col] = DiagonalTensorMap(vals, ComplexSpace(length(vals)))
+    end
+    weights = SUWeight(weight_data)
+
+    return PXPIPEPSState(
+        peps,
+        weights,
+        cell,
         Ref(Int(data["mutation_version"])),
         Ref(Float64(data["log_norm_value"])),
     )
