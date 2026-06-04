@@ -248,8 +248,24 @@ site rotation.
     star-energy patch is a *dense* contraction (`~4^12` external legs at
     `D = 4`), so `measure_simple` — and hence this audit — is only feasible at
     `D ≲ 2–3`; large-`D` reversibility will need a CTM/MPO-environment energy.
-  - *Remaining:* D-convergence smoke test, CTM-χ sensitivity, and snapshot/load
-    on the native engine.
+  - **Native exact finite oracle + D>1 traps — done (small cell/D).**
+    `exact_density_finite(::PXPIPEPSState)`, `dense_state_finite(::PXPIPEPSState)`,
+    and `exact_one_site_expectation_finite(::PXPIPEPSState, …)` extend the
+    `FiniteIPEPSObservables` generics for the native state (`src/PEPSKitObservables.jl`),
+    contracting ONLY `measurement_peps` (convention B) — the result is independent
+    of the `SUWeight` ledger. This makes the native backend falsifiable at D>1.
+    `test/test_pepskit_native_dgt1.jl` gates it: native exact density == the
+    ED-validated legacy exact oracle at D=2 (1e-9); a lossless native star update
+    matches legacy on an anisotropic D=2 cell (1e-9); the exact density is
+    invariant under ledger corruption while the mean-field `measure_simple`
+    density is not (convention-B source-of-truth); a per-site coordinate-reflection
+    trap on a vertically-asymmetric checkerboard; and a native-vs-legacy short-time
+    trajectory. See `docs/superpowers/plans/2026-06-04-native-d-gt-1-validation-oracle.md`
+    and `notes/stage1-dynamics/native-d-gt-1-validation.md`.
+  - *Remaining:* native D>1 vs **ED over the full revival trajectory** (the oracle
+    now exists but the D-ladder gate still builds legacy states); native at **D≥3**;
+    CTM-χ sensitivity and native CTM observables at D>1; snapshot/load on the native
+    engine; a native `:boundary` oracle (current native oracle is `:dense`, ≤16 sites).
 
 ## Consolidation roadmap (the payoff)
 

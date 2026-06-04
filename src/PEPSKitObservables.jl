@@ -41,6 +41,11 @@ import ..Observables: measure_simple
 import ..IPEPSEvolution: evolve!, reverse_evolve!
 using ..Observables: SimpleObservableSummary
 using ..IPEPSEvolution: TrotterParams, EvolutionLog
+# Native exact finite-cell oracle: extend the existing FiniteIPEPSObservables
+# generics for PXPIPEPSState and reuse its tested statevector readout helpers.
+import ..FiniteIPEPSObservables:
+    dense_state_finite, exact_density_finite, exact_one_site_expectation_finite
+using ..FiniteIPEPSObservables: _local_expectation_from_state, _dense_index, _local_positions
 
 export density_operator, blockade_operator, pxp_star_operator, pxp_energy_operator
 export PEPSKitNativeContext, pepskit_native_context
@@ -442,6 +447,130 @@ function _bond_entropies(state::PXPIPEPSState)
     end
     isempty(entropies) && throw(ArgumentError("state has no bond entropies"))
     return entropies
+end
+
+# --- exact finite-cell oracle for the native state ------------------------
+#
+# A trusted, CTM-free reference contraction of the convention-"B" InfinitePEPS on
+# the finite periodic Lx×Ly torus. It depends ONLY on `measurement_peps(state)`
+# (each stored Γ already carries sqrt(λ), so two neighbouring Γ's reproduce the
+# full bond weight λ): the `SUWeight` ledger is deliberately NOT read here. That
+# is what makes this a faithful test of convention B — the exact density is
+# independent of the ledger, whereas the mean-field `measure_simple` density is
+# not. The 2^N statevector is built in `cell.reps` order so the existing legacy
+# readout (`_local_expectation_from_state`/`_dense_index`/`_local_positions`,
+# shared with `dense_state_finite(::SquareIPEPSState)`) is reused verbatim.
+#
+# Cost: a single-layer 2^N contraction (intermediate grows with the bond
+# dimension D), so this is a SMALL-cell, SMALL-D oracle — exactly the D>1 regime
+# where the rest of the native suite (all D=1) is blind. For larger cells/D the
+# CTM observables (`measure_ctm_pepskit`) or the legacy `:boundary` oracle apply.
+
+# Native dense statevector by exact periodic contraction of `measurement_peps`.
+# Lattice bonds (PEPSKit leg order [P, N, E, S, W] = 1..5): a site's E(3) bond is
+# shared with the east neighbour's W(5); its N(2) bond with the north (row-1)
+# neighbour's S(4). Physical legs are the open (negative) ncon indices, ordered
+# to match `cell.reps` so `_dense_index` indexes the result directly.
+function _native_dense_state(state::PXPIPEPSState; max_sites::Integer = 16)
+    cell = state.unitcell
+    Nr, Nc = cell.Ly, cell.Lx                       # PEPSKit matrix dims (rows=Ly, cols=Lx)
+    nsites = Nr * Nc
+    nsites <= max_sites || throw(
+        ArgumentError(
+            "native exact contraction supports at most $max_sites sites; got $nsites " *
+            "(use the CTM observables or a larger max_sites for bigger cells)",
+        ),
+    )
+    peps = measurement_peps(state)                  # convention B: this IS the contractable state
+    _nextr(r) = r == Nr ? 1 : r + 1
+    _prevc(c) = c == 1 ? Nc : c - 1
+    Hbond(r, c) = (r - 1) * Nc + c                  # east(r,c) bond id  [E↔W]
+    Vbond(r, c) = nsites + (r - 1) * Nc + c         # north(r,c) bond id [N↔S]
+    physpos(r, c) = (Nr - r) * Nc + c               # position of (r,c) in cell.reps order
+    arrays = Vector{Array{ComplexF64,5}}(undef, nsites)
+    idxlists = Vector{Vector{Int}}(undef, nsites)
+    k = 0
+    for r in 1:Nr, c in 1:Nc
+        k += 1
+        arrays[k] = convert(Array{ComplexF64,5}, convert(Array, peps[r, c]))  # [P,N,E,S,W]
+        idxlists[k] = [
+            -physpos(r, c),        # P  (open)
+            Vbond(r, c),           # N
+            Hbond(r, c),           # E
+            Vbond(_nextr(r), c),   # S  = north bond of the south neighbour
+            Hbond(r, _prevc(c)),   # W  = east bond of the west neighbour
+        ]
+    end
+    A = convert(Array, ncon(arrays, idxlists))      # open legs ordered -1,-2,… = reps order
+    statevec = zeros(ComplexF64, 2^nsites)
+    for vals in Iterators.product(ntuple(_ -> 1:2, nsites)...)
+        statevec[_dense_index(vals)] = A[vals...]
+    end
+    return statevec
+end
+
+"""
+    dense_state_finite(state::PXPIPEPSState; max_sites = 16)
+
+Exact `2^N` statevector of the PEPSKit-native `state` on its finite periodic
+torus, contracted from `measurement_peps(state)` (convention B). The companion of
+[`dense_state_finite`](@ref)`(::SquareIPEPSState)` for the native backend; uses
+only the stored `InfinitePEPS`, not the `SUWeight` ledger.
+"""
+dense_state_finite(state::PXPIPEPSState; max_sites::Integer = 16) =
+    _native_dense_state(state; max_sites)
+
+"""
+    exact_density_finite(state::PXPIPEPSState; max_sites = 16, method = :dense)
+
+Average exact finite-torus Rydberg density of the PEPSKit-native `state`, the
+trusted CTM-free oracle for native D>1 validation. Contracts only
+`measurement_peps(state)` (convention B), so the result is independent of the
+`SUWeight` ledger. `method = :dense` (default) builds the `2^N` statevector;
+`:boundary` is not yet implemented for the native backend.
+"""
+function exact_density_finite(
+    state::PXPIPEPSState;
+    max_sites::Integer = 16,
+    method::Symbol = :dense,
+)::Float64
+    method in (:dense, :auto) || throw(
+        ArgumentError(
+            "native exact_density_finite supports method = :dense (or :auto); " *
+            "got :$method (the :boundary oracle is legacy-only for now)",
+        ),
+    )
+    cell = state.unitcell
+    nsites = cell.Lx * cell.Ly
+    statevec = _native_dense_state(state; max_sites)
+    n = _density_matrix()
+    total = 0.0
+    for c in cell.reps
+        positions = _local_positions(cell, (c,))
+        total += real(_local_expectation_from_state(statevec, nsites, positions, n))
+    end
+    return total / length(cell.reps)
+end
+
+"""
+    exact_one_site_expectation_finite(state::PXPIPEPSState, c, O; max_sites = 16)
+
+Exact finite-torus expectation of the 2×2 operator `O` at coordinate `c` for the
+PEPSKit-native `state` (convention B; ledger-independent). Companion of the
+`::SquareIPEPSState` method, used for site-resolved native-vs-legacy comparisons.
+"""
+function exact_one_site_expectation_finite(
+    state::PXPIPEPSState,
+    c::SquareCoord,
+    O::AbstractMatrix;
+    max_sites::Integer = 16,
+)
+    size(O) == (2, 2) || throw(ArgumentError("one-site operator must be 2x2"))
+    cell = state.unitcell
+    nsites = cell.Lx * cell.Ly
+    statevec = _native_dense_state(state; max_sites)
+    positions = _local_positions(cell, (c,))
+    return _local_expectation_from_state(statevec, nsites, positions, O)
 end
 
 # --- public adapters -------------------------------------------------------
