@@ -1,0 +1,23 @@
+RSS start = 1797.6 MB ; total = 772425.8 MB
+=== env_fork tag=dtconv01 : fork@t=1.60 -> 1.80 , env_dt=0.010 (bare_dt=0.020) , env=exact_cluster , alg=full ===
+bare-evolved to fork t=1.60 ; n=0.144802
+env-JIT warmup = 154.6 s
+
+t     n_env       n_ED      maxcond   wall_s    diag     
+1.60  0.144802    0.15558   -         -        
+1.70  0.180559    -         Inf       3783.6     [minkept=2 nfb=0 finite=true]
+1.80  0.223225    0.24370   Inf       3580.9     [minkept=2 nfb=0 finite=true]
+RSS peak = 7298.3 MB
+DONE
+┌ Warning: FET cancel   50: fid = 9.99999865e-01, Δfid = 3.99680289e-15, |Δs| = 2.464789e-08, time = 0.0736 s
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/fullenv_truncation.jl:277
+[ Info: FET conv   50: fid = 9.99999863e-01, Δfid = 8.88178420e-16, |Δs| = 1.181782e-08, time = 0.0547 s
+┌ Warning: FET cancel   50: fid = 9.99999876e-01, Δfid = 4.44089210e-15, |Δs| = 2.015034e-08, time = 0.0753 s
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/fullenv_truncation.jl:277
+┌ Warning: FET cancel   50: fid = 9.99999925e-01, Δfid = 2.22044605e-15, |Δs| = 3.191230e-08, time = 0.0527 s
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/fullenv_truncation.jl:277
+┌ Warning: FET cancel   50: fid = 9.99999904e-01, Δfid = 1.55431223e-15, |Δs| = 1.634720e-08, time = 0.0767 s
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/fullenv_truncation.jl:277
+[ Info: FET conv   50: fid = 9.99999789e-01, Δfid = -3.33066907e-16, |Δs| = 1.200031e-08, time = 0.0655 s
+┌ Warning: FET cancel   50: fid = 9.99999850e-01, Δfid = 2.17603713e-14, |Δs| = 1.706846e-08, time = 0.0731 s
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/fullenv_truncation.jl:277

@@ -1,0 +1,66 @@
+RSS at start = 1669.8 MB ; total mem = 772425.8 MB
+
+[32993] signal 15: Terminated
+in expression starting at /data/djxg096/SquarePXPDynamics.jl/scripts/g0/spike_ntu_patch_bond.jl:233
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+#wait#398 at ./condition.jl:141
+_trywait at ./asyncevent.jl:163
+profile_printing_listener at ./Base.jl:332
+#start_profile_listener##0 at ./Base.jl:352
+jfptr_YY.start_profile_listenerYY.YY.0_6779.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1252
+unknown function (ip: (nil)) at (unknown file)
+_ZN4llvm25InnerAnalysisManagerProxyINS_15AnalysisManagerINS_8FunctionEJEEENS_6ModuleEJEE6Result10invalidateERS4_RKNS_17PreservedAnalysesERNS1_IS4_JEE11InvalidatorE at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libLLVM.so.18.1jl (unknown line)
+_ZN4llvm15AnalysisManagerINS_6ModuleEJEE10invalidateERS1_RKNS_17PreservedAnalysesE at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libLLVM.so.18.1jl (unknown line)
+_ZN4llvm11PassManagerINS_6ModuleENS_15AnalysisManagerIS1_JEEEJEE3runERS1_RS3_ at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libLLVM.so.18.1jl (unknown line)
+run at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/pipeline.cpp:741
+operator() at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jitlayers.cpp:1459
+withModuleDo<(anonymous namespace)::sizedOptimizerT<N>::operator()(llvm::orc::ThreadSafeModule) [with long unsigned int N = 4]::<lambda(llvm::Module&)> > at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/usr/include/llvm/ExecutionEngine/Orc/ThreadSafeModule.h:136 [inlined]
+operator() at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jitlayers.cpp:1420 [inlined]
+operator() at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jitlayers.cpp:1572 [inlined]
+addModule at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jitlayers.cpp:2031
+jl_compile_codeinst_now at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jitlayers.cpp:626
+jl_compile_codeinst_impl at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jitlayers.cpp:824
+jl_compile_method_internal at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gf.c:3528
+_jl_invoke at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gf.c:4006 [inlined]
+ijl_apply_generic at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gf.c:4214
+#ncon#113 at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/implementation/ncon.jl:48
+ncon at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/implementation/ncon.jl:25 [inlined]
+ncon at /localhome/djxg096/.julia/packages/TensorOperations/FjqJj/src/implementation/ncon.jl:25
+unknown function (ip: 0x7f03d9e5d39d) at (unknown file)
+#project_star_pepskit!#3 at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitStarUpdate.jl:354
+project_star_pepskit! at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitStarUpdate.jl:244 [inlined]
+#evolve_pepskit!#4 at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitEvolution.jl:175
+evolve_pepskit! at /data/djxg096/SquarePXPDynamics.jl/src/PEPSKitEvolution.jl:143 [inlined]
+main at /data/djxg096/SquarePXPDynamics.jl/scripts/g0/spike_ntu_patch_bond.jl:47
+unknown function (ip: 0x7f0438f890ff) at (unknown file)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+do_call at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_value at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:243
+eval_stmt_value at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:194 [inlined]
+eval_body at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:707
+jl_interpret_toplevel_thunk at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1047
+ijl_toplevel_eval_in at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:306
+exec_options at ./client.jl:317
+_start at ./client.jl:550
+jfptr__start_74358.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+true_main at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jlapi.c:971
+jl_repl_entrypoint at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jlapi.c:1139
+main at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/cli/loader_exe.c:58
+__libc_start_main at /lib64/libc.so.6 (unknown line)
+unknown function (ip: 0x4010b8) at /workspace/srcdir/glibc-2.17/csu/../sysdeps/x86_64/start.S
+unknown function (ip: (nil)) at (unknown file)
+Allocations: 310965587 (Pool: 310962782; Big: 2805); GC: 34

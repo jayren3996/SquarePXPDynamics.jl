@@ -1,0 +1,20 @@
+=== ntu_vertical_gate : D=2, frozen t=1.80 ===
+frozen density = 0.43420465
+
+--- GV1: vertical-P6 TRANSPOSE ORACLE (norm(engine - oracle)/norm) ---
+  dir=up    reldev = 6.1669e-14
+  dir=down  reldev = 1.8537e-14
+  GV1 PASS = true
+
+--- GV2: NTU-P6 no-op-at-BIG per direction ---
+  dir=right no-op-at-BIG dev = 1.0547e-15
+  dir=up    no-op-at-BIG dev = 6.1062e-16
+  dir=left  no-op-at-BIG dev = 2.7756e-16
+  dir=down  no-op-at-BIG dev = 3.8858e-16
+  GV2 PASS = true
+
+===== SUMMARY =====
+GV1 vertical-P6 transpose oracle = true  (up=6.167e-14 down=1.854e-14)
+GV2 NTU-P6 no-op-at-BIG          = true  (R=1.05e-15 U=6.11e-16 L=2.78e-16 D=3.89e-16)
+OVERALL = true
+DONE

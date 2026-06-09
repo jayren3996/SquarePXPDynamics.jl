@@ -1,0 +1,38 @@
+# N4 RUN-1 CAPTURED OUTPUT (Stage A + Stage B + ASSERT(1a) shape gate)
+# Captured 2026-06-07 from the first execution of spike_n4_exact_cluster_bond.jl.
+# Run 1 completed Stage A (frozen setup + lossless gate + _qr_bond) and Stage B
+# (hand-built double-layer {2,2} env) and reached the codomain==domain==true print
+# BEFORE the run's allotted window was consumed by the slow CTMRG space-oracle.
+# Subsequent re-runs could NOT reach asserts 2/3 because a competing node job
+# (run_pbc.jl 6 6 pxp, 420% CPU, ~2h) slowed the first-call JIT compile of
+# exact_density_finite's ncon contraction (_native_dense_state, PEPSKitObservables.jl:504)
+# to >595s. The Stage A+B + shape result below is the load-bearing N4 finding.
+
+RSS at start = 1773.7 MB ; total mem = 772425.8 MB
+frozen density at t=1.00: 0.15293455
+center PEPSKit (r,c)=(4,1), right leaf (r,c)=(4,2)
+n_lossless (oracle, expect ~0.15183976) = 0.15183976
+a space    = ℂ^16 ← ((ℂ^2)' ⊗ (ℂ^8)')
+b space    = ((ℂ^8)' ⊗ ℂ^2) ← (ℂ^8)'
+X space    = (ℂ^8 ⊗ (ℂ^16)' ⊗ ℂ^8 ⊗ ℂ^8) ← one(ComplexSpace)  ; dual flags = Bool[0, 1, 0, 0]
+Y space    = (ℂ^2 ⊗ ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^8)') ← one(ComplexSpace)  ; dual flags = Bool[0, 0, 0, 1]
+a_bt space = (ℂ^16 ⊗ ℂ^2) ← (ℂ^8)'
+b_bt space = (ℂ^8)' ← ((ℂ^2)' ⊗ (ℂ^8)')
+space(X,2) = (ℂ^16)' isdual=true ; space(Y,4) = (ℂ^8)' isdual=true
+space(a_bt,1) = ℂ^16 ; space(b_bt,3) = ℂ^8
+
+[hand env] space(benv)   = (ℂ^16 ⊗ ℂ^8) ← (ℂ^16 ⊗ ℂ^8)
+[hand env] dual flags    = Bool[0, 0, 1, 1]
+[hand env] codomain==domain = true
+
+# ===== N4 ASSERT(1a) shape gate (vs documented bondenv_fu target) =====
+# TARGET (ctm_bond_proto.out ground truth): (ℂ^16⊗ℂ^8)←(ℂ^16⊗ℂ^8), flags [0,0,1,1].
+# HAND ENV: (ℂ^16⊗ℂ^8)←(ℂ^16⊗ℂ^8), flags [0,0,1,1], codomain==domain==true.
+# ==> SPACE-EQUAL and DUAL-EQUAL. The N4 SpaceMismatch risk is RESOLVED: NO mismatch.
+# The dual-flag fix from spec-review (build BOTH codomain and domain on the NON-DUAL
+# pair space(X,2)'⊗space(Y,4)' = ℂ^16⊗ℂ^8) produced the correct [0,0,1,1] signature.
+
+# ===== Asserts 2/3 (bond_truncate composition + density) =====
+# NOT directly observed this session (env-slowness; see header). However the hand env's
+# space is byte-identical to the env ctm_bond_proto.jl already fed to bond_truncate
+# successfully (fid=1.0, |dn|=1.52e-8), so composition is expected to succeed.

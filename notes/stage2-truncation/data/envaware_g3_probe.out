@@ -1,0 +1,33 @@
+=== G3 probe: full-star no-op-at-BIG, ALS-floor vs routing ===
+  [ALS maxiter=50  tol=1e-12] dev = 4.9674e-09 ; fids = [5.96e-12, 2.92e-13, 6.4e-13, 3.48e-13]
+  [ALS maxiter=300 tol=1e-14] dev = 1.2261e-09 ; fids = [5.84e-12, 2.24e-13, 3.81e-13, 2.79e-13]
+  [FullEnvTruncation (exact)] dev = 1.0547e-10 ; fids = [0.0, 9.99e-16, 7.77e-16, 7.77e-16]
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.91e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 2.24e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 4.42e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 2.25e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.61e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 2.39e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 6.05e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+DONE

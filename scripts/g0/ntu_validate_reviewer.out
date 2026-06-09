@@ -1,0 +1,44 @@
+RSS at start = 1974.3 MB ; total mem = 772425.8 MB
+frozen density at t=1.80: 0.43420465
+center (r,c)=(4,1), right leaf (r,c)=(4,2) on 4x4
+n_lossless (oracle) = 0.43328091
+X q-leg space(X,2) = (ℂ^16)' isdual=true ; Y q-leg space(Y,4) = (ℂ^8)' isdual=true
+
+===== G-COST =====
+exact-cluster build: 31.93 s ; peak RSS now 6104.4 MB (Δ 4065.0 MB)
+NTU P6 (trace) build: 14.8451 s ; peak RSS now 6104.4 MB (Δ 0.0 MB)
+SPEEDUP (exact/P6) = 2.2x wall
+
+===== G-MAXPATCH =====
+rel-dev(:torus vs exact) = 0.0000e+00  (gate < 1e-12)
+G-MAXPATCH PASS = true
+
+===== G-SHAPE =====
+space(benv_p6) = (ℂ^16 ⊗ ℂ^8) ← (ℂ^16 ⊗ ℂ^8)  flags Bool[0, 0, 1, 1]
+G-SHAPE PASS = true (matches exact target [0,0,1,1])
+
+===== G-PSD =====
+ERROR: LoadError: MethodError: no method matching eigvals(::Array{ComplexF64, 4})
+The function `eigvals` exists, but no method is defined for this combination of argument types.
+
+Closest candidates are:
+  eigvals(!Matched::Diagonal{var"#s4808", V} where {var"#s4808"<:Number, V<:AbstractVector{var"#s4808"}}; permute, scale)
+   @ LinearAlgebra /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/share/julia/stdlib/v1.12/LinearAlgebra/src/diagonal.jl:937
+  eigvals(!Matched::Diagonal; permute, scale)
+   @ LinearAlgebra /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/share/julia/stdlib/v1.12/LinearAlgebra/src/diagonal.jl:938
+  eigvals(!Matched::StaticArraysCore.StaticArray; permute, scale)
+   @ StaticArrays ~/.julia/packages/StaticArrays/0cEwi/src/eigen.jl:6
+  ...
+
+Stacktrace:
+ [1] main()
+   @ Main /data/djxg096/SquarePXPDynamics.jl/scripts/g0/spike_ntu_patch_bond.jl:121
+ [2] top-level scope
+   @ /data/djxg096/SquarePXPDynamics.jl/scripts/g0/spike_ntu_patch_bond.jl:234
+ [3] include(mod::Module, _path::String)
+   @ Base ./Base.jl:306
+ [4] exec_options(opts::Base.JLOptions)
+   @ Base ./client.jl:317
+ [5] _start()
+   @ Base ./client.jl:550
+in expression starting at /data/djxg096/SquarePXPDynamics.jl/scripts/g0/spike_ntu_patch_bond.jl:233

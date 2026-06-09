@@ -1,0 +1,21 @@
+RSS start = 1748.8 MB ; total = 772425.8 MB
+=== env_fork tag=ntuwindow : fork@t=1.60 -> 2.80 , env_dt=0.020 (bare_dt=0.020) , env=ntu , patch=P6 , alg=full , D=2 ===
+bare-evolved to fork t=1.60 ; n=0.144802
+env-JIT warmup = 100.8 s
+
+t     n_env       n_ED      maxcond   wall_s    diag     
+1.60  0.144802    0.15558   -         -        
+1.70  0.171964    -         Inf       326.2      [minkept=2 nfb=0 finite=true]
+1.80  0.201584    0.24370   Inf       299.3      [minkept=2 nfb=0 finite=true]
+1.90  0.233211    -         Inf       296.3      [minkept=2 nfb=0 finite=true]
+2.00  0.266077    0.33735   Inf       299.0      [minkept=2 nfb=0 finite=true]
+2.10  0.299162    -         Inf       326.4      [minkept=2 nfb=0 finite=true]
+2.20  0.331072    0.41600   Inf       305.6      [minkept=2 nfb=0 finite=true]
+2.30  0.360303    -         Inf       311.9      [minkept=2 nfb=0 finite=true]
+2.40  0.385311    0.46696   Inf       325.5      [minkept=2 nfb=0 finite=true]
+2.50  0.404752    -         Inf       311.3      [minkept=2 nfb=0 finite=true]
+2.60  0.417055    0.48306   Inf       309.9      [minkept=2 nfb=0 finite=true]
+2.70  0.421011    -         Inf       305.5      [minkept=2 nfb=0 finite=true]
+2.80  0.417331    0.46230   Inf       329.2      [minkept=2 nfb=0 finite=true]
+RSS peak = 3456.7 MB
+DONE

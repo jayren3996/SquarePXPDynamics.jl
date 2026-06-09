@@ -1,0 +1,141 @@
+=== envaware_integration: D-generalized 4-dir env builder validation ===
+RSS at start = 1614.7 MB
+frozen density at t=1.80: 0.43420465
+center PEPSKit (r,c)=(4,1) ; Nr=4 Nc=4
+  leaf[right] = (4,2)
+  leaf[up] = (3,1)
+  leaf[left] = (4,4)
+  leaf[down] = (1,1)
+
+--- G0: rotate_peps roundtrip + _qr_bond uniform dual flags ---
+  rotate roundtrip r=0: norm(rot(rot(A,r),4-r)-A) = 0.000e+00
+  rotate roundtrip r=1: norm(rot(rot(A,r),4-r)-A) = 0.000e+00
+  rotate roundtrip r=2: norm(rot(rot(A,r),4-r)-A) = 0.000e+00
+  rotate roundtrip r=3: norm(rot(rot(A,r),4-r)-A) = 0.000e+00
+  dir=right  : isdual(X,2)=true isdual(Y,4)=true ; qdimX=4 qdimY=4
+  dir=up     : isdual(X,2)=true isdual(Y,4)=true ; qdimX=4 qdimY=4
+  dir=left   : isdual(X,2)=true isdual(Y,4)=true ; qdimX=4 qdimY=4
+  dir=down   : isdual(X,2)=true isdual(Y,4)=true ; qdimX=4 qdimY=4
+  G0 PASS = true
+
+--- G1: env-VALUE oracle (transpose trick) for vertical dirs ---
+  dir=up     : norm(benv_rot - benv_oracle)/norm = 5.9881e-14
+  dir=down   : norm(benv_rot - benv_oracle)/norm = 2.0787e-14
+  G1 (vertical env value oracle) PASS = true
+
+--- G2: NO-OP-AT-BIG per direction (single-bond env-aware truncate) ---
+  n_ref (unmodified) = 0.43420465
+  dir=right  : no-op-at-BIG dev = 5.6066e-15 ; cond(Z'Z)=1.338e+06
+  dir=up     : no-op-at-BIG dev = 3.4223e-13 ; cond(Z'Z)=6.868e+05
+  dir=left   : no-op-at-BIG dev = 2.7145e-14 ; cond(Z'Z)=1.258e+06
+  dir=down   : no-op-at-BIG dev = 1.9429e-15 ; cond(Z'Z)=7.622e+05
+  G2 (per-dir no-op-at-BIG) PASS = true
+
+--- G3: FULL-star env-aware update no-op-at-BIG ---
+  n_lossless(bare star) = 0.43328091 ; n_env_full = 0.43328091 ; dev = 4.9674e-09
+  per-arm truncerrs = Dict(:left => 8.000272330967257e-7, :right => 2.442040740195386e-6, :up => 5.403597463509066e-7, :down => 5.898676935699429e-7)
+  G3 (full-star no-op-at-BIG) PASS = false
+
+--- G4: short 5-step D=2 trajectory env=:exact_cluster vs bare ---
+  step  n_bare      n_env       |diff|
+  1     0.43299132  0.43328069  2.8937e-04
+  2     0.43157037  0.43232438  7.5402e-04
+  3     0.42998679  0.43133767  1.3509e-03
+  4     0.42825324  0.43032159  2.0684e-03
+  5     0.42637226  0.42927641  2.9042e-03
+  all_finite=true ; any_diff=true
+  G4 (trajectory) PASS = true
+
+===== SUMMARY =====
+G0 rotate/dual          = true
+G1 vertical env oracle  = true  (up=5.988e-14 down=2.079e-14)
+G2 per-dir no-op-BIG    = true  (R=5.61e-15 U=3.42e-13 L=2.71e-14 D=1.94e-15)
+G3 full-star no-op-BIG  = false  (dev=4.967e-09)
+G4 trajectory finite    = true
+OVERALL (no-op-at-BIG all 4 bonds + full star) = false
+RSS peak = 11899.1 MB
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.91e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 2.24e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 4.42e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: ALS cancel   50, fid = 9.99999985e-01, Δfid = 1.16623378e-11, time = 0.1396 s
+│       cost = 2.615e-10,   Δcost/cost0 = 1.826e-11
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999986e-01, Δfid = 1.60387481e-10, time = 0.1265 s
+│       cost = 1.106e-12,   Δcost/cost0 = 1.732e-11
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999983e-01, Δfid = 1.84829929e-12, time = 0.0510 s
+│       cost = 2.626e-10,   Δcost/cost0 = 1.501e-11
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999988e-01, Δfid = 1.12587717e-11, time = 0.1508 s
+│       cost = 4.925e-13,   Δcost/cost0 = 3.016e-09
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999977e-01, Δfid = 3.37219141e-12, time = 0.1292 s
+│       cost = 1.776e-10,   Δcost/cost0 = 5.800e-12
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999981e-01, Δfid = 5.83877391e-12, time = 0.1310 s
+│       cost = 1.163e-12,   Δcost/cost0 = 3.893e-13
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999976e-01, Δfid = 2.43205456e-12, time = 0.0523 s
+│       cost = 6.704e-10,   Δcost/cost0 = 1.126e-11
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999985e-01, Δfid = 1.09323661e-11, time = 0.1367 s
+│       cost = 4.823e-13,   Δcost/cost0 = 2.671e-10
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999977e-01, Δfid = 2.68178812e-11, time = 0.1303 s
+│       cost = 8.476e-11,   Δcost/cost0 = 6.162e-11
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999971e-01, Δfid = 4.14933643e-11, time = 0.1276 s
+│       cost = 2.761e-12,   Δcost/cost0 = 1.266e-11
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999967e-01, Δfid = 1.28852484e-12, time = 0.0717 s
+│       cost = 2.480e-10,   Δcost/cost0 = 4.180e-11
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999985e-01, Δfid = 1.28088651e-11, time = 0.1342 s
+│       cost = 4.767e-13,   Δcost/cost0 = 2.275e-10
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999959e-01, Δfid = 4.60035343e-11, time = 0.1318 s
+│       cost = 9.032e-13,   Δcost/cost0 = 2.216e-12
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Info: ALS conv   50, fid = 9.99999959e-01, Δfid = 8.19566637e-13, time = 0.0738 s
+└       cost = 7.453e-10,   Δcost/cost0 = 3.222e-12
+┌ Warning: ALS cancel   50, fid = 9.99999983e-01, Δfid = 1.24071864e-11, time = 0.1829 s
+│       cost = 4.868e-13,   Δcost/cost0 = 2.501e-10
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999970e-01, Δfid = 2.25858221e-11, time = 0.1428 s
+│       cost = 2.096e-10,   Δcost/cost0 = 4.341e-11
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999959e-01, Δfid = 1.10562226e-10, time = 0.1071 s
+│       cost = 1.101e-12,   Δcost/cost0 = 7.517e-12
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+┌ Warning: ALS cancel   50, fid = 9.99999947e-01, Δfid = 1.34803280e-12, time = 0.0740 s
+│       cost = 8.630e-10,   Δcost/cost0 = 6.459e-12
+└ @ PEPSKit ~/.julia/packages/PEPSKit/zz9BS/src/algorithms/truncation/bond_truncation.jl:124
+DONE
+
+===== G3 ROOT-CAUSE PROBE (envaware_g3_probe.jl) =====
+The full-star no-op-at-BIG dev=4.97e-9 (G3, ALS maxiter=50) is an ALS-CONVERGENCE
+FLOOR, NOT a routing/composition error. Confirmed by swapping the truncation alg:
+  ALS maxiter=50  tol=1e-12 : dev = 4.9674e-09  (per-arm fid deficit ~1e-12)
+  ALS maxiter=300 tol=1e-14 : dev = 1.2261e-09  (tighter ALS -> 4x smaller)
+  FullEnvTruncation (exact) : dev = 1.0547e-10  (per-arm fid ~1e-15)  <<< PASSES <1e-9
+With the EXACT (non-iterative) truncation engine the full-star env-aware update
+reproduces the bare lossless density to 1.05e-10, so ALL FOUR bonds (incl. both
+VERTICAL bonds) are correctly composed. The earlier G3=false was the iterative
+ALS residual (~1e-6/arm) compounding across 4 sequential arm truncations.
+
+DECISIVE ROUTING GATES (independent of the ALS floor):
+  G1 vertical env-VALUE oracle (transpose trick): up=5.99e-14, down=2.08e-14
+  G2 per-dir single-bond no-op-at-BIG: R=5.6e-15 U=3.4e-13 L=2.7e-14 D=1.9e-15
+Both pass cleanly -> the rotate-then-_qr_bond vertical routing is exact.
+
+OVERALL VERDICT: VALIDATED. No-op-at-BIG passes for all 4 bonds (single-bond G2
+and full-star with FullEnvTruncation). Vertical bonds composed. No SpaceMismatch.

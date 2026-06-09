@@ -1,0 +1,18 @@
+frozen density at t=1.00: 0.152935
+center PEPSKit (r,c)=(4,1), right leaf (r,c)=(4,2)
+n_lossless (no truncation)              = 0.15183976
+center-right bond dim after gate: ℂ^2 ← ((ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)')
+CTMRG done.
+a space (from _qr_bond): ℂ^16 ← ((ℂ^2)' ⊗ (ℂ^8)')
+b space (from _qr_bond): ((ℂ^8)' ⊗ ℂ^2) ← (ℂ^8)'
+benv space: (ℂ^16 ⊗ ℂ^8) ← (ℂ^16 ⊗ ℂ^8) ; dual flags: Bool[0, 0, 1, 1]
+positive_approx OK; cond(Z'Z)=3.417e+20
+a_bt space: (ℂ^16 ⊗ ℂ^2) ← (ℂ^8)'
+b_bt space: (ℂ^8)' ← ((ℂ^2)' ⊗ (ℂ^8)')
+bond_truncate fid (CTM-aware) = 1.00000000e+00 ; kept dim = 2
+
+===== RESULT (one horizontal bond) =====
+n_lossless         = 0.15183976
+n_CTM-aware trunc  = 0.15183974  (|dn| = 1.5171e-08)
+n_bare-SVD trunc   = 0.15183936  (|dn| = 3.9703e-07)
+DONE

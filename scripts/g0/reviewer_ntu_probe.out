@@ -1,0 +1,88 @@
+RSS at start = 1596.7 MB
+frozen density at t=1.80: 0.43420465
+n_lossless (oracle) = 0.43328091
+
+===== G-COST (JIT-separated) =====
+exact-cluster build (2nd call) = 7.039 s
+NTU P6 trace  build (2nd call) = 1.338 s
+SPEEDUP (exact/P6, 2nd-call)   = 5.26x
+
+===== G-PSD (fixed) =====
+min eig (benv+benv')/2 = 4.5722e-14 ; norm = 2.8475e+00 ; min/norm = 1.6057e-14
+G-PSD PASS (Gram, no clamp) = true
+cond(Z'Z) [NTU P6] = 4.2613e+13 (exact env was 9.03e20)
+
+===== G-VALUE (rel-dev vs exact-cluster) =====
+rel-dev torus      = 0.0000e+00 (==exact equality gate, expect 0)
+rel-dev P6  trace  = 9.4882e-01
+rel-dev P6  lambda = 1.2341e+00
+  reldev(P10,trace) THREW: AssertionError("P10/P12 need Nc>=5 so the added arm columns do not self-alias on the wrap (got Nc=4)")
+rel-dev P10 trace  = NaN
+  reldev(P12,trace) THREW: AssertionError("P10/P12 need Nc>=5 so the added arm columns do not self-alias on the wrap (got Nc=4)")
+rel-dev P12 trace  = NaN
+
+===== G-ACCURACY (|dn| ladder) =====
+  bare-SVD (no env)      |dn|=6.1411e-06   (MIN BAR to beat)
+  exact-cluster          |dn|=1.1702e-06  fid=1.000000e+00
+  NTU P6 trace           |dn|=6.9446e-08  fid=9.999918e-01
+  NTU P6 lambda          |dn|=4.5746e-05  fid=9.999532e-01
+  DROP-1-loop (4 cells)  |dn|=1.0374e-05  fid=9.999034e-01
+
+===== VERDICT NUMBERS =====
+n_lossless        = 0.43328091
+|dn| bare-SVD     = 6.1411e-06  (BAR)
+|dn| NTU P6 trace = 6.9446e-08  beats-bare=true
+|dn| NTU P6 lambda= 4.5746e-05  beats-bare=false
+|dn| DROP-1-loop  = 1.0374e-05
+|dn| exact-cluster= 1.1702e-06  (TARGET)
+COST: exact 7.039s / NTU P6 1.338s (5.26x, 2nd-call)
+G-PSD=true G-SHAPE(prev run)=true G-MAXPATCH(prev run)=true
+DONE
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 6.96e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 2.86e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.99e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.46e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.18e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 9.24e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 7.38e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 6.03e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 4.63e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 3.85e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 3.31e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 2.84e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
