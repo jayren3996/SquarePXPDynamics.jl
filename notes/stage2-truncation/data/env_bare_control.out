@@ -1,0 +1,16 @@
+evolved bare to t=1.6 ; n=0.144802
+
+=== CONTROL: native-bare vs env=:bare (lossless->bareSVD) from t=1.6 ===
+t     native_bare  env_bare     exact_clus   D3D4      ED         note
+1.6   0.144802     0.144802     0.144800     0.14615   0.15558  
+1.7   0.402686     0.157732     0.180520     -         -          [minkept=2]
+1.8   0.428149     0.169795     0.223210     0.23363   0.24370    [minkept=2]
+1.9   0.409874     0.182338     0.269770     -         -          [minkept=2]
+2.0   0.382919     0.195593     0.316520     0.32746   0.33735    [minkept=2]
+
+===== VERDICT =====
+env=:bare ~ native-bare (spikes to ~0.43 @ t=1.8)  => the lossless-then-retruncate
+   PROCEDURE does NOT fix it => the loop-carrying ENVIRONMENT is the cause.
+env=:bare ~ exact_cluster (smooth ~0.22 @ t=1.8)   => the PROCEDURE carries the fix
+   (env-quality would then be unproven by this experiment).
+DONE

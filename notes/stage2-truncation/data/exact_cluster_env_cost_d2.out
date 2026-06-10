@@ -1,0 +1,22 @@
+===== SPIKE N2 env-cost, D = 2 =====
+Sys.total_memory = 772425.8 MB (RAM ceiling)
+RSS at start     = 1253.7 MB
+
+--- D=2, t=2.0 ---
+X q-leg dim = 16 ; Y q-leg dim = 8 ; post-gate A space = ℂ^2 ← ((ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)')
+ENV-BUILD: wall = 127.083 s ; rss_delta = 6746.0 MB ; peak_rss = 8091.8 MB
+ENV: dim(benv,1)=16 dim(benv,2)=8 ; summarysize = 0.250 MB
+SINGLE-LAYER density: wall = 10.705 s ; rss_delta = 0.0 MB ; peak_rss = 8091.8 MB
+double/single wall ratio = 11.87
+EXTRAP: per-step env cost = 8133.30 s (64 x wall) ; full-traj ~ 1138661.8 s = 316.29 h (9000 x wall)
+
+--- D=2, t=2.4 ---
+X q-leg dim = 16 ; Y q-leg dim = 8 ; post-gate A space = ℂ^2 ← ((ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)')
+ENV-BUILD: wall = 2.755 s ; rss_delta = 1911.7 MB ; peak_rss = 10003.5 MB
+ENV: dim(benv,1)=16 dim(benv,2)=8 ; summarysize = 0.250 MB
+SINGLE-LAYER density: wall = 10.167 s ; rss_delta = 0.0 MB ; peak_rss = 10003.5 MB
+double/single wall ratio = 0.27
+EXTRAP: per-step env cost = 176.31 s (64 x wall) ; full-traj ~ 24683.5 s = 6.86 h (9000 x wall)
+
+FINAL peak RSS (D=2) = 10003.5 MB ; total mem = 772425.8 MB
+DONE

@@ -1,0 +1,5 @@
+=== boundary-cutoff calibration: 4x4 D=3 rel_floor=0, threads=16 ===
+t     cutoff      n_dense      n_boundary   delta      wall_s  
+0.5   1e-05       0.38509732   0.38505723   -4.0e-05   354.5   
+0.5   1e-06       0.38509732   0.38508131   -1.6e-05   608.8   
+0.5   1e-08       0.38509732   0.38509623   -1.1e-06   9398.1  

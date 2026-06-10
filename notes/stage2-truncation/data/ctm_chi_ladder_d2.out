@@ -1,0 +1,18 @@
+=== ctm_chi_ladder : D=2 frozen t=1.80, chi=[8, 16, 24, 32] ===
+frozen n(t=1.80)=0.434205 ; n_lossless(1 star)=0.43328091 ; bond=ℂ^2 ← ((ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)')
+exact-cluster ref: |dn|=2.6679e-07 fid=0.99999999 ; benv space=(ℂ^16 ⊗ ℂ^8) ← (ℂ^16 ⊗ ℂ^8)
+bare-SVD (no env): |dn|=6.1411e-06
+
+chi   ctm_conv  reldev_inf    1-overlap     |dn|_ctm    fid_ctm     wall_s   
+8     done      3.5656e-02    6.3586e-04    1.1645e-05  1.000000    76.4     
+16    done      7.0263e-01    2.4698e-01    1.7530e-05  1.000000    76.7     
+24    done      1.9884e+00    2.2139e-02    1.7476e-05  1.000000    230.1    
+32    done      1.0079e+00    5.0821e-01    4.1026e-05  1.000000    1435.3   
+
+===== READ =====
+NTU-P6 reldev_inf vs exact = 0.949 (nearly orthogonal). If CTM reldev_inf drops
+well below that and SHRINKS with chi -> CTM env is an accuracy lever -> pivot GO.
+If reldev_inf PLATEAUS at a nonzero floor -> that floor is the finite(4x4)-vs-
+infinite(CTM) BC gap (bears on the revival finite-size question). exact-cluster
+ref |dn|=2.6679e-07 ; bare |dn|=6.1411e-06.
+DONE

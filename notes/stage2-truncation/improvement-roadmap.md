@@ -65,6 +65,13 @@ evolution is exact-finite-correct; CTM flatters (use the exact oracle); regaugin
    framed as "tighten convergence / remove the revival-rise lag", not "break a
    wall". NOTE: the norm environment ⟨ψ|ψ⟩ is PSD even in real time — the
    "indefinite metric" worry is a numerical-regularization issue, not fundamental.
+   **STATE SNAPSHOT (2026-06-04): `2026-06-04-ctm-aware-evolution-state.md`** —
+   read this for exactly where the CTM-aware evolution stands. TL;DR: the per-bond
+   CTM truncation primitive is validated (26× better than bare SVD); the full-star
+   geometry passes horizontally but the vertical bond is blocked on an untested
+   `rotl90(env)` fix; per-star CTMRG is trajectory-infeasible; the open fork is
+   which loop-carrying engine to build (exact-finite-cluster env vs NTU patch), and
+   the blowup is CUMULATIVE so only a full-trajectory run can demonstrate the fix.
 
 ## Lower-priority levers (from the brainstorm)
 

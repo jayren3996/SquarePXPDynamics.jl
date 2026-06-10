@@ -1,5 +1,14 @@
 # rel_floor — the conditioning knob (provisional default 1e-3)
 
+**ADDENDUM 2026-06-10: the trajectory verdict below is LEGACY-backend-scoped.** On the
+NATIVE backend (`evolve_pepskit!`) rel_floor=1e-3 is an accuracy artifact (it flattened
+the D-ladder, D=3≡D=4 to 6 digits) and **rel_floor=0 is correct and stable at D=3 and
+D=4**: collapse+onset tracked to ~1e-4, monotone D-ladder, no conditioning crash
+(D=4 RMS 5.9e-3, best to date). See
+`2026-06-10-d3-simple-update-6x6-benchmark.md` and `data/native_relfloor0_baseline.out`.
+The 2026-06-02 table below (incl. the "rel_floor=0 crashed at D=4" entry) came from the
+legacy `dev_relfloor_trajectory.jl` path and the since-fixed shifted-ED comparison.
+
 `rel_floor` (in `_svd_with_rel_floor`, `StarSimpleUpdate.jl`) drops retained
 singular values below `rel_floor · σ_max` after each bond SVD, capping the bond
 condition number at `1/rel_floor` independent of cutoff. It exists because

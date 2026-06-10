@@ -697,12 +697,16 @@ function _boundary_scalar(
     return scalar(acc)
 end
 
-function _boundary_density_finite(psi::SquareIPEPSState; max_sites::Integer = 16)::Float64
+function _boundary_density_finite(
+    psi::SquareIPEPSState;
+    max_sites::Integer = 16,
+    cutoff::Float64 = 1e-14,
+)::Float64
     _check_tiny_finite_cell(psi, max_sites)
     folded = _absorb_all_weights_once(psi)
     combs = _bond_combiners(psi)
     reps = psi.unitcell.reps
-    Z = _boundary_scalar(psi, folded, combs; op_site = nothing)
+    Z = _boundary_scalar(psi, folded, combs; op_site = nothing, cutoff)
     abs(Z) > 1e-300 || throw(ArgumentError("double-layer norm is zero"))
     # Each site's Z_c is an independent boundary sweep (it builds its own tensors
     # and shares only the read-only `folded`/`combs`), so the N sweeps run in
@@ -712,7 +716,8 @@ function _boundary_density_finite(psi::SquareIPEPSState; max_sites::Integer = 16
     # notes/stage2-truncation/improvement-roadmap.md.
     contribs = Vector{Float64}(undef, length(reps))
     Threads.@threads for i in eachindex(reps)
-        contribs[i] = real(_boundary_scalar(psi, folded, combs; op_site = reps[i]) / Z)
+        contribs[i] =
+            real(_boundary_scalar(psi, folded, combs; op_site = reps[i], cutoff) / Z)
     end
     return sum(contribs) / length(reps)
 end
@@ -853,15 +858,24 @@ precision:
   documented next optimization).
 - `:auto` (default) — `:dense` for `nsites ≤ 16` (fast where the `2^N` state fits),
   `:boundary` for larger cells. Never changes the result.
+
+`boundary_cutoff` (default `1e-14`, effectively exact) is the `:boundary`
+ring-recompression SVD cutoff. On highly entangled states the exact ring rank
+explodes (observed ~5e4 bonds / 74 GB on a mid-quench 4×4 D=3 state); a looser
+cutoff (e.g. `1e-8`) bounds the rank, turning `:boundary` into a χ-controlled
+finite-torus approximation — calibrate against `:dense` where both run
+(`scripts/g0/boundary_cutoff_calibration.jl`).
 """
 function exact_density_finite(
     psi::SquareIPEPSState;
     max_sites::Integer = 12,
     method::Symbol = :auto,
+    boundary_cutoff::Float64 = 1e-14,
 )::Float64
     nsites = _check_tiny_finite_cell(psi, max_sites)
     chosen = method === :auto ? (nsites > 16 ? :boundary : :dense) : method
-    chosen === :boundary && return _boundary_density_finite(psi; max_sites)
+    chosen === :boundary &&
+        return _boundary_density_finite(psi; max_sites, cutoff = boundary_cutoff)
     chosen === :dense || throw(ArgumentError("method must be :auto, :dense, or :boundary"))
     # Build the exact dense state ONCE and read every site's density from it.
     # (The per-site exact_one_site_expectation_finite rebuilds the dense

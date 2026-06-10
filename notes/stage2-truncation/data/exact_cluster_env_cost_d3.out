@@ -1,0 +1,21 @@
+===== SPIKE N2 env-cost, D = 3 =====
+Sys.total_memory = 772425.8 MB (RAM ceiling)
+RSS at start     = 1174.4 MB
+
+--- D=3, t=2.0 ---
+X q-leg dim = 24 ; Y q-leg dim = 24 ; post-gate A space = ℂ^2 ← ((ℂ^12)' ⊗ (ℂ^12)' ⊗ (ℂ^12)' ⊗ (ℂ^12)')
+ERROR: LoadError: AssertionError: expected DX q-leg dim 16, got 24
+Stacktrace:
+ [1] build_exact_cluster_bondenv(state::PXPIPEPSState, X::Tensor{ComplexF64, ComplexSpace, 4, Vector{ComplexF64}}, Y::Tensor{ComplexF64, ComplexSpace, 4, Vector{ComplexF64}}, rc::Int64, cc::Int64, cp1::Int64)
+   @ Main /data/djxg096/SquarePXPDynamics.jl/scripts/g0/spike_n4_exact_cluster_bond.jl:53
+ [2] run_cost(D::Int64)
+   @ Main /data/djxg096/SquarePXPDynamics.jl/scripts/g0/spike_n2_env_cost.jl:55
+ [3] top-level scope
+   @ /data/djxg096/SquarePXPDynamics.jl/scripts/g0/spike_n2_env_cost.jl:119
+ [4] include(mod::Module, _path::String)
+   @ Base ./Base.jl:306
+ [5] exec_options(opts::Base.JLOptions)
+   @ Base ./client.jl:317
+ [6] _start()
+   @ Base ./client.jl:550
+in expression starting at /data/djxg096/SquarePXPDynamics.jl/scripts/g0/spike_n2_env_cost.jl:117

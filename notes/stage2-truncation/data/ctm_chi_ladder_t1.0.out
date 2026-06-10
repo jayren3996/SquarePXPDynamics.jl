@@ -1,0 +1,29 @@
+=== ctm_chi_ladder : D=2 frozen t=1.00, chi=[8, 16, 24, 32, 48] ===
+frozen n(t=1.00)=0.152935 ; n_lossless(1 star)=0.15183976 ; bond=ℂ^2 ← ((ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)' ⊗ (ℂ^8)')
+exact-cluster ref: |dn|=6.0714e-08 fid=1.00000000 ; benv space=(ℂ^16 ⊗ ℂ^8) ← (ℂ^16 ⊗ ℂ^8)
+bare-SVD (no env): |dn|=3.9703e-07
+
+chi   ctm_conv  reldev_inf    1-overlap     |dn|_ctm    fid_ctm     wall_s   
+8     done      1.6995e+00    5.5566e-01    4.4575e-08  1.000000    75.3     
+16    done      1.9772e+00    4.5137e-02    4.4627e-08  1.000000    89.1     
+24    done      1.7368e+00    4.9165e-01    4.4625e-08  1.000000    223.7    
+32    done      1.9924e+00    1.5066e-02    4.4585e-08  1.000000    505.8    
+48    done      1.3560e-01    9.1942e-03    4.4641e-08  1.000000    1460.9   
+
+===== READ =====
+NTU-P6 reldev_inf vs exact = 0.949 (nearly orthogonal). If CTM reldev_inf drops
+well below that and SHRINKS with chi -> CTM env is an accuracy lever -> pivot GO.
+If reldev_inf PLATEAUS at a nonzero floor -> that floor is the finite(4x4)-vs-
+infinite(CTM) BC gap (bears on the revival finite-size question). exact-cluster
+ref |dn|=6.0714e-08 ; bare |dn|=3.9703e-07.
+DONE
+[ Info: CTMRG init:	obj = +1.857328482867e-14 +3.323075496743e-15im	err = 1.0000e+00
+[ Info: CTMRG conv 27:	obj = +2.856621821915e-03	err = 6.6276871271e-10	time = 21.57 sec
+[ Info: CTMRG init:	obj = +2.689688469654e-18 +5.731390644468e-17im	err = 1.0000e+00
+[ Info: CTMRG conv 55:	obj = +2.856621821915e-03	err = 1.8051795059e-10	time = 1.30 min
+[ Info: CTMRG init:	obj = +4.107666061461e-09 +7.046039200719e-09im	err = 1.0000e+00
+[ Info: CTMRG conv 57:	obj = +2.856621821915e-03	err = 7.3873879807e-10	time = 3.53 min
+[ Info: CTMRG init:	obj = -1.081439273769e-11 +5.805882154518e-11im	err = 1.0000e+00
+[ Info: CTMRG conv 64:	obj = +2.856621821915e-03	err = 2.1995883397e-10	time = 8.16 min
+[ Info: CTMRG init:	obj = -1.399468261101e-11 -3.066848438209e-10im	err = 1.0000e+00
+[ Info: CTMRG conv 96:	obj = +2.856621821915e-03	err = 9.4080188656e-10	time = 24.09 min

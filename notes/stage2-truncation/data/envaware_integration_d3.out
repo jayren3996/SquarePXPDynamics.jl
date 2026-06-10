@@ -1,0 +1,106 @@
+=== envaware_integration: D-generalized 4-dir env builder validation ===
+RSS at start = 1802.2 MB
+D = 3 ; BIG (no-op ceiling) = 256
+frozen density at t=1.80: 0.23362680
+center PEPSKit (r,c)=(4,1) ; Nr=4 Nc=4
+  leaf[right] = (4,2)
+  leaf[up] = (3,1)
+  leaf[left] = (4,4)
+  leaf[down] = (1,1)
+
+--- G0: rotate_peps roundtrip + _qr_bond uniform dual flags ---
+  rotate roundtrip r=0: norm(rot(rot(A,r),4-r)-A) = 0.000e+00
+  rotate roundtrip r=1: norm(rot(rot(A,r),4-r)-A) = 0.000e+00
+  rotate roundtrip r=2: norm(rot(rot(A,r),4-r)-A) = 0.000e+00
+  rotate roundtrip r=3: norm(rot(rot(A,r),4-r)-A) = 0.000e+00
+  dir=right  : isdual(X,2)=true isdual(Y,4)=true ; qdimX=6 qdimY=6
+  dir=up     : isdual(X,2)=true isdual(Y,4)=true ; qdimX=6 qdimY=6
+  dir=left   : isdual(X,2)=true isdual(Y,4)=true ; qdimX=6 qdimY=6
+  dir=down   : isdual(X,2)=true isdual(Y,4)=true ; qdimX=6 qdimY=6
+  G0 PASS = true
+
+--- G1: env-VALUE oracle (transpose trick) for vertical dirs ---
+  dir=up     : norm(benv_rot - benv_oracle)/norm = 1.3156e-11
+  dir=down   : norm(benv_rot - benv_oracle)/norm = 4.3616e-11
+  G1 (vertical env value oracle) PASS = true
+
+--- G2: NO-OP-AT-BIG per direction (single-bond env-aware truncate) ---
+  n_ref (unmodified) = 0.23362680
+  dir=right  : no-op-at-BIG dev = 1.1102e-16 ; cond(Z'Z)=5.076e+04
+  dir=up     : no-op-at-BIG dev = 1.1102e-16 ; cond(Z'Z)=1.520e+05
+  dir=left   : no-op-at-BIG dev = 1.1102e-16 ; cond(Z'Z)=3.559e+05
+  dir=down   : no-op-at-BIG dev = 2.7478e-15 ; cond(Z'Z)=1.771e+06
+  G2 (per-dir no-op-at-BIG) PASS = true
+
+--- G3: FULL-star env-aware update no-op-at-BIG ---
+  n_lossless(bare star) = 0.23361815 ; n_env_full = 0.23361816 ; dev = 6.7563e-09
+  per-arm truncerrs = Dict(:left => 4.59284633619262e-8, :right => 4.854898022903476e-7, :up => 5.545554776766418e-7, :down => 5.762531619569513e-7)
+  G3 (full-star no-op-at-BIG) PASS = false
+
+--- G4: short 5-step D=2 trajectory env=:exact_cluster vs bare ---
+  step  n_bare      n_env       |diff|
+  1     0.23361720  0.23361837  1.1702e-06
+  2     0.23361322  0.23361546  2.2483e-06
+  3     0.23361484  0.23361796  3.1286e-06
+  4     0.23362205  0.23362592  3.8731e-06
+  5     0.23363482  0.23363932  4.5044e-06
+  all_finite=true ; any_diff=true
+  G4 (trajectory) PASS = true
+
+===== SUMMARY =====
+G0 rotate/dual          = true
+G1 vertical env oracle  = true  (up=1.316e-11 down=4.362e-11)
+G2 per-dir no-op-BIG    = true  (R=1.11e-16 U=1.11e-16 L=1.11e-16 D=2.75e-15)
+G3 full-star no-op-BIG  = false  (dev=6.756e-09)
+G4 trajectory finite    = true
+OVERALL (no-op-at-BIG all 4 bonds + full star) = false
+RSS peak = 513755.1 MB
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 5.74e-10
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 3.11e-10
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.36e-10
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.04e-10
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 8.58e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 7.45e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 6.35e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.21e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 1.35e-11
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 6.61e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 3.06e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+┌ Warning: GMRES linsolve stopped without converging after 100 iterations:
+│ * norm of residual = 3.16e-12
+│ * number of operations = 2902
+└ @ KrylovKit ~/.julia/packages/KrylovKit/nyPcr/src/linsolve/gmres.jl:123
+DONE

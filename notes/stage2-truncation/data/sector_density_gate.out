@@ -1,0 +1,50 @@
+julia 1.12.5, threads=16, BLAS threads set to 16
+=== 4x4 gate: D=3 rel_floor=0, dt=0.02 order=2 serial, maxdim=3 cutoff=1e-12 ===
+masks: Nc=4 -> 7 (expect 7)
+t=0.0  n_full=0.500000000000  n_dense_sector=0.500000000000  n_sector=0.500000000000  |dn|=0.000e+00
+t=0.0  leak_sector=0.000000e+00  leak_dense_seam=0.000000e+00  |dleak|=0.000e+00 (tol 1.000e-09)  leak_dense_full=0.000000e+00
+t=0.0  n_full-n_sector=+0.000000e+00  ampdiff=0.000e+00 (maxamp 1.000e+00)  pairs=1225/65536 valid=743  secs=1.01  (info)
+t=0.5  n_full=0.385097320299  n_dense_sector=0.385097320299  n_sector=0.385097320299  |dn|=9.437e-16
+t=0.5  leak_sector=1.550504e-15  leak_dense_seam=1.639907e-15  |dleak|=8.940e-17 (tol 1.000e-09)  leak_dense_full=1.139105e-13
+t=0.5  n_full-n_sector=-1.298961e-14  ampdiff=8.683e-18 (maxamp 7.293e-03)  pairs=1225/65536 valid=743  secs=0.29  PASS
+t=1.6  n_full=0.155540459093  n_dense_sector=0.155540459017  n_sector=0.155540459017  |dn|=2.776e-17
+t=1.6  leak_sector=7.361055e-10  leak_dense_seam=7.361064e-10  |dleak|=9.634e-16 (tol 1.000e-09)  leak_dense_full=1.211764e-09
+t=1.6  n_full-n_sector=+7.619083e-11  ampdiff=2.437e-17 (maxamp 2.786e-02)  pairs=1225/65536 valid=743  secs=0.24  PASS
+t=2.6  n_full=0.466839394931  n_dense_sector=0.466839520676  n_sector=0.466839520676  |dn|=5.551e-17
+t=2.6  leak_sector=1.959399e-07  leak_dense_seam=1.959399e-07  |dleak|=2.542e-16 (tol 9.797e-09)  leak_dense_full=7.095956e-07
+t=2.6  n_full-n_sector=-1.257457e-07  ampdiff=8.778e-19 (maxamp 1.638e-03)  pairs=1225/65536 valid=743  secs=0.21  PASS
+4x4 gate: PASS  (max |n_sector - n_dense_sector| = 9.437e-16)
+
+=== 6x6: D=3 rel_floor=0, dt=0.02 order=2 serial, maxdim=3 cutoff=1e-12 ===
+masks: Nc=6 -> 18 (expect 18)
+  evolved to t=0.1  (8.3 s, chunk trunc=4.31e-05)
+  evolved to t=0.2  (10.4 s, chunk trunc=3.22e-04)
+-- sector_density at t=0.2 --
+  [sector] Nr=6 Nc=6 nmask=18 h=3 ntop=2309 K=531441 npairs=5331481 est_gb=37.51 est_secs(cons.)=764.3
+  [sector] halves built at t+53.5 s; GEMM...
+  [sector] n=0.48026525178245755 leak=0.0 nvalid_pairs=2406862 secs=81.7
+6x6 t=0.2: n=0.4802652518  leak=0.000000e+00  secs=81.7  |n - Krylov(0.48026525)| = 1.782e-09  (expect <= 2e-4) OK
+maxrss after t=0.2 eval: 39.53 GB
+  evolved to t=0.3  (11.1 s, chunk trunc=2.96e-04)
+  evolved to t=0.4  (11.1 s, chunk trunc=2.54e-04)
+  evolved to t=0.5  (11.2 s, chunk trunc=2.07e-04)
+  evolved to t=0.6  (11.1 s, chunk trunc=1.61e-04)
+  evolved to t=0.7  (11.1 s, chunk trunc=1.30e-04)
+  evolved to t=0.8  (10.9 s, chunk trunc=1.89e-04)
+  evolved to t=0.9  (11.0 s, chunk trunc=3.14e-04)
+  evolved to t=1.0  (11.1 s, chunk trunc=4.81e-04)
+  evolved to t=1.1  (10.9 s, chunk trunc=6.19e-04)
+  evolved to t=1.2  (12.4 s, chunk trunc=6.41e-04)
+  evolved to t=1.3  (12.3 s, chunk trunc=4.88e-04)
+  evolved to t=1.4  (10.3 s, chunk trunc=2.39e-04)
+  evolved to t=1.5  (10.3 s, chunk trunc=1.37e-04)
+  evolved to t=1.6  (10.4 s, chunk trunc=1.98e-04)
+-- sector_density at t=1.6 --
+  [sector] Nr=6 Nc=6 nmask=18 h=3 ntop=2309 K=531441 npairs=5331481 est_gb=37.51 est_secs(cons.)=764.3
+  [sector] halves built at t+50.2 s; GEMM...
+  [sector] n=0.1561673573749078 leak=9.575271203403973e-10 nvalid_pairs=2406862 secs=78.8
+6x6 t=1.6: n=0.1561673574  leak=9.575271e-10  secs=78.8  |n - Krylov(0.15613395)| = 3.341e-05  (~1e-3 expected, no hard threshold)
+maxrss after t=1.6 eval: 40.73 GB
+
+n_full - n_sector gaps at 4x4 t=0.5/1.6/2.6: -1.299e-14 +7.619e-11 -1.257e-07
+RESULT pass=true gate4x4_max_diff=9.436896e-16 leak4x4_t26=1.959399e-07 n6_t02=0.4802652518 n6_diff_krylov_t02=1.782458e-09 n6_t16=0.1561673574 n6_diff_krylov_t16=3.340737e-05 leak6_t02=0.000000e+00 leak6_t16=9.575271e-10 cost6_s=78.8 ram6_gb=40.73 total_s=700

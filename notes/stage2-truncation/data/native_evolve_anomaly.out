@@ -1,0 +1,4 @@
+
+===== native D=2, dt=0.02, order=2, :serial, rel_floor=1e-3 =====
+t     n_native   n_legacy2  n_ED       chunk_trnerr
+0.0   0.500000   -          -          -           
