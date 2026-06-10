@@ -1,0 +1,53 @@
+# Gate the native->legacy adapter + legacy :boundary oracle, then time it at 6x6.
+#
+# G1 (4x4, value): along a native D=3 rel_floor=0 trajectory, at t=0.5/1.0/2.6
+#     n_native(:dense) == n_legacy(:dense) == n_legacy(:boundary) to <=1e-9.
+#     This gates the adapter (conventions) AND the boundary sweep (algorithm)
+#     against the established native oracle in collapse + entangled regimes.
+# G2 (6x6, value+cost): evolve 6x6 D=3 rel_floor=0 to t=0.2, convert, run
+#     :boundary at 36 sites. Short-time n(t) is ED-grade checkable: Krylov 6x6
+#     gives n(0.2)=0.4802653 (and 4x4/6x6 agree to 1e-10 there). Wall time is
+#     the per-point cost of the production 6x6 trajectory observable.
+
+include(joinpath(@__DIR__, "native_to_legacy.jl"))
+using Printf
+
+function gate_4x4()
+    cell = PeriodicSquareUnitCell(4, 4)
+    psi = checkerboard_pxp_pepskit_state(cell; excited_on = :even, D = 3)
+    t = 0.0
+    println("=== G1: 4x4 adapter + :boundary vs native dense ===")
+    @printf("%-5s %-12s %-12s %-12s %-9s %-9s\n",
+            "t", "n_nat_dense", "n_leg_dense", "n_leg_bnd", "d_dense", "d_bnd")
+    for tstop in (0.5, 1.0, 2.6)
+        while t < tstop - 1e-9
+            evolve_pepskit!(psi, 0.1; dt = 0.02, order = 2, schedule = :serial,
+                            maxdim = 3, cutoff = 1e-12, rel_floor = 0.0)
+            t = round(t + 0.1, digits = 1)
+        end
+        nnat = exact_density_finite(psi; max_sites = 16)
+        leg = native_to_legacy(psi)
+        nld = exact_density_finite(leg; max_sites = 16, method = :dense)
+        nlb = exact_density_finite(leg; max_sites = 16, method = :boundary)
+        @printf("%-5.1f %-12.8f %-12.8f %-12.8f %-9.1e %-9.1e\n",
+                t, nnat, nld, nlb, nld - nnat, nlb - nnat)
+        flush(stdout)
+    end
+end
+
+function probe_6x6()
+    println("\n=== G2: 6x6 D=3 :boundary value + cost (Krylov n(0.2)=0.4802653) ===")
+    cell = PeriodicSquareUnitCell(6, 6)
+    psi = checkerboard_pxp_pepskit_state(cell; excited_on = :even, D = 3)
+    evolve_pepskit!(psi, 0.2; dt = 0.02, order = 2, schedule = :serial,
+                    maxdim = 3, cutoff = 1e-12, rel_floor = 0.0)
+    el_conv = @elapsed leg = native_to_legacy(psi)
+    el = @elapsed n = exact_density_finite(leg; max_sites = 36, method = :boundary)
+    @printf("t=0.2: n_boundary=%.8f (Krylov 0.48026525)  convert=%.1f s  boundary=%.1f s (%d threads)\n",
+            n, el_conv, el, Threads.nthreads())
+    flush(stdout)
+end
+
+gate_4x4()
+probe_6x6()
+println("DONE")

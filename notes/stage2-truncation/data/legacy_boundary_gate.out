@@ -1,0 +1,342 @@
+gate script start, threads=16
+=== G1 phase A: 4x4 native dense vs legacy dense (adapter gate) ===
+phase A t=0.5  n_nat_dense=0.38509732 n_leg_dense=0.38509732 d_dense=-5.6e-17
+phase A t=1.0  n_nat_dense=0.15546499 n_leg_dense=0.15546499 d_dense=2.8e-17
+phase A t=2.6  n_nat_dense=0.46683939 n_leg_dense=0.46683939 d_dense=1.7e-16
+
+=== G2: 6x6 D=3 :boundary value + cost (Krylov n(0.2)=0.4802653) ===
+6x6 evolved to t=0.2; converting, then 36-site :boundary
+
+[157467] signal 15: Terminated
+in expression starting at /data/djxg096/SquarePXPDynamics.jl/scripts/g0/legacy_boundary_gate.jl:89
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/gc-stock.c:3636
+start_thread at /lib64/libpthread.so.0 (unknown line)
+clone at /lib64/libc.so.6 (unknown line)
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+pthread_cond_wait at /lib64/libpthread.so.0 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_60124.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+zgemv_kernel_4x4 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libopenblas64_.so (unknown line)
+zgemv_n_SKYLAKEX at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libopenblas64_.so (unknown line)
+gemv_kernel at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libopenblas64_.so (unknown line)
+exec_blas at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libopenblas64_.so (unknown line)
+zgemv_thread_n at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libopenblas64_.so (unknown line)
+zgemv_64_ at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libopenblas64_.so (unknown line)
+zlabrd_64_ at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libopenblas64_.so (unknown line)
+zgebrd_64_ at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libopenblas64_.so (unknown line)
+zgesdd_64_ at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/bin/../lib/julia/libopenblas64_.so (unknown line)
+gesdd! at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/LinearAlgebra/src/lapack.jl:1698
+_svd! at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/LinearAlgebra/src/svd.jl:125 [inlined]
+#svd!#119 at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/LinearAlgebra/src/svd.jl:105
+svd! at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/LinearAlgebra/src/svd.jl:100 [inlined]
+#svd#121 at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/LinearAlgebra/src/svd.jl:180
+svd at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/LinearAlgebra/src/svd.jl:179 [inlined]
+#svd#1 at /localhome/djxg096/.julia/packages/NDTensors/gWcwD/src/lib/Expose/src/functions/linearalgebra.jl:28 [inlined]
+svd at /localhome/djxg096/.julia/packages/NDTensors/gWcwD/src/lib/Expose/src/functions/linearalgebra.jl:27 [inlined]
+#svd_catch_error#88 at /localhome/djxg096/.julia/packages/NDTensors/gWcwD/src/linearalgebra/linearalgebra.jl:40
+svd_catch_error at /localhome/djxg096/.julia/packages/NDTensors/gWcwD/src/linearalgebra/linearalgebra.jl:38 [inlined]
+#svd#89 at /localhome/djxg096/.julia/packages/NDTensors/gWcwD/src/linearalgebra/linearalgebra.jl:93
+svd at /localhome/djxg096/.julia/packages/NDTensors/gWcwD/src/linearalgebra/linearalgebra.jl:80
+unknown function (ip: 0x7fac3f5c154d) at (unknown file)
+#svd#304 at /localhome/djxg096/.julia/packages/ITensors/6hc0c/src/tensor_operations/matrix_decomposition.jl:162
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_f__apply_iterate at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/builtins.c:868
+svd at /localhome/djxg096/.julia/packages/ITensors/6hc0c/src/tensor_operations/matrix_decomposition.jl:110
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_f__apply_iterate at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/builtins.c:868
+sweep at /data/djxg096/SquarePXPDynamics.jl/src/Observables.jl:619
+#_recompress_ring!#14 at /data/djxg096/SquarePXPDynamics.jl/src/Observables.jl:623
+_recompress_ring! at /data/djxg096/SquarePXPDynamics.jl/src/Observables.jl:610 [inlined]
+#_boundary_scalar#16 at /data/djxg096/SquarePXPDynamics.jl/src/Observables.jl:684
+_boundary_scalar at /data/djxg096/SquarePXPDynamics.jl/src/Observables.jl:633 [inlined]
+#_boundary_density_finite#21 at /data/djxg096/SquarePXPDynamics.jl/src/Observables.jl:705
+_boundary_density_finite at /data/djxg096/SquarePXPDynamics.jl/src/Observables.jl:700 [inlined]
+#exact_density_finite#36 at /data/djxg096/SquarePXPDynamics.jl/src/Observables.jl:864
+exact_density_finite at /data/djxg096/SquarePXPDynamics.jl/src/Observables.jl:857 [inlined]
+macro expansion at ./timing.jl:461 [inlined]
+probe_6x6 at /data/djxg096/SquarePXPDynamics.jl/scripts/g0/legacy_boundary_gate.jl:66
+unknown function (ip: 0x7fac3f55471f) at (unknown file)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+do_call at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:123
+eval_value at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:243
+eval_stmt_value at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:194 [inlined]
+eval_body at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:707
+jl_interpret_toplevel_thunk at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/interpreter.c:898
+jl_toplevel_eval_flex at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1035
+jl_toplevel_eval_flex at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:975
+ijl_toplevel_eval at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1047
+ijl_toplevel_eval_in at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/toplevel.c:1092
+eval at ./boot.jl:489
+include_string at ./loading.jl:2870
+_include at ./loading.jl:2930
+include at ./Base.jl:306
+exec_options at ./client.jl:317
+_start at ./client.jl:550
+jfptr__start_74358.1 at /data/djxg096/.julia/juliaup/julia-1.12.5+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+true_main at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jlapi.c:971
+jl_repl_entrypoint at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/src/jlapi.c:1139
+main at /cache/build/builder-amdci5-3/julialang/julia-release-1-dot-12/cli/loader_exe.c:58
+__libc_start_main at /lib64/libc.so.6 (unknown line)
+unknown function (ip: 0x4010b8) at /workspace/srcdir/glibc-2.17/csu/../sysdeps/x86_64/start.S
+unknown function (ip: (nil)) at (unknown file)
+Allocations: 1511839737 (Pool: 1508294087; Big: 3545650); GC: 1610
